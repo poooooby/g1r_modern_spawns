@@ -1,0 +1,10 @@
+{
+  "id": "national_dex",
+  "name": "National Dex (test stub, option OFF)",
+  "version": "0.35.5",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "content",
+  "games": ["gen1"],
+  "description": "Test stub: national_dex installed with NATIONAL DEX OFF, so nothing past #151 exists."
+}

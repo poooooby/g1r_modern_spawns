@@ -1,0 +1,10 @@
+{
+  "id": "national_dex",
+  "name": "National Dex (test stub)",
+  "version": "0.35.5",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "content",
+  "games": ["gen1"],
+  "description": "Test stub: registers a handful of species past #151, as national_dex does with NATIONAL DEX ON."
+}

@@ -1,0 +1,32 @@
+-- Sharing metadata (25-community-and-ecosystem.md 3.2). Read by tooling and
+-- the manager's detail pane; never by the loader's merge.
+return {
+  summary = "Dynamic Gen 1-9 wild encounters built from each game's own tables.",
+  author = "poooooby",
+  tags = { "mechanic", "encounters", "tool", "gen2", "gen3" },
+  differences = {
+    changed = {
+      "every wild grass, cave, surf and Super Rod table picks its species from the generations GENERATIONS allows",
+      "each table keeps the game's own encounter rate, slot levels and odds; only species change",
+    },
+    added = {
+      "settings in OPTIONS -> MODS -> Modern Spawns: MODERN SPAWNS (ON/OFF) and GENERATIONS (GEN 1 .. GEN 1-9)",
+      "SPAWN MODE: SEEDED, EVERY MAP or RANDOM, all drawn from the save's seed",
+      "SEED (type a code) and REROLL SEED, also in the MODS menu",
+      "LEGENDARIES: rare legendary (1/1024) and mythical (1/2048) encounters on fitting home maps, until owned",
+      "exports apiVersion / isActive / maxGeneration / tableFor / superRodFor / explain / candidates / profileOf",
+    },
+    known = {
+      "Red/Blue/Yellow: the Old Rod and Good Rod keep the game's own catches",
+      "Gold/Silver/Crystal: the Old Rod, swarms, the Bug Contest, Headbutt, Rock Smash and roamers keep the game's own Pokemon",
+      "FireRed/LeafGreen: fishing, Rock Smash and static encounters keep the game's own Pokemon; beside 1025Dex, its WILD GENS keeps them",
+      "legendary and mythical species never enter the wild tables; with LEGENDARIES ON they appear only through the rare roll",
+      "alternate and regional forms are not spawned yet",
+    },
+  },
+  credits = {
+    { who = "PokéAPI", for_ = "wild encounter data the spawn profiles are derived from" },
+    { who = "sanjinpepic", for_ = "national_dex, which registers species #152-1025" },
+  },
+  compat = { engine = ">=0.3.0", modApi = 2 },
+}

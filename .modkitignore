@@ -1,0 +1,27 @@
+# Excluded from the packaged mod (modkit matches exact relative paths).
+# Development docs and the Python data generator
+CLAUDE.md
+pokemon_spawn_generator/CLAUDE_SPAWN_GENERATOR_CONTRACT.md
+pokemon_spawn_generator/README.md
+pokemon_spawn_generator/generate_spawn_data.py
+pokemon_spawn_generator/pokemon_spawn_profiles.schema.json
+# Test suites (they require engine modules) and their national_dex stubs
+tests/_helpers.lua
+tests/generator_test.lua
+tests/species_pool_test.lua
+tests/integration_test.lua
+tests/integration_no_modern_species_test.lua
+tests/modes_test.lua
+tests/legendaries_test.lua
+tests/yellow_test.lua
+tests/gen2_test.lua
+tests/fixtures/modern_gen2/national_dex/main.lua
+tests/fixtures/modern_gen2/national_dex/manifest.json
+tests/fixtures/modern/national_dex/main.lua
+tests/fixtures/modern/national_dex/manifest.json
+tests/fixtures/empty/national_dex/main.lua
+tests/fixtures/empty/national_dex/manifest.json
+tests/gen3_test.lua
+tests/dex1025_compat_test.lua
+tests/fixtures/gen3/1025dex/main.lua
+tests/fixtures/gen3/1025dex/manifest.json

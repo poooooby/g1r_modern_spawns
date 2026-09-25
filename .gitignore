@@ -1,0 +1,8 @@
+# PokeAPI
+/pokemon_spawn_generator/
+
+# Local Tooling
+CLAUDE.md
+
+# Build Output
+/dist/

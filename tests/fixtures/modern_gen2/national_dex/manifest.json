@@ -1,0 +1,10 @@
+{
+  "id": "national_dex",
+  "name": "National Dex (Gen 2 test stub)",
+  "version": "0.35.5",
+  "api": 2,
+  "entry": "main.lua",
+  "profile": "content",
+  "games": ["gen2"],
+  "description": "Test stub: registers a handful of species past #251 in Gold's record shape, as national_dex does on a Gen 2 boot with NATIONAL DEX ON."
+}
