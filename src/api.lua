@@ -47,6 +47,8 @@ return function(deps)
   local mod, Runtime, Config = deps.mod, deps.Runtime, deps.Config
   local exports = mod.exports
 
+  -- Added fields don't bump it (0.7.0 added drawFor / legendaryFor): test
+  -- for a newer function by presence, `type(exports.drawFor) == "function"`.
   exports.apiVersion = 1
 
   exports.isActive = function()
@@ -103,6 +105,20 @@ return function(deps)
   --   Gen 2 water: { map, rate, slots = {3} }
   exports.tableFor = function(mapId, terrain)
     return deepCopy(Runtime.tableFor(mapId, terrain or "grass"))
+  end
+
+  -- For a mod that picks species itself, once per pick (visible overworld
+  -- spawns): tableFor under SEEDED / EVERY MAP, a fresh one-off draw under
+  -- RANDOM, so each pick sees what that mode would roll. Same shape as tableFor.
+  exports.drawFor = function(mapId, terrain)
+    return deepCopy(Runtime.drawFor(mapId, terrain or "grass"))
+  end
+
+  -- The LEGENDARIES roll for such a pick: a legendary (1/1024) or mythical
+  -- (1/2048) species id hosted on this map and not yet owned, or nil. Call it
+  -- once per pick and use the species in place of the table's.
+  exports.legendaryFor = function(mapId, terrain)
+    return Runtime.legendaryFor(mapId, terrain or "grass")
   end
 
   -- The Super Rod's generated catches for a map: Gen 1 { { species, level } },

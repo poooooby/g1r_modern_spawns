@@ -3,6 +3,18 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.7.0] - 2026-09-25
+
+### Added
+
+- `drawFor(mapId, terrain)` and `legendaryFor(mapId, terrain)` exports, for
+  mods that pick wild species themselves instead of letting the engine roll
+  (visible overworld spawns never pass through the encounter hooks).
+  `drawFor` is `tableFor` under SEEDED / EVERY MAP and a fresh draw per call
+  under RANDOM; `legendaryFor` is the LEGENDARIES roll for one pick.
+  Wilds of Kanto Revival uses both, so its visible Pokémon now follow Modern
+  Spawns. `apiVersion` stays 1: check for these functions by presence.
+
 ## [0.6.0] - 2026-09-24
 
 ### Added

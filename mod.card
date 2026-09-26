@@ -14,7 +14,8 @@ return {
       "SPAWN MODE: SEEDED, EVERY MAP or RANDOM, all drawn from the save's seed",
       "SEED (type a code) and REROLL SEED, also in the MODS menu",
       "LEGENDARIES: rare legendary (1/1024) and mythical (1/2048) encounters on fitting home maps, until owned",
-      "exports apiVersion / isActive / maxGeneration / tableFor / superRodFor / explain / candidates / profileOf",
+      "exports apiVersion / isActive / maxGeneration / tableFor / drawFor / legendaryFor / superRodFor / explain / candidates / profileOf",
+      "Wilds of Kanto Revival's visible overworld Pokemon follow the generated tables",
     },
     known = {
       "Red/Blue/Yellow: the Old Rod and Good Rod keep the game's own catches",

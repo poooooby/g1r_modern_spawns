@@ -121,10 +121,27 @@ local fished = Runtime.call("encounter.fishing", function(_, _, c) return c end,
                             "SUPER_ROD", rodMap, Data.field.superRod[rodMap])
 T.eq(#fished, #Data.field.superRod[rodMap], "RANDOM Super Rod groups keep their size")
 
+-- drawFor: a fresh table per call for consumers that pick species themselves
+local drawn, sameShape = {}, true
+for i = 1, 10 do
+  local t = api.drawFor("ROUTE_1", "grass")
+  if not (t and #t.slots == #Data.encounters.ROUTE_1.grass.slots) then sameShape = false end
+  drawn[H.serialize(t)] = true
+end
+local draws = 0
+for _ in pairs(drawn) do draws = draws + 1 end
+T.check(sameShape, "RANDOM drawFor keeps the game's slot count")
+T.check(draws > 1, "RANDOM drawFor draws afresh each call (" .. draws .. " distinct)")
+
 -- SEEDED ignores the species hook
 setOption("spawn_mode", "seeded")
 local kept = species("ROUTE_1", { species = "PIDGEY", level = 3 })
 T.eq(kept.species, "PIDGEY", "SEEDED leaves the rolled species to the table")
+T.eq(H.serialize(api.drawFor("ROUTE_1", "grass")), H.serialize(api.tableFor("ROUTE_1", "grass")),
+     "SEEDED drawFor is the fixed table")
+setOption("enabled", "off")
+T.eq(api.drawFor("ROUTE_1", "grass"), nil, "drawFor answers nil while OFF")
+setOption("enabled", "on")
 
 -- ------- SEED and REROLL SEED in MODS -> Modern Spawns
 

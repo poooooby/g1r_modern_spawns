@@ -106,6 +106,24 @@ Runtime.call("encounter.species", function(e) return e end,
     rng = function(lo, hi) asked[#asked + 1] = hi return 2 end })
 T.eq(asked[1], 1024, "legendaries roll 1 in 1024")
 
+-- legendaryFor: the same roll for a mod that picks species itself (a
+-- visible overworld spawn), on the mod's own seeded RNG
+local hits, onlyHosts = 0, true
+for _ = 1, 20000 do
+  local id = api.legendaryFor("POWER_PLANT", "grass")
+  if id then
+    hits = hits + 1
+    if not hostSet[id] then onlyHosts = false end
+  end
+end
+T.check(hits > 0 and hits < 200, "legendaryFor hits about 1 in 1024 on a home map (" .. hits .. "/20000)")
+T.check(onlyHosts, "and only ever with that map's hosts")
+local strays = 0
+for _ = 1, 5000 do
+  if api.legendaryFor("ROUTE_1", "grass") then strays = strays + 1 end
+end
+T.eq(strays, 0, "legendaryFor never answers on a map with no home")
+
 -- ------- owned species stop appearing
 
 local owned = {}
@@ -155,6 +173,11 @@ set("legendaries", "off")
 T.eq(api.settings().legendaries, false, "turned OFF from the MODS menu")
 T.check(not hostSet[encounter("POWER_PLANT", "grass", 1).species],
         "and a winning roll gives no legendary")
+local offHits = 0
+for _ = 1, 5000 do
+  if api.legendaryFor("POWER_PLANT", "grass") then offHits = offHits + 1 end
+end
+T.eq(offHits, 0, "legendaryFor answers nil with LEGENDARIES OFF")
 
 run.release()
 T.finish("modern_spawns legendaries")

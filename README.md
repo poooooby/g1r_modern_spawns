@@ -33,7 +33,7 @@ nothing to the top-level OPTIONS screen.
 | SPAWN MODE | SEEDED / EVERY MAP / RANDOM | SEEDED: each map keeps one roster for the save file. EVERY MAP: a map's roster is drawn again on every entry. RANDOM: every encounter draws a new species. |
 | LEGENDARIES | OFF / ON | ON: legendaries (1 in 1024 encounters) and mythicals (1 in 2048) can appear on their home maps, until the save owns them. |
 | SEED | a code of up to 10 characters | Shows the loaded save's seed; press A to type a new one. Typed at the title screen, it becomes the next NEW GAME's seed. Leaving it empty keeps the seed. |
-| REROLL SEED | - / REROLL | Step to REROLL for a new random seed; the row then returns to `-`. |
+| REROLL SEED | - / REROLL | Step to REROLL for a new random seed |
 
 Changes take effect on the next encounter; no restart is needed.
 
@@ -112,6 +112,8 @@ end
 | `legendaryHomes()` | `{ [mapId] = { grass = { {id, score, category} }, water = … } }`, where legendaries would appear |
 | `tableFor(mapId, terrain)` | the generated grass / indoor / water table (copy) in the running game's own shape, or nil. Gen 1: `{ rate, slots, buckets? }`. Gen 2 grass: `{ map, rates, slots = { MORN, DAY, NITE } }`; Gen 2 water: `{ map, rate, slots }` |
 | `superRodFor(mapId)` | the Super Rod catches (copy): Gen 1 `{ { species, level } }`, Gen 2 fish rows `{ { chance, species, level } }`; or nil |
+| `drawFor(mapId, terrain)` | for a mod that picks species itself, called once per pick (visible overworld spawns): `tableFor` under SEEDED / EVERY MAP, a fresh one-off draw under RANDOM. Same shape as `tableFor`. Since 0.7.0 |
+| `legendaryFor(mapId, terrain)` | the LEGENDARIES roll for such a pick: a hosted, not-yet-owned legendary (1/1024) or mythical (1/2048) species id, or nil. Since 0.7.0 |
 | `explain(mapId, terrain)` | per-slot records: species, replaced, score, reasons, penalties |
 | `candidates(opts)` | the candidate pool, filterable by generation, terrain, level range and habitat |
 | `profileOf(speciesId)` | one species' spawn profile |
@@ -122,6 +124,11 @@ fires whenever tables are regenerated. Modern Spawns wraps `encounter.roll`,
 `encounter.fishing` and `encounter.table` as the innermost wrapper, so its
 tables are what the engine rolls. Outer mods can still suppress an encounter
 or post-process it through `encounter.species`.
+
+A mod that suppresses step encounters and picks species itself (visible
+overworld spawns) bypasses those hooks, and `game.data.encounters` always
+holds the game's own tables. Such a mod should read `drawFor` (and
+`legendaryFor`) per pick instead. Wilds of Kanto Revival does this.
 
 ## Regenerating the profile data
 

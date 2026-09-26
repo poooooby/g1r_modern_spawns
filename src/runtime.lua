@@ -361,6 +361,17 @@ return function(deps)
     return fresh and fresh.slots[index] and fresh.slots[index].species or nil
   end
 
+  -- For consumers that pick species themselves, one pick per call (visible
+  -- overworld spawns): the fixed table under SEEDED / EVERY MAP, a fresh
+  -- one-off draw under RANDOM. Same shape as tableFor.
+  function Runtime.drawFor(mapId, terrain)
+    if Config.spawnMode(mod) ~= "random" then return Runtime.tableFor(mapId, terrain) end
+    local kind = kindOf(terrain)
+    local draw = type(mapId) == "string" and randomDraw(mapId) or nil
+    local def = draw and checked(draw[kind])
+    return def and world.assemble(mapId, kind, def) or nil
+  end
+
   -- -------------------------------------------------------- legendaries
 
   -- Home maps for every legendary/mythical under the current cap, or nil
@@ -414,6 +425,14 @@ return function(deps)
       end
     end
     return nil
+  end
+
+  -- The rare roll for a consumer's own encounter on a map (a visible
+  -- overworld spawn): a hosted legendary/mythical species id, or nil.
+  function Runtime.legendaryFor(mapId, terrain)
+    if not Runtime.isActive() or type(mapId) ~= "string" then return nil end
+    local ok, species = pcall(legendaryFor, { mapId = mapId }, kindOf(terrain))
+    return ok and species or nil
   end
 
   -- ------------------------------------------------------------- hooks
