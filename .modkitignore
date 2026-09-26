@@ -1,7 +1,5 @@
 # Excluded from the packaged mod (modkit matches exact relative paths).
 # Development docs and the Python data generator
-CLAUDE.md
-pokemon_spawn_generator/CLAUDE_SPAWN_GENERATOR_CONTRACT.md
 pokemon_spawn_generator/README.md
 pokemon_spawn_generator/generate_spawn_data.py
 pokemon_spawn_generator/pokemon_spawn_profiles.schema.json

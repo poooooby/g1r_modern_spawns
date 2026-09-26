@@ -8,13 +8,6 @@ dynamically rather than from hand-written per-map lists. It's for players who
 want a modern Pokédex's worth of wild Pokémon in Kanto and Johto, and for mod
 authors who want a spawn framework to build on.
 
-Try it (from a gen1recomp checkout, with this repo linked as `mods/modern_spawns`):
-
-```bash
-luajit mods/modern_spawns/tests/integration_test.lua   # headless check against Red's data
-python tools/modkit.py lint mods/modern_spawns          # ROM-content gate
-# then launch the game: OPTIONS -> MODS -> Modern Spawns
-```
 
 ## Requirements
 
@@ -37,7 +30,7 @@ nothing to the top-level OPTIONS screen.
 |---|---|---|
 | MODERN SPAWNS | ON / OFF | OFF uses the game's original tables. |
 | GENERATIONS | GEN 1, GEN 1-2 … GEN 1-9 | Limits which generations can spawn. GEN 1 uses the original tables. |
-| SPAWN MODE | SEEDED / EVERY MAP / RANDOM | SEEDED: each map keeps one roster for the playthrough. EVERY MAP: a map's roster is drawn again on every entry. RANDOM: every encounter draws a new species. |
+| SPAWN MODE | SEEDED / EVERY MAP / RANDOM | SEEDED: each map keeps one roster for the save file. EVERY MAP: a map's roster is drawn again on every entry. RANDOM: every encounter draws a new species. |
 | LEGENDARIES | OFF / ON | ON: legendaries (1 in 1024 encounters) and mythicals (1 in 2048) can appear on their home maps, until the save owns them. |
 | SEED | a code of up to 10 characters | Shows the loaded save's seed; press A to type a new one. Typed at the title screen, it becomes the next NEW GAME's seed. Leaving it empty keeps the seed. |
 | REROLL SEED | - / REROLL | Step to REROLL for a new random seed; the row then returns to `-`. |

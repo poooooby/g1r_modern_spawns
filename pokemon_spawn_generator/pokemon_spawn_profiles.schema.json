@@ -1,0 +1,67 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/pokemon-spawn-profiles.schema.json",
+  "title": "Pokemon Spawn Profiles",
+  "type": "object",
+  "additionalProperties": {
+    "$ref": "#/$defs/profile"
+  },
+  "$defs": {
+    "specialSpawn": {
+      "type": "object",
+      "required": ["is_special", "category", "is_legendary", "is_mythical", "requires_special_handling"],
+      "properties": {
+        "is_special": {"type": "boolean"},
+        "category": {"type": "string", "enum": ["normal", "rare", "very_rare", "legendary", "mythical"]},
+        "is_legendary": {"type": "boolean"},
+        "is_mythical": {"type": "boolean"},
+        "requires_special_handling": {"type": "boolean"}
+      },
+      "additionalProperties": false
+    },
+    "profile": {
+      "type": "object",
+      "required": [
+        "species", "generation_introduced", "generations_seen", "native_versions",
+        "target_game_encounter_count", "native_encounter_count", "location_count",
+        "methods", "terrains", "habitats", "progression", "rarity", "special_spawn",
+        "encounters_by_generation"
+      ],
+      "properties": {
+        "species": {"type": "string"},
+        "generation_introduced": {"type": ["integer", "null"], "minimum": 1, "maximum": 9},
+        "generations_seen": {"type": "array", "items": {"type": "integer", "minimum": 1, "maximum": 9}},
+        "native_versions": {"type": "array", "items": {"type": "string"}},
+        "target_game_encounter_count": {"type": "integer", "minimum": 0},
+        "native_encounter_count": {"type": "integer", "minimum": 0},
+        "location_count": {"type": "integer", "minimum": 0},
+        "methods": {"type": "array", "items": {"type": "string"}},
+        "terrains": {"type": "array", "items": {"type": "string", "enum": ["grass", "cave", "water", "fish"]}},
+        "habitats": {"type": "array", "items": {"type": "string"}},
+        "progression": {
+          "type": "object",
+          "required": ["first_wild_level", "last_wild_level", "typical_wild_level", "level_bands"],
+          "properties": {
+            "first_wild_level": {"type": "integer", "minimum": 1},
+            "last_wild_level": {"type": "integer", "minimum": 1},
+            "typical_wild_level": {"type": ["number", "null"]},
+            "level_bands": {"type": "object", "additionalProperties": {"type": "number", "minimum": 0, "maximum": 1}}
+          },
+          "additionalProperties": false
+        },
+        "rarity": {
+          "type": "object",
+          "required": ["classification", "mean_slot_chance"],
+          "properties": {
+            "classification": {"type": "string", "enum": ["common", "uncommon", "rare", "very_rare", "unknown"]},
+            "mean_slot_chance": {"type": ["number", "null"]}
+          },
+          "additionalProperties": false
+        },
+        "special_spawn": {"$ref": "#/$defs/specialSpawn"},
+        "encounters_by_generation": {"type": "object", "additionalProperties": {"type": "integer", "minimum": 0}}
+      },
+      "additionalProperties": false
+    }
+  }
+}

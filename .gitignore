@@ -1,8 +1,10 @@
-# PokeAPI
-/pokemon_spawn_generator/
-
 # Local Tooling
 CLAUDE.md
 
 # Build Output
 /dist/
+
+# PokéAPI response cache and Python build junk
+/tools/.cache/
+__pycache__/
+*.pyc
