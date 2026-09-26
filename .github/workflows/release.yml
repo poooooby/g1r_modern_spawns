@@ -142,6 +142,41 @@ jobs:
           rm -rf "$staging/.github" "$staging/.gitattributes" \
                  "$staging/.gitignore" "$staging/.luarc.json"
 
+          # Same exclusion rule as modkit's own mod_files() (tools/modkit.py):
+          # .modkitignore lines are exact relative paths; every dotfile except
+          # .luarc.json is dropped regardless of .modkitignore; SKIP_DIRS
+          # (.git, .modkit, __pycache__, .vscode) and any other dot-directory
+          # never ship, at any depth. Without this, the workflow's own strip
+          # list above (.github/.gitattributes/.gitignore/.luarc.json) was
+          # all that ever applied, and .modkitignore -- the file whose entire
+          # purpose is deciding what a packaged mod excludes -- was silently
+          # ignored by the one path that actually publishes one.
+          python3 - "$staging" <<'PY'
+          import os, shutil, sys
+          root = sys.argv[1] if len(sys.argv) > 1 else "."
+          SKIP_DIRS = {".git", ".modkit", "__pycache__", ".vscode"}
+          ignore_path = os.path.join(root, ".modkitignore")
+          ignored = set()
+          if os.path.isfile(ignore_path):
+              for line in open(ignore_path, encoding="utf-8"):
+                  line = line.strip()
+                  if line and not line.startswith("#"):
+                      ignored.add(line)
+          for base, dirs, files in os.walk(root, topdown=True):
+              for d in list(dirs):
+                  if d in SKIP_DIRS or d.startswith("."):
+                      shutil.rmtree(os.path.join(base, d))
+                      dirs.remove(d)
+              for name in files:
+                  rel = os.path.relpath(os.path.join(base, name), root).replace(os.sep, "/")
+                  is_dotfile = name.startswith(".") and name != ".luarc.json"
+                  if is_dotfile or rel in ignored or rel == ".modkitignore":
+                      os.remove(os.path.join(base, name))
+          for base, dirs, files in os.walk(root, topdown=False):
+              if base != root and not os.listdir(base):
+                  os.rmdir(base)
+          PY
+
           python3 - "$staging/manifest.json" "$VERSION" <<'PY'
           import json, sys
           path, version = sys.argv[1], sys.argv[2]

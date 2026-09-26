@@ -3,6 +3,17 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.7.1] - 2026-09-26
+
+### Fixed
+
+- The release workflow's own packaging step never read `.modkitignore`, so
+  the 0.7.0 release zip shipped `pokemon_spawn_generator/` and `tests/`
+  alongside the mod. It now excludes exactly what `modkit pack` would
+  (`.modkitignore`'s listed paths, plus any dotfile other than
+  `.luarc.json`), matching modkit's own `mod_files()` rule. No Lua code
+  changed.
+
 ## [0.7.0] - 2026-09-25
 
 ### Added
