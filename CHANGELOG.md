@@ -3,6 +3,14 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.8.1] - 2026-10-07
+
+### Fixed
+
+- The `national_dex_gen3` dependency now names its repo
+  (`"github": "poooooby/national_dex_gen3"`), so the launcher can fetch it
+  from the manifest alone. No Lua code changed.
+
 ## [0.8.0] - 2026-10-05
 
 ### Added
