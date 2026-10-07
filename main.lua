@@ -1,5 +1,6 @@
 -- Modern Spawns: dynamic Gen 1-9 wild encounter tables for Pokemon Red,
--- Blue, Yellow, Gold, Silver, Crystal, FireRed and LeafGreen.
+-- Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire
+-- and Emerald.
 --
 -- The game's own encounter tables are the skeleton (rate, slot levels, odds
 -- ladder, Super Rod groups); only species are redistributed, from the
@@ -16,8 +17,10 @@
 --   src/generator.lua     full redistribution, scoring, explain records
 --   src/adapters/gen1.lua Red/Blue/Yellow data + hook shapes
 --   src/adapters/gen2.lua Gold/Silver/Crystal data + hook shapes
---   src/adapters/gen3.lua FireRed/LeafGreen data + hook shapes
+--   src/adapters/gen3.lua every Gen 3 game's data + hook shapes
 --   src/compat/dex1025.lua  keeps 1025Dex's WILD GENS off our encounters
+--   src/live_sync.lua     writes generated species into the live game data,
+--                         restorable, for mods that read it directly
 --   src/runtime.lua       seed, cache, encounter hooks, events, seed option sync
 --   src/api.lua           mod.exports framework surface
 --
@@ -58,6 +61,7 @@ return function(mod)
   local SpeciesPool = loadSibling(mod, "src/species_pool.lua")
   local Generator = loadSibling(mod, "src/generator.lua")
   local makeRuntime = loadSibling(mod, "src/runtime.lua")
+  local makeLiveSync = loadSibling(mod, "src/live_sync.lua")
   local makeApi = loadSibling(mod, "src/api.lua")
   -- one adapter per engine: Red/Blue/Yellow, Gold/Silver/Crystal,
   -- FireRed/LeafGreen
@@ -68,8 +72,8 @@ return function(mod)
   }
   local installDex1025 = loadSibling(mod, "src/compat/dex1025.lua")
   if not (Config and Rng and MapContext and SpeciesPool and Generator
-          and makeRuntime and makeApi and adapters[1] and adapters[2]
-          and adapters[3]) then
+          and makeRuntime and makeLiveSync and makeApi and adapters[1]
+          and adapters[2] and adapters[3]) then
     return
   end
 
@@ -86,6 +90,7 @@ return function(mod)
   local Runtime = makeRuntime({
     mod = mod, Config = Config, Generator = Generator, SpeciesPool = SpeciesPool,
     MapContext = MapContext, Rng = Rng, profiles = profiles, adapters = adapters,
+    makeLiveSync = makeLiveSync,
   })
   Runtime.install()
 

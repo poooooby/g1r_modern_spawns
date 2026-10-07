@@ -16,6 +16,7 @@ return {
       "LEGENDARIES: rare legendary (1/1024) and mythical (1/2048) encounters on fitting home maps, until owned",
       "exports apiVersion / isActive / maxGeneration / tableFor / drawFor / legendaryFor / superRodFor / explain / candidates / profileOf",
       "Wilds of Kanto Revival's visible overworld Pokemon follow the generated tables",
+      "the generated species are also written into the game's own encounter data, restorable, for Kanto Gear's wild-encounter guide and anything else that reads it directly",
     },
     known = {
       "Red/Blue/Yellow: the Old Rod and Good Rod keep the game's own catches",
@@ -23,6 +24,7 @@ return {
       "FireRed/LeafGreen/Ruby/Sapphire/Emerald: fishing, Rock Smash and static encounters keep the game's own Pokemon; beside 1025Dex (FireRed/LeafGreen only), its WILD GENS keeps them",
       "legendary and mythical species never enter the wild tables; with LEGENDARIES ON they appear only through the rare roll",
       "alternate and regional forms are not spawned yet",
+      "under RANDOM the live encounter data holds one snapshot per visit, not the full distribution; under EVERY MAP only visited maps are kept in sync",
     },
   },
   credits = {

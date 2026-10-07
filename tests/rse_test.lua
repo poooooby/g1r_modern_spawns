@@ -35,6 +35,7 @@ for _, game in ipairs({ "emerald", "ruby", "sapphire" }) do
   loader.modSave.modern_spawns = { seed = "HOENN" }
   loader.modOptions.modern_spawns = { enabled = "on", max_generation = "9", legendaries = "on" }
   local set, managerGame = H.manager(loader)
+  managerGame.data = data -- live_sync writes through mod.game.data; the stub has none by default
   local api = loader.exports.modern_spawns
   T.eq(api.generation(), 3, game .. ": the Gen 3 adapter runs")
   T.check(api.isActive(), game .. ": active with national_dex_gen3's species")
@@ -49,13 +50,74 @@ for _, game in ipairs({ "emerald", "ruby", "sapphire" }) do
   T.check(grassMap ~= nil, game .. ": a map with a generated grass table")
   T.check(waterMap ~= nil, game .. ": a map with a generated water table")
 
-  local grass = api.tableFor(grassMap, "grass")
-  local modern = 0
-  for _, slot in ipairs(grass.slots) do
-    local rec = loader.content.pokemon:get(slot.species)
-    if rec and (tonumber(rec.dex) or 0) > 386 then modern = modern + 1 end
+  -- Across every map, not just grassMap: a single small cave room can
+  -- legitimately roll zero modern species in its handful of slots by
+  -- chance, which isn't a bug -- the claim this checks is "modern species
+  -- appear somewhere", not "on this one map in particular".
+  local modern, mapsChecked = 0, 0
+  for mapId in pairs(data.gen3Encounters) do
+    local grass = api.tableFor(mapId, "grass")
+    if grass then
+      mapsChecked = mapsChecked + 1
+      for _, slot in ipairs(grass.slots) do
+        local rec = loader.content.pokemon:get(slot.species)
+        if rec and (tonumber(rec.dex) or 0) > 386 then modern = modern + 1 end
+      end
+    end
   end
-  T.check(modern > 0, game .. ": modern species appear in " .. grassMap .. " (" .. modern .. ")")
+  T.check(modern > 0, game .. ": modern species appear somewhere (" .. modern
+    .. " slots across " .. mapsChecked .. " maps)")
+
+  -- ------- live_sync: every alias of grassMap's live table carries the
+  -- generated species, not just the one id tableFor was asked about. Gen 3
+  -- is the one generation where this matters: its aliases are separate
+  -- table objects (confirmed empirically), unlike Gen 1/2.
+  do
+    local rec = data.gen3Encounters[grassMap]
+    local aliases = {}
+    if rec and rec.mapGroup and rec.mapNum then
+      local key = rec.mapGroup .. ":" .. rec.mapNum
+      for id, other in pairs(data.gen3Encounters) do
+        if type(id) == "string" and other.mapGroup and other.mapNum
+          and (other.mapGroup .. ":" .. other.mapNum) == key then
+          aliases[#aliases + 1] = id
+        end
+      end
+    end
+    local vanillaSpecies = {}
+    for _, id in ipairs(aliases) do
+      local area = data.gen3Encounters[id].land
+      vanillaSpecies[id] = area and area.slots[1] and area.slots[1].species
+    end
+
+    loader.events:emit("save.loaded", {})
+    local generated = api.tableFor(grassMap, "land") or api.tableFor(grassMap, "grass")
+    T.check(#aliases > 0, game .. ": " .. grassMap .. " has alias ids to check")
+    local allAliasesMatch = true
+    for _, id in ipairs(aliases) do
+      local area = data.gen3Encounters[id].land
+      if area then
+        for i, slot in ipairs(area.slots) do
+          if not generated or slot.species ~= generated.slots[i].species then
+            allAliasesMatch = false
+          end
+        end
+      end
+    end
+    T.check(allAliasesMatch, game .. ": live_sync updated every alias of " .. grassMap
+      .. " (" .. table.concat(aliases, ",") .. "), not just one")
+
+    set("enabled", "off")
+    local restored = true
+    for _, id in ipairs(aliases) do
+      local area = data.gen3Encounters[id].land
+      if area and area.slots[1] and area.slots[1].species ~= vanillaSpecies[id] then
+        restored = false
+      end
+    end
+    T.check(restored, game .. ": OFF restores every alias to its original species")
+    set("enabled", "on")
+  end
 
   -- GEN 1-3 cap: every slot's species is #1-411 (the cart's own range)
   set("max_generation", "3")

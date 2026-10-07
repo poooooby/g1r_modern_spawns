@@ -11,6 +11,7 @@ tests/integration_test.lua
 tests/integration_no_modern_species_test.lua
 tests/modes_test.lua
 tests/legendaries_test.lua
+tests/live_sync_test.lua
 tests/yellow_test.lua
 tests/gen2_test.lua
 tests/fixtures/modern_gen2/national_dex/main.lua

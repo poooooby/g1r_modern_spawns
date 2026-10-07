@@ -21,7 +21,7 @@
 -- index), swarms, and -- because the engine raises no hook for them --
 -- Headbutt, Rock Smash and roamers.
 
-return function(reg, MapContext)
+return function(reg, MapContext, mod)
   local A = { generation = 2 }
 
   local TIMES = { "MORN", "DAY", "NITE" }
@@ -297,6 +297,19 @@ return function(reg, MapContext)
       end
     end
     return i and offset + i or nil
+  end
+
+  -- ------------------------------------------------------------ live sync
+
+  -- kind: "grass" | "water"; time ("MORN"/"DAY"/"NITE") applies to grass
+  -- only. See gen1.lua's liveSlots and live_sync.lua's header.
+  function A.liveSlots(mapId, kind, time)
+    local data = mod and mod.game and mod.game.data
+    local byMap = data and data.gen2Encounters and data.gen2Encounters[kind]
+    local entry = byMap and byMap[mapId]
+    if not entry or type(entry.slots) ~= "table" then return nil end
+    local list = (kind == "grass") and time and entry.slots[time] or entry.slots
+    return (type(list) == "table" and #list > 0) and { list } or nil
   end
 
   -- ----------------------------------------------------------------- save

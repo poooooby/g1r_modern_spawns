@@ -22,7 +22,7 @@
 -- Left as the game has them: fishing and Rock Smash (the engine raises no
 -- hook for them), static and scripted encounters.
 
-return function(reg, MapContext)
+return function(reg, MapContext, mod)
   local A = { generation = 3, substituteAfterRoll = true }
 
   local LAND_WEIGHTS = { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 }
@@ -204,6 +204,46 @@ return function(reg, MapContext)
   -- ctx.rng is the game's own 16-bit stream and takes no range; this mod
   -- never draws from it (the runtime uses its seeded fallback instead).
   A.useEngineRng = false
+
+  -- ------------------------------------------------------------ live sync
+
+  -- Every alias id sharing mapId's mapGroup:mapNum. The encounters registry
+  -- lists one map under several aliases (FR_ROUTE_1, ROUTE1, "3:19", ...),
+  -- and -- confirmed empirically, unlike Gen 1/2 -- these are SEPARATE
+  -- table objects, not the same one under different keys: writing through
+  -- one alias does not update another, so every one of them has to be
+  -- written for a raw reader keyed by any of them to see it.
+  local function aliasIds(mapId)
+    local rec = maps()[mapId]
+    if not (rec and rec.mapGroup and rec.mapNum) then return { mapId } end
+    local key, out = rec.mapGroup .. ":" .. rec.mapNum, {}
+    for _, id in ipairs(reg.ids("encounters")) do
+      if type(id) == "string" then
+        local other = record(id)
+        if other and other.mapGroup and other.mapNum
+          and (other.mapGroup .. ":" .. other.mapNum) == key then
+          out[#out + 1] = id
+        end
+      end
+    end
+    return #out > 0 and out or { mapId }
+  end
+
+  -- kind: "land" | "water". See gen1.lua's liveSlots and live_sync.lua's
+  -- header for why this returns one array per alias, not one array.
+  function A.liveSlots(mapId, kind)
+    local data = mod and mod.game and mod.game.data
+    local byId = data and data.gen3Encounters
+    if not byId then return nil end
+    local out = {}
+    for _, id in ipairs(aliasIds(mapId)) do
+      local area = byId[id] and byId[id][kind]
+      if type(area) == "table" and type(area.slots) == "table" then
+        out[#out + 1] = area.slots
+      end
+    end
+    return #out > 0 and out or nil
+  end
 
   -- ----------------------------------------------------------------- save
 

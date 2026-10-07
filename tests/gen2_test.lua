@@ -95,11 +95,52 @@ local set, game = H.manager(loader)
 -- Game2 has persistOptions and no writeOptions
 game.writeOptions = nil
 game.persistOptions = function(g) g.persisted = (g.persisted or 0) + 1 end
+game.data = data -- live_sync writes through mod.game.data; the stub has none by default
 T.eq(api.generation(), 2, "the Gen 2 adapter runs")
 T.check(api.isActive(), "active on Gold")
 
 checkTables("gold", data, api)
 local live = data.gen2Encounters
+
+-- ------- live_sync: game.data.gen2Encounters itself carries the species a
+-- raw reader (a wild-encounter guide, say) would see, not just tableFor
+
+local vanillaRoute1Species, vanillaRoute1Rates = {}, {}
+for _, time in ipairs(TIMES) do
+  local list = (live.grass.ROUTE_1 or {}).slots and live.grass.ROUTE_1.slots[time]
+  vanillaRoute1Species[time] = {}
+  for i, slot in ipairs(list or {}) do vanillaRoute1Species[time][i] = slot.species end
+  vanillaRoute1Rates[time] = (live.grass.ROUTE_1 or {}).rates
+    and live.grass.ROUTE_1.rates[time]
+end
+
+loader.events:emit("save.loaded", {})
+local liveRoute1 = live.grass.ROUTE_1
+local generatedRoute1 = api.tableFor("ROUTE_1", "grass")
+if liveRoute1 and generatedRoute1 then
+  local matches = true
+  for _, time in ipairs(TIMES) do
+    for i, slot in ipairs(liveRoute1.slots[time] or {}) do
+      if slot.species ~= (generatedRoute1.slots[time][i] or {}).species then matches = false end
+    end
+  end
+  T.check(matches, "live_sync: ROUTE_1's live grass matches tableFor, every time of day")
+  local ratesOk = true
+  for time, rate in pairs(liveRoute1.rates or {}) do
+    if rate ~= vanillaRoute1Rates[time] then ratesOk = false end
+  end
+  T.check(ratesOk, "and its rates are untouched")
+
+  set("enabled", "off")
+  local restoredOk = true
+  for _, time in ipairs(TIMES) do
+    for i, slot in ipairs(live.grass.ROUTE_1.slots[time] or {}) do
+      if slot.species ~= vanillaRoute1Species[time][i] then restoredOk = false end
+    end
+  end
+  T.check(restoredOk, "OFF restores ROUTE_1's original grass species, every time of day")
+  set("enabled", "on")
+end
 
 -- ------- day/night: a night-only role stays nocturnal
 
@@ -258,10 +299,46 @@ run.release()
 -- ============================================================== Crystal
 
 local crun, cdata = load("crystal")
-H.manager(crun.loader)
+local cset, cgame = H.manager(crun.loader)
+cgame.data = cdata
 local capi = crun.loader.exports.modern_spawns
 T.check(capi.isActive(), "active on Crystal")
 checkTables("crystal", cdata, capi)
+
+-- live_sync smoke check: Gen 2 is one adapter for Gold and Crystal alike,
+-- so this only needs to confirm it also runs here, not re-prove the Gold
+-- block's detail.
+local cliveGrass = cdata.gen2Encounters.grass
+local cmapId
+for id in pairs(cliveGrass) do cmapId = id break end
+if cmapId then
+  local vanillaSpecies = {}
+  for _, time in ipairs(TIMES) do
+    local list = cliveGrass[cmapId].slots and cliveGrass[cmapId].slots[time]
+    if list and list[1] then vanillaSpecies[time] = list[1].species end
+  end
+  crun.loader.events:emit("save.loaded", {})
+  local generated = capi.tableFor(cmapId, "grass")
+  local liveMatches = true
+  for _, time in ipairs(TIMES) do
+    local list = cliveGrass[cmapId].slots[time]
+    if list and list[1] and generated.slots[time][1]
+      and list[1].species ~= generated.slots[time][1].species then
+      liveMatches = false
+    end
+  end
+  T.check(liveMatches, "Crystal: live_sync runs here too (" .. cmapId .. ")")
+  cset("enabled", "off")
+  local restored = true
+  for _, time in ipairs(TIMES) do
+    local list = cliveGrass[cmapId].slots[time]
+    if list and list[1] and vanillaSpecies[time]
+      and list[1].species ~= vanillaSpecies[time] then
+      restored = false
+    end
+  end
+  T.check(restored, "Crystal: OFF restores it")
+end
 crun.release()
 
 T.finish("modern_spawns gen2")

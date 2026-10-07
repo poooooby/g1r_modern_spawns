@@ -126,9 +126,16 @@ tables are what the engine rolls. Outer mods can still suppress an encounter
 or post-process it through `encounter.species`.
 
 A mod that suppresses step encounters and picks species itself (visible
-overworld spawns) bypasses those hooks, and `game.data.encounters` always
-holds the game's own tables. Such a mod should read `drawFor` (and
-`legendaryFor`) per pick instead. Wilds of Kanto Revival does this.
+overworld spawns) bypasses those hooks entirely. If it's willing to call
+into this mod, it should read `drawFor` (and `legendaryFor`) per pick
+instead — Wilds of Kanto Revival does this.
+
+For a mod that can't be changed to call anything (a wild-encounter guide
+reading `game.data.encounters`/`gen2Encounters`/`gen3Encounters` directly,
+say — this is why Kanto Gear's guide now shows modern species), those
+tables themselves carry the generated species too, kept in sync and
+restored on OFF — see "Known limits" above for where this can't be fully
+faithful (RANDOM, an unvisited EVERY MAP map).
 
 ## Regenerating the profile data
 
@@ -185,3 +192,15 @@ FireRed's own `gen3_test.lua`.
   shows the DAY list, because the preview has no time of day.
 - A table whose original slots all held one species (Route 19's surf table,
   for example) still gets one species.
+- **Live sync** (writing the generated species into the game's own
+  `encounters`/`gen2Encounters`/`gen3Encounters` data, for a mod that reads
+  it directly instead of through a hook or export — Kanto Gear's
+  wild-encounter guide is why this exists) has two gaps:
+  - Under RANDOM, the live tables hold one snapshot per map visit, not the
+    full distribution — the same thing is already true of `drawFor`.
+  - Under EVERY MAP, only maps the player has actually visited this session
+    are synced; an unvisited map still shows its original species to a raw
+    reader until the player reaches it.
+  - If another mod also writes species directly into these same tables
+    (a randomizer mod, say), whichever one writes last wins — this isn't
+    arbitrated.

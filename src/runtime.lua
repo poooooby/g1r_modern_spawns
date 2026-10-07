@@ -1,12 +1,19 @@
--- Runtime wiring: the per-save seed, the generated-table cache and the three
--- encounter hooks.
+-- Runtime wiring: the per-save seed, the generated-table cache, the three
+-- encounter hooks, and live_sync (src/live_sync.lua).
 --
--- Everything is read from the running game through mod.content (the merged,
--- frozen registries): encounter tables, Super Rod groups, map order, map
--- tilesets and the species registry. Nothing is written back into game data;
--- the redistributed tables are handed to the engine per roll through the
--- hooks, so switching MODERN SPAWNS off (or picking GEN 1) is immediate and
--- leaves the original tables exactly as the game loaded them.
+-- Most of what the engine rolls on is read from the running game through
+-- mod.content (the merged, frozen registries): encounter tables, Super Rod
+-- groups, map order, map tilesets and the species registry. The
+-- redistributed tables are handed to the engine per roll through the hooks,
+-- so switching MODERN SPAWNS off (or picking GEN 1) is immediate there.
+--
+-- Separately, live_sync ALSO writes the generated species directly into the
+-- running game's own data (game.data.encounters / gen2Encounters /
+-- gen3Encounters, Gen 1's Super Rod groups) -- restorable, species only,
+-- never mechanics -- for a mod that reads those tables itself instead of
+-- going through encounter.roll/encounter.table (a wild-encounter guide, for
+-- instance). See src/live_sync.lua for exactly what, when and how OFF
+-- restores it.
 --
 -- Hook priority: every wrapper sits INNERMOST (lowest priority), right next
 -- to the engine's own roll. An outer mod can still suppress an encounter
@@ -88,7 +95,7 @@ return function(deps)
   -- (Gold/Silver/Crystal). Everything below them is shared.
   local generation = tonumber(mod.generation) or 1
   local makeAdapter = deps.adapters[generation] or deps.adapters[1]
-  local world = makeAdapter({ get = registryGet, ids = registryIds }, MapContext)
+  local world = makeAdapter({ get = registryGet, ids = registryIds }, MapContext, mod)
 
   function world.species()
     local out = {}
@@ -372,6 +379,51 @@ return function(deps)
     return def and world.assemble(mapId, kind, def) or nil
   end
 
+  -- -------------------------------------------------------- live sync
+
+  local LiveSync = deps.makeLiveSync and deps.makeLiveSync({ world = world })
+
+  -- Writes this map's currently generated species into the live game data
+  -- (src/live_sync.lua), for a reader that never goes through the hooks.
+  -- The same species drawFor would hand a per-pick consumer -- under
+  -- RANDOM, one fresh draw, with the same caveat drawFor's own callers get:
+  -- it reflects that one draw, not the full distribution.
+  local function liveSyncMap(mapId)
+    if not (LiveSync and Runtime.isActive() and type(mapId) == "string") then return end
+    if world.generation == 2 then
+      local grass = Runtime.drawFor(mapId, "grass")
+      if grass and type(grass.slots) == "table" then
+        for _, time in ipairs({ "MORN", "DAY", "NITE" }) do
+          local list = grass.slots[time]
+          if list then LiveSync.apply(mapId, "grass", time, list) end
+        end
+      end
+      local water = Runtime.drawFor(mapId, "water")
+      if water and water.slots then LiveSync.apply(mapId, "water", nil, water.slots) end
+      return
+    end
+    local terrains = world.generation == 3 and { "land", "water" }
+      or { "grass", "water", "superRod" }
+    for _, terrain in ipairs(terrains) do
+      local t = Runtime.drawFor(mapId, terrain)
+      -- Gen 1's Super Rod assembles to a bare list, not { slots = ... }.
+      local slots = t and (t.slots or t)
+      if type(slots) == "table" then LiveSync.apply(mapId, terrain, nil, slots) end
+    end
+  end
+
+  -- SEEDED only: every map Runtime.tables() has, synced at once. EVERY MAP
+  -- and RANDOM have nothing fixed to sync ahead of a visit; map.entered
+  -- (Runtime.install) covers those as the player reaches them instead.
+  local function liveSyncAll()
+    if not (LiveSync and Runtime.isActive() and Config.spawnMode(mod) == "seeded") then
+      return
+    end
+    local tables = Runtime.tables()
+    if not tables then return end
+    for mapId in pairs(tables) do liveSyncMap(mapId) end
+  end
+
   -- -------------------------------------------------------- legendaries
 
   -- Home maps for every legendary/mythical under the current cap, or nil
@@ -547,11 +599,14 @@ return function(deps)
     end, HOOK_PRIORITY)
 
     -- EVERY MAP: each entry is a new visit, so the map is drawn again.
+    -- Also (co, every mode): live_sync picks the entered map up here, since
+    -- EVERY MAP/RANDOM have nothing fixed to sync ahead of a visit.
     mod.events:on("map.entered", function(ev)
       local mapId = type(ev) == "table" and ev.mapId or nil
       if type(mapId) == "string" then
         visits[mapId] = (visits[mapId] or 0) + 1
         visitTables[mapId] = nil
+        liveSyncMap(mapId)
       end
     end)
 
@@ -561,25 +616,38 @@ return function(deps)
     -- save keeps that save's own seed.
     local pendingSeed
 
+    -- Each handler below restores live_sync's previous writes right after
+    -- Runtime.invalidate() (so a stale map is never left mutated), and
+    -- re-syncs (SEEDED: eagerly; other modes: on the next map.entered)
+    -- only once the seed for THIS save is settled -- save.created applies
+    -- pendingSeed after invalidating, so syncing any earlier would use the
+    -- wrong seed.
     mod.events:on("save.created", function()
       Runtime.invalidate()
+      if LiveSync then LiveSync.restore() end
       if pendingSeed then Runtime.setSeed(pendingSeed) end
       pendingSeed = nil
       syncSeedOption(Runtime.seed())
+      liveSyncAll()
     end)
     mod.events:on("save.loaded", function()
       Runtime.invalidate()
+      if LiveSync then LiveSync.restore() end
       pendingSeed = nil
       syncSeedOption(Runtime.seed())
+      liveSyncAll()
     end)
     mod.events:on("checkpoint.restored", function()
       Runtime.invalidate()
+      if LiveSync then LiveSync.restore() end
       syncSeedOption(Runtime.seed())
+      liveSyncAll()
     end)
 
     mod.events:on("mod.options_changed", function(ev)
       if type(ev) ~= "table" or ev.mod ~= mod.id then return end
       Runtime.invalidate()
+      if LiveSync then LiveSync.restore() end
       if ev.key == "seed" then
         local seed = Runtime.setSeed(ev.value)
         if seed then
@@ -593,6 +661,7 @@ return function(deps)
         -- an action, not a setting: the row always rests on "-"
         pcall(function() Config.write(mod, mod.game, "reroll_seed", "idle") end)
       end
+      liveSyncAll()
     end)
   end
 

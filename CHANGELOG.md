@@ -3,6 +3,28 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.9.0] - 2026-10-07
+
+### Added
+
+- **Live sync**: the generated species are now also written directly into
+  the running game's own `encounters` / `gen2Encounters` / `gen3Encounters`
+  data (and Gen 1's Super Rod groups) — restorable, species only, never
+  mechanics — for a mod that reads those tables itself instead of going
+  through `encounter.roll`/`encounter.table` or an export. This is for
+  Kanto Gear's wild-encounter guide specifically, which reads the cart's
+  raw tables directly and can't be changed to call anything (a third-party
+  repo). `src/live_sync.lua`; see CLAUDE.md's "Live sync" rule for exactly
+  what this touches, when, and the coexistence/RANDOM/EVERY MAP gaps it
+  doesn't close, and README "Known limits" for the player-facing version.
+
+### Changed
+
+- This reverses the previous hard rule that generated tables were never
+  written into `game.data`. OFF still restores the exact original species
+  (backed up before the first write); switching MODERN SPAWNS off or back
+  on, or changing the seed or SPAWN MODE, keeps the live tables in step.
+
 ## [0.8.1] - 2026-10-07
 
 ### Fixed

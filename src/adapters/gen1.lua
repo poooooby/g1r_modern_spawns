@@ -10,8 +10,10 @@
 --   odds: the 256-step ladder constants.encounterBuckets (or a table's own)
 --
 -- `reg.get(registry, id)` / `reg.ids(registry)` read mod.content.
+-- `mod` (third arg) is the live game, for liveSlots only -- everything else
+-- here still reads through `reg`.
 
-return function(reg, MapContext)
+return function(reg, MapContext, mod)
   local A = { generation = 1 }
 
   local DEFAULT_LADDER = { 51, 102, 141, 166, 191, 216, 229, 242, 253, 256 }
@@ -167,6 +169,27 @@ return function(reg, MapContext)
       if slot.species == rolled.species and slot.level == rolled.level then return i end
     end
     return nil
+  end
+
+  -- ------------------------------------------------------------ live sync
+
+  -- The live slots array for a map/kind (src/live_sync.lua), as a
+  -- single-element list -- see live_sync.lua's header for why a list.
+  -- kind: "grass" | "water" | "superRod". mod.game is re-read every call,
+  -- the same reason world.owned() is (the save is replaced on NEW GAME).
+  function A.liveSlots(mapId, kind)
+    local data = mod and mod.game and mod.game.data
+    if not data then return nil end
+    local slots
+    if kind == "superRod" then
+      local group = data.field and data.field.superRod and data.field.superRod[mapId]
+      slots = (type(group) == "table" and #group > 0) and group or nil
+    else
+      local def = data.encounters and data.encounters[mapId]
+      local area = def and def[kind]
+      slots = (type(area) == "table" and type(area.slots) == "table") and area.slots or nil
+    end
+    return slots and { slots } or nil
   end
 
   -- ----------------------------------------------------------------- save
