@@ -3,6 +3,21 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.8.0] - 2026-10-05
+
+### Added
+
+- **Ruby, Sapphire and Emerald.** `manifest.json` already targeted
+  `games: ["gen3"]`, which the engine expands to every Gen 3 version, and
+  `src/adapters/gen3.lua` was already fully generic -- no FireRed-specific
+  code needed changing. Verified directly against real imported Ruby,
+  Sapphire and Emerald carts: `tests/rse_test.lua` confirms generated grass
+  and water tables, the generation cap, OFF, and that Hoenn's own
+  legendaries (Kyogre, Groudon, Rayquaza) are correctly recognized as
+  LEGENDARIES hosts on each game, the same as Kanto's on FireRed.
+  `tests/_helpers.lua`'s `H.gen3Data()` now takes a `game` argument (still
+  defaulting to `"firered"`).
+
 ## [0.7.1] - 2026-09-26
 
 ### Fixed

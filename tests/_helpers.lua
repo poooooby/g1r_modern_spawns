@@ -70,8 +70,11 @@ end
 -- (src/core/Game3.lua _exposeModData), from the imported cart under
 -- firered/data/generated/gba. The species tables live on the real
 -- src.core.game3.pokemon module, as in the game.
-function H.gen3Data()
-  local root = "firered/data/generated/gba/"
+-- game: "firered" (default, matching every existing call site), "leafgreen",
+-- "emerald", "ruby" or "sapphire" -- any imported <game>/ cart. All five
+-- share one game3 engine and schema, so nothing else here is game-specific.
+function H.gen3Data(game)
+  local root = (game or "firered") .. "/data/generated/gba/"
   local function load(path) return dofile(root .. path) end
   local Json = require("src.link.Json")
   local MapCatalog = require("src.import.gba.map_catalog")

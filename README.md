@@ -1,11 +1,11 @@
 # Modern Spawns
 
 Modern Spawns redistributes every wild encounter in Pokémon Red, Blue, Yellow,
-Gold, Silver, Crystal, FireRed and LeafGreen across Gen 1–9 species. Each map keeps the game's own
-encounter rate, slot levels and odds, and in Gold, Silver and Crystal its
+Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald across Gen 1–9 species. Each
+map keeps the game's own encounter rate, slot levels and odds, and in Gold, Silver and Crystal its
 morning/day/night lists too. Only the species change, and they're chosen
 dynamically rather than from hand-written per-map lists. It's for players who
-want a modern Pokédex's worth of wild Pokémon in Kanto and Johto, and for mod
+want a modern Pokédex's worth of wild Pokémon in Kanto, Johto and Hoenn, and for mod
 authors who want a spawn framework to build on.
 
 
@@ -17,9 +17,9 @@ authors who want a spawn framework to build on.
     with its **NATIONAL DEX** option **ON**. That option is what registers
     species #152–1025. With it off, Modern Spawns leaves the original tables
     alone and logs why.
-  - **FireRed / LeafGreen:** `national_dex_gen3`, which registers #387–1025 as
-    data only (no sprites; pair it with a sprite mod). If 1025Dex is installed
-    instead, its species are used.
+  - **FireRed / LeafGreen / Ruby / Sapphire / Emerald:** `national_dex_gen3`, which registers
+    #387–1025 as data only (no sprites; pair it with a sprite mod) on every Gen 3 game. On
+    FireRed/LeafGreen, if 1025Dex is installed instead, its species are used.
 
 ## Options
 
@@ -146,7 +146,7 @@ See [pokemon_spawn_generator/README.md](pokemon_spawn_generator/README.md).
 |---|---|---|
 | Red, Blue, Yellow | Grass and cave tables, surf tables, Super Rod groups | Old Rod, Good Rod |
 | Gold, Silver, Crystal | Grass and cave tables (all three times of day), surf tables, Good and Super Rod on maps that have wild tables | Old Rod, swarms, Bug Catching Contest, `randomwildmon` scripts, Headbutt, Rock Smash, roaming beasts |
-| FireRed, LeafGreen | Grass and cave tables, surf tables | Fishing, Rock Smash, static and scripted encounters (the engine gives mods no hook for them) |
+| FireRed, LeafGreen, Ruby, Sapphire, Emerald | Grass and cave tables, surf tables | Fishing, Rock Smash, static and scripted encounters (the engine gives mods no hook for them) |
 
 In Gold, Silver and Crystal, each species in a map's morning, day and night
 lists is replaced by one species across all three times. A night-only species
@@ -154,20 +154,29 @@ lists is replaced by one species across all three times. A night-only species
 Ghost or Dark type, so the day/night feel survives. Headbutt, Rock Smash and
 roamers can't be changed because the engine gives mods no hook for them.
 
-In FireRed and LeafGreen, the engine rolls from its own table no matter what
-a mod hands it. So Modern Spawns swaps the species right after the roll: each
+On every Gen 3 game, the engine rolls from its own table no matter what a mod
+hands it. So Modern Spawns swaps the species right after the roll: each
 slot the game rolls is mapped to its generated species, at the level the game
-rolled. FireRed has no map order, so maps are generated in order of their
-average wild level.
+rolled. Gen 3 has no map order, so maps are generated in order of their
+average wild level. One adapter and one `national_dex_gen3` dependency cover
+all five Gen 3 games: Hoenn's map ids, item lists and move-tutor sets differ
+from Kanto's, but nothing in either mod is tied to FireRed specifically — see
+`national_dex_gen3`'s own README and CLAUDE.md for exactly what differs per
+game (chiefly: Ruby/Sapphire never had move tutors at all).
 
-**Beside 1025Dex:** 1025Dex's own WILD GENS feature replaces wild Pokémon
-just before battle. While MODERN SPAWNS is ON, Modern Spawns marks the
-encounters it decided so WILD GENS leaves them alone (using WILD GENS' own
-opt-out). WILD GENS still handles fishing and Rock Smash, and everything when
-MODERN SPAWNS is OFF.
+**Beside 1025Dex (FireRed/LeafGreen only):** 1025Dex's own WILD GENS feature
+replaces wild Pokémon just before battle. While MODERN SPAWNS is ON, Modern
+Spawns marks the encounters it decided so WILD GENS leaves them alone (using
+WILD GENS' own opt-out). WILD GENS still handles fishing and Rock Smash, and
+everything when MODERN SPAWNS is OFF. 1025Dex doesn't cover Ruby/Sapphire/
+Emerald, so this doesn't apply there.
 
-Blue, Silver and LeafGreen use the same code paths as Red, Gold and FireRed. They aren't imported in the development checkout, so they're covered by the
-Red, Gold and FireRed tests.
+Blue, Silver, LeafGreen, Ruby and Sapphire use the same code paths as Red,
+Gold and FireRed/Emerald respectively. Blue, Silver and LeafGreen aren't
+imported in the development checkout, so they're covered by the Red, Gold
+and FireRed tests; Ruby and Sapphire *are* imported there, and
+`tests/rse_test.lua` runs against them (and Emerald) directly, alongside
+FireRed's own `gen3_test.lua`.
 
 ## Known limits
 
