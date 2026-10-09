@@ -19,7 +19,8 @@
       "games": [
         "gen1",
         "gen2"
-      ]
+      ],
+      "github": "sanjinpepic/gen1recomp-national-dex"
     },
     {
       "id": "national_dex_gen3",
@@ -31,9 +32,12 @@
   ],
   "optional_dependencies": [
     "wilds_of_kanto_gen3",
-    "1025dex"
+    "wilds_of_hoenn"
   ],
-  "conflicts": [],
+  "conflicts": [
+    "1025Dex",
+    "wildfollowers"
+  ],
   "options_schema": "options.lua",
   "description": "Redistributes every wild encounter table across Gen 1-9 species, dynamically, in Red, Blue, Yellow, Gold, Silver, Crystal, FireRed and LeafGreen: each map keeps the game's own rates, slot levels, odds and (in Gold/Silver/Crystal) day/night structure, and only the species are re-picked by level, terrain, habitat, type and rarity. Settings in OPTIONS > MODS > Modern Spawns: on/off, a generation cap, SEEDED / EVERY MAP / RANDOM rosters, rare legendaries, and a per-save seed. Published through mod.exports as a framework other mods can build on. Needs national_dex (NATIONAL DEX option ON) on Red to Crystal, or national_dex_gen3 on FireRed/LeafGreen.",
   "permissions": [
