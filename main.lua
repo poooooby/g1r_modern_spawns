@@ -18,7 +18,6 @@
 --   src/adapters/gen1.lua Red/Blue/Yellow data + hook shapes
 --   src/adapters/gen2.lua Gold/Silver/Crystal data + hook shapes
 --   src/adapters/gen3.lua every Gen 3 game's data + hook shapes
---   src/compat/dex1025.lua  keeps 1025Dex's WILD GENS off our encounters
 --   src/live_sync.lua     writes generated species into the live game data,
 --                         restorable, for mods that read it directly
 --   src/runtime.lua       seed, cache, encounter hooks, events, seed option sync
@@ -70,7 +69,6 @@ return function(mod)
     [2] = loadSibling(mod, "src/adapters/gen2.lua"),
     [3] = loadSibling(mod, "src/adapters/gen3.lua"),
   }
-  local installDex1025 = loadSibling(mod, "src/compat/dex1025.lua")
   if not (Config and Rng and MapContext and SpeciesPool and Generator
           and makeRuntime and makeLiveSync and makeApi and adapters[1]
           and adapters[2] and adapters[3]) then
@@ -95,9 +93,4 @@ return function(mod)
   Runtime.install()
 
   makeApi({ mod = mod, Runtime = Runtime, Config = Config })
-
-  -- FireRed with 1025Dex installed: keep its WILD GENS off our encounters
-  if installDex1025 then
-    pcall(installDex1025, { mod = mod, Runtime = Runtime })
-  end
 end

@@ -78,9 +78,9 @@ return function(deps)
   end
 
   -- The species mod for this game: national_dex (Red..Crystal),
-  -- national_dex_gen3 or 1025Dex (FireRed). Read for evolutionsOf.
+  -- national_dex_gen3 (Gen 3). Read for evolutionsOf.
   local function nationalDexExports()
-    for _, id in ipairs({ "national_dex", "national_dex_gen3", "1025dex" }) do
+    for _, id in ipairs({ "national_dex", "national_dex_gen3" }) do
       local ok, found = pcall(function() return mod:find(id) end)
       if ok and type(found) == "table" and type(found.exports) == "table"
         and type(found.exports.evolutionsOf) == "function" then
@@ -388,8 +388,16 @@ return function(deps)
   -- The same species drawFor would hand a per-pick consumer -- under
   -- RANDOM, one fresh draw, with the same caveat drawFor's own callers get:
   -- it reflects that one draw, not the full distribution.
+  local syncedOnce = {}
   local function liveSyncMap(mapId)
     if not (LiveSync and Runtime.isActive() and type(mapId) == "string") then return end
+    if not syncedOnce[mapId] then
+      syncedOnce[mapId] = true
+      local arrays = world.liveSlots(mapId, world.generation == 3 and "land" or "grass",
+        world.generation == 2 and "DAY" or nil)
+      log:info("live sync: first write for %s (live table found: %s)", mapId,
+        tostring(arrays ~= nil and #arrays or "no"))
+    end
     if world.generation == 2 then
       local grass = Runtime.drawFor(mapId, "grass")
       if grass and type(grass.slots) == "table" then
@@ -417,11 +425,28 @@ return function(deps)
   -- (Runtime.install) covers those as the player reaches them instead.
   local function liveSyncAll()
     if not (LiveSync and Runtime.isActive() and Config.spawnMode(mod) == "seeded") then
+      log:info("live sync: skipped (module %s, active %s, spawn mode %s) -- "
+        .. "only SEEDED syncs every map up front; other modes sync per map entered",
+        tostring(LiveSync ~= nil), tostring(Runtime.isActive()),
+        tostring(Config.spawnMode(mod)))
       return
     end
     local tables = Runtime.tables()
     if not tables then return end
-    for mapId in pairs(tables) do liveSyncMap(mapId) end
+    local maps = 0
+    for mapId in pairs(tables) do liveSyncMap(mapId) maps = maps + 1 end
+    -- One line per sync so a report of "the guide still shows vanilla" can be
+    -- told apart: did live sync run, and is the table it wrote the one the
+    -- engine itself rolls on (Gen 3 re-creates Encounters._tables on reload).
+    local engineTable
+    if world.generation == 3 then
+      local ok, Enc = pcall(require, "src.core.game3.encounters")
+      local data = mod.game and mod.game.data
+      engineTable = ok and type(Enc) == "table" and data
+        and (data.gen3Encounters == Enc._tables) or "unknown"
+    end
+    log:info("live sync: %d maps written (game.data is the engine's own table: %s)",
+      maps, tostring(engineTable))
   end
 
   -- -------------------------------------------------------- legendaries

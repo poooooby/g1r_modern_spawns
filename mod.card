@@ -21,9 +21,9 @@ return {
     known = {
       "Red/Blue/Yellow: the Old Rod and Good Rod keep the game's own catches",
       "Gold/Silver/Crystal: the Old Rod, swarms, the Bug Contest, Headbutt, Rock Smash and roamers keep the game's own Pokemon",
-      "FireRed/LeafGreen/Ruby/Sapphire/Emerald: fishing, Rock Smash and static encounters keep the game's own Pokemon; beside 1025Dex (FireRed/LeafGreen only), its WILD GENS keeps them",
+      "FireRed/LeafGreen/Ruby/Sapphire/Emerald: fishing, Rock Smash and static encounters keep the game's own Pokemon",
       "legendary and mythical species never enter the wild tables; with LEGENDARIES ON they appear only through the rare roll",
-      "alternate and regional forms are not spawned yet",
+      "on Gen 3 only the wild forms spawn (Galar/Hisui and the looks of Rotom, Flabebe, Alcremie and more); item and fusion forms never do; Gen 1 and 2 spawn no forms",
       "under RANDOM the live encounter data holds one snapshot per visit, not the full distribution; under EVERY MAP only visited maps are kept in sync",
     },
   },

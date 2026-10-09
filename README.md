@@ -19,7 +19,6 @@ authors who want a spawn framework to build on.
     alone and logs why.
   - **FireRed / LeafGreen / Ruby / Sapphire / Emerald:** `national_dex_gen3`, which registers
     #387–1025 as data only (no sprites; pair it with a sprite mod) on every Gen 3 game. On
-    FireRed/LeafGreen, if 1025Dex is installed instead, its species are used.
 
 ## Options
 
@@ -170,13 +169,6 @@ all five Gen 3 games: Hoenn's map ids, item lists and move-tutor sets differ
 from Kanto's, but nothing in either mod is tied to FireRed specifically — see
 `national_dex_gen3`'s own README and CLAUDE.md for exactly what differs per
 game (chiefly: Ruby/Sapphire never had move tutors at all).
-
-**Beside 1025Dex (FireRed/LeafGreen only):** 1025Dex's own WILD GENS feature
-replaces wild Pokémon just before battle. While MODERN SPAWNS is ON, Modern
-Spawns marks the encounters it decided so WILD GENS leaves them alone (using
-WILD GENS' own opt-out). WILD GENS still handles fishing and Rock Smash, and
-everything when MODERN SPAWNS is OFF. 1025Dex doesn't cover Ruby/Sapphire/
-Emerald, so this doesn't apply there.
 
 Blue, Silver, LeafGreen, Ruby and Sapphire use the same code paths as Red,
 Gold and FireRed/Emerald respectively. Blue, Silver and LeafGreen aren't

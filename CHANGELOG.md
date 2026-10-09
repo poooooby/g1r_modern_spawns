@@ -5,6 +5,11 @@ All notable changes to this mod are documented here, in
 
 ## [Unreleased]
 
+### Removed
+
+- **1025Dex compatibility** (`src/compat/dex1025.lua`, its test and stub): 1025Dex is a manifest
+  conflict now, so Modern Spawns no longer wraps the battle bridge for it or reads its exports.
+
 ### Added
 
 - **Alternate forms on Gen 3** (national_dex_gen3's, `src/species_pool.lua`):
