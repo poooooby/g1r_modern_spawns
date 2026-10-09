@@ -187,7 +187,10 @@ FireRed's own `gen3_test.lua`.
 
 ## Known limits
 
-- Alternate and regional forms aren't spawned.
+- On Gen 3, the forms that are wild in the real games spawn (Galarian and Hisuian forms, and
+  the colours, sizes and styles of Flabébé, Floette, Florges, Pumpkaboo, Gourgeist, Oricorio,
+  Rotom, Alcremie and a few more). Item forms (Origin, Therian, Crowned and so on) and megas
+  never do. Gen 1 and 2 spawn no forms.
 - On Gold, Silver and Crystal, the preview (`mod.world:effectiveEncounters`)
   shows the DAY list, because the preview has no time of day.
 - A table whose original slots all held one species (Route 19's surf table,

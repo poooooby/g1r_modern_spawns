@@ -3,6 +3,26 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Added
+
+- **Alternate forms on Gen 3** (national_dex_gen3's, `src/species_pool.lua`):
+  - the 11 regional forms that are wild in the real games (Galarian Darumaka,
+    Darmanitan, Yamask and Stunfisk; Hisuian Zorua, Zoroark, Lilligant, Braviary, Sliggoo,
+    Goodra and Avalugg) are candidates of their own, scored on the runtime estimate from
+    their own typing, in their base species' family;
+  - the 45 "looks" (Rotom's appliances, Oricorio's styles, Pumpkaboo/Gourgeist sizes,
+    Flabebe/Floette/Florges colours, Alcremie creams, east-sea Shellos/Gastrodon, Wormadam
+    cloaks, Midnight Lycanroc, white-striped Basculin, female Basculegion, the Antique / Artisan / Masterpiece tea set) are not
+    candidates: after a species is chosen as before, the generator swaps it for one of its looks
+    (or leaves it) with equal odds, so a species with many looks does not spawn more often
+    (`variants` on the candidate; an extra RNG draw only for species that have looks, so Gen 1
+    and 2 tables are unchanged).
+  - item and fusion forms (Origin, Therian, Crowned, ...), Floette Eternal, Dusk Lycanroc and
+    Ursaluna Bloodmoon are never spawned. Gen 1 and 2 still leave every form out.
+  - `candidates()` / `profileOf()` add `form`, `baseSpecies` and `variants`.
+
 ## [0.9.0] - 2026-10-07
 
 ### Added

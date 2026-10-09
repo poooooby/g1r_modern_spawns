@@ -15,11 +15,59 @@
 --     gets an ESTIMATED profile from its evolution stage, base stats and
 --     types instead of being left out.
 --
--- Alternate forms (records with `form`/`baseSpecies`) are left out in v1:
--- megas and gigantamax are not wild, and regional forms need per-region
--- rules this version does not have.
+-- Alternate forms (records with `form`/`baseSpecies`) are left out, with one
+-- exception: on Gen 3, the forms national_dex_gen3 registers that are wild
+-- Pokemon in the real games. Which ones is this file's own list (REGIONAL,
+-- LOOKS below); item and fusion forms (Origin, Therian, Crowned, ...), Floette
+-- Eternal, Dusk Lycanroc and Ursaluna Bloodmoon are not on it, and neither are
+-- megas or gigantamax.
+--   * a REGIONAL form (Galarian Darumaka, Hisuian Zorua, ...) has its own typing
+--     and habitat, so it is a candidate of its own, scored like any species on
+--     the runtime estimate from its own types; it shares its base's family;
+--   * a LOOK (Rotom's appliances, Oricorio's styles, Flabebe's colours, ...) is
+--     not a candidate. The base species is chosen exactly as before, and the
+--     generator then swaps it for one of its looks (or leaves it) with equal
+--     odds -- `variants` on the base's candidate -- so a species with many looks
+--     does not spawn more often than one with none.
 
 local SpeciesPool = {}
+
+local function set(list)
+  local out = {}
+  for _, id in ipairs(list) do out[id] = true end
+  return out
+end
+
+local REGIONAL = set({
+  "DARUMAKA_GALAR", "DARMANITAN_GALAR_STANDARD", "YAMASK_GALAR", "STUNFISK_GALAR",
+  "ZORUA_HISUI", "ZOROARK_HISUI", "LILLIGANT_HISUI", "BRAVIARY_HISUI", "SLIGGOO_HISUI",
+  "GOODRA_HISUI", "AVALUGG_HISUI",
+})
+
+local LOOKS = set({
+  "WORMADAM_SANDY", "WORMADAM_TRASH",
+  "ROTOM_HEAT", "ROTOM_WASH", "ROTOM_FROST", "ROTOM_FAN", "ROTOM_MOW",
+  "ORICORIO_PAU", "ORICORIO_POM_POM", "ORICORIO_SENSU",
+  "PUMPKABOO_SMALL", "PUMPKABOO_LARGE", "PUMPKABOO_SUPER",
+  "GOURGEIST_SMALL", "GOURGEIST_LARGE", "GOURGEIST_SUPER",
+  "LYCANROC_MIDNIGHT",
+  "SHELLOS_EAST", "GASTRODON_EAST",
+  "FLABEBE_YELLOW", "FLABEBE_ORANGE", "FLABEBE_BLUE", "FLABEBE_WHITE",
+  "FLOETTE_YELLOW", "FLOETTE_ORANGE", "FLOETTE_BLUE", "FLOETTE_WHITE",
+  "FLORGES_YELLOW", "FLORGES_ORANGE", "FLORGES_BLUE", "FLORGES_WHITE",
+  "ALCREMIE_RUBY_CREAM", "ALCREMIE_MATCHA_CREAM", "ALCREMIE_MINT_CREAM",
+  "ALCREMIE_LEMON_CREAM", "ALCREMIE_SALTED_CREAM", "ALCREMIE_RUBY_SWIRL",
+  "ALCREMIE_CARAMEL_SWIRL", "ALCREMIE_RAINBOW_SWIRL",
+  "BASCULIN_WHITE_STRIPED", "BASCULEGION_FEMALE",
+  "SINISTEA_ANTIQUE", "POLTEAGEIST_ANTIQUE", "POLTCHAGEIST_ARTISAN", "SINISTCHA_MASTERPIECE",
+})
+
+-- "regional" / "look" for a form record this mod spawns, nil for any other
+local function formKind(record)
+  if REGIONAL[record.id] then return "regional" end
+  if LOOKS[record.id] then return "look" end
+  return nil
+end
 
 local STAT_KEYS = { "hp", "attack", "defense", "speed" }
 
@@ -227,7 +275,7 @@ local function buildEvolutionIndex(records, byId, evolutionOf)
     return depth
   end
 
-  return { from = from, into = into, family = find, stage = stage }
+  return { from = from, into = into, family = find, stage = stage, union = union }
 end
 
 -- ------------------------------------------------------------------ build
@@ -237,14 +285,26 @@ end
 -- profiles             -> the loaded spawn_profiles.lua table, or nil
 -- generationOfDex      -> function(dex) -> 1..9
 function SpeciesPool.build(world, profiles, generationOfDex)
-  local records, byId = {}, {}
+  local records, byId, looks = {}, {}, {}
+  -- only Gen 3 has the forms this file knows (national_dex on Gen 1/2 registers forms
+  -- under some of the same ids; those stay out as before)
+  local gen3 = world.generation == 3
   for _, record in ipairs(world.species() or {}) do
     if type(record) == "table" and type(record.id) == "string"
       and type(record.dex) == "number" and record.dex >= 1
-      and record.form == nil and record.baseSpecies == nil
       and not byId[record.id] then
-      records[#records + 1] = record
-      byId[record.id] = record
+      if record.form == nil and record.baseSpecies == nil then
+        records[#records + 1] = record
+        byId[record.id] = record
+      elseif gen3 then
+        local kind = formKind(record)
+        if kind == "regional" then
+          records[#records + 1] = record
+          byId[record.id] = record
+        elseif kind == "look" then
+          looks[#looks + 1] = record
+        end
+      end
     end
   end
   table.sort(records, function(a, b)
@@ -253,6 +313,12 @@ function SpeciesPool.build(world, profiles, generationOfDex)
   end)
 
   local evo = buildEvolutionIndex(records, byId, world.evolutionOf)
+  -- a regional form belongs to its base species' family
+  for _, record in ipairs(records) do
+    if record.baseSpecies and byId[record.baseSpecies] then
+      evo.union(record.id, record.baseSpecies)
+    end
+  end
   local profileSpecies = profiles and profiles.species or {}
   local profileGen = profiles and profiles.generation or {}
   local profileSpecial = profiles and profiles.special or {}
@@ -275,6 +341,12 @@ function SpeciesPool.build(world, profiles, generationOfDex)
       special = profileSpecial[record.dex],
     }
     local p = profileSpecies[record.dex]
+    -- a form shares its base's dex number, and so its profile: the base's wild
+    -- data does not describe a Galarian Darumaka, the runtime estimate does
+    if record.form or record.baseSpecies then
+      p = nil
+      c.form, c.baseSpecies = record.form, record.baseSpecies
+    end
     -- A legendary's PokéAPI "wild" rows are one-offs (Let's Go's wandering
     -- birds read as common L3-56 route Pokemon), so special species always
     -- take the runtime estimate: high levels, habitats from their types.
@@ -297,6 +369,15 @@ function SpeciesPool.build(world, profiles, generationOfDex)
     end
     list[#list + 1] = c
     byIdOut[c.id] = c
+  end
+  -- looks hang off their base species' candidate, in a fixed order
+  table.sort(looks, function(a, b) return a.id < b.id end)
+  for _, record in ipairs(looks) do
+    local base = byIdOut[record.baseSpecies]
+    if base then
+      base.variants = base.variants or {}
+      base.variants[#base.variants + 1] = record.id
+    end
   end
   return { list = list, byId = byIdOut }
 end

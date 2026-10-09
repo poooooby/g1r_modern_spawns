@@ -273,12 +273,21 @@ local function redistribute(def, env, rng, weights)
   for _, role in ipairs(buildRoles(def.slots, weights, env.slotTimes)) do
     local pick = choose(role, env, rng)
     local species = pick and pick.c.id or role.species
+    -- a species with looks (Rotom's appliances, Flabebe's colours, ...) is shown as itself
+    -- or one of them, equally likely; a species without any draws nothing
+    local shown = species
+    if pick and pick.c.variants then
+      local options = { species }
+      for _, id in ipairs(pick.c.variants) do options[#options + 1] = id end
+      shown = options[rng:int(1, #options)]
+    end
     for _, i in ipairs(role.slots) do
-      out.slots[i].species = species
+      out.slots[i].species = shown
       explain[#explain + 1] = {
         slot = i,
         level = out.slots[i].level,
-        species = species,
+        species = shown,
+        variantOf = shown ~= species and species or nil,
         replaced = role.species,
         score = pick and pick.score or nil,
         tier = pick and pick.tier or nil,

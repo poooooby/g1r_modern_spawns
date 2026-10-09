@@ -40,6 +40,7 @@ local function describe(c)
     rarity = c.rarity, habitats = setToList(c.habitats),
     terrains = setToList(c.terrains), special = c.special,
     profileSource = c.source,
+    form = c.form, baseSpecies = c.baseSpecies, variants = deepCopy(c.variants),
   }
 end
 

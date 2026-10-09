@@ -25,3 +25,4 @@ tests/rse_test.lua
 tests/dex1025_compat_test.lua
 tests/fixtures/gen3/1025dex/main.lua
 tests/fixtures/gen3/1025dex/manifest.json
+tests/forms_test.lua
