@@ -10,6 +10,11 @@ All notable changes to this mod are documented here, in
 - **1025Dex compatibility** (`src/compat/dex1025.lua`, its test and stub): 1025Dex is a manifest
   conflict now, so Modern Spawns no longer wraps the battle bridge for it or reads its exports.
 
+### Changed
+
+- Live sync logs one line per sync (how many maps it wrote, and whether the table is the engine's
+  own), to tell a stale guide from a sync that did not run.
+
 ### Added
 
 - **Alternate forms on Gen 3** (national_dex_gen3's, `src/species_pool.lua`):
