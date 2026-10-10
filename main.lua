@@ -62,6 +62,7 @@ return function(mod)
   local makeRuntime = loadSibling(mod, "src/runtime.lua")
   local makeLiveSync = loadSibling(mod, "src/live_sync.lua")
   local makeApi = loadSibling(mod, "src/api.lua")
+  local makeDexArea = loadSibling(mod, "src/dex_area.lua")
   -- one adapter per engine: Red/Blue/Yellow, Gold/Silver/Crystal,
   -- FireRed/LeafGreen
   local adapters = {
@@ -93,4 +94,6 @@ return function(mod)
   Runtime.install()
 
   makeApi({ mod = mod, Runtime = Runtime, Config = Config })
+  -- Gen 3's Pokedex AREA page reads the generated tables (src/dex_area.lua)
+  if makeDexArea then makeDexArea({ mod = mod, Runtime = Runtime })() end
 end

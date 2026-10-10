@@ -3,6 +3,88 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.11.0] - 2026-10-09
+
+### Added
+
+- **SPAWN MODE labels:** SEEDED is now shown as **LIMITED**. The stored
+  value is unchanged, so existing saves and settings keep their mode.
+- **Pokédex AREA page (FireRed, LeafGreen, Ruby, Sapphire, Emerald)** now
+  shows where this mod puts each species: every map's generated table under
+  LIMITED, every pool under COMPLETE, the maps generated this session under
+  EVERY MAP, and nothing under RANDOM (no fixed tables). The cart's own
+  fishing and Rock Smash spots still show. Before this the page always showed
+  the cart's original locations.
+- **Undiscovered Pokédex entries** (Gen 3, with `national_dex_gen3` 0.7.0+): a species
+  you haven't seen can be opened by its number when this mod puts it somewhere, with
+  its name, picture and cry hidden, so its AREA page shows where to find it. Not under
+  RANDOM or outside GENERATIONS. New export `locate(speciesId)`.
+- **AREA page completeness.** Emerald hides "landmark" places (Sky Pillar, Artisan Cave,
+  Seafloor Cavern, Altering Cave, Mirage Tower, Desert Underpass) until discovered, and about a
+  sixth of placed species lived only there: they now show. On FireRed/LeafGreen, a Sevii map with
+  no marker of its own (Six Island's Green Path) uses its island's, and with `national_dex_gen3`
+  0.7.0 the page draws the Sevii Islands (over a third of placed species live only there). On the
+  seed that showed the gap, every placed species now has a location on all three games.
+- **LEGENDARIES ON** (every mode but RANDOM) marks each hosted legendary and
+  mythical as seen in the Gen 3 Pokédex, like a roaming legendary after the
+  news report, so its AREA page shows its home maps before it is met. Seen
+  flags are permanent, as in the cart.
+
+- **COMPLETE spawn mode.** Every species GENERATIONS allows is catchable
+  somewhere. Each walking/surfing slot keeps its LIMITED species and also holds
+  a small pool (average under 3, at most 6); the game rolls the slot with its
+  own odds and level, then the species is drawn from the pool. Leftover
+  species are placed where they fit best, hardest to place first. The seed
+  decides where each species lives. With LEGENDARIES ON every legendary and
+  mythical under the cap gets a home. Built once per save/setting change:
+  0.40 s Emerald, 0.57 s FireRed, 0.38 s Red (LIMITED: 0.26 / 0.39 s).
+  New export `poolFor(mapId, terrain)`; `spawnMode()` can answer `"complete"`.
+
+### Removed
+
+- **Gold, Silver and Crystal are marked incompatible** (`games` no longer lists
+  `gen2`). gen1recomp's Gen 2 species schema gained a strict `dexEntry`
+  (commit 722c2fc4), and `national_dex` still sends it Gen 1 fields, so every
+  species past #251 is rejected and the mod could only ever offer Gen 1-2
+  species there. The Gen 2 adapter and its tests stay in the repo; restore
+  `gen2` in `manifest.json` (and the `national_dex` dependency's `games`) once
+  `national_dex` registers species past #251 on Gen 2 again.
+
+### Changed
+
+- **Far more variety between seeds, modes and generations.** Early routes kept
+  producing the same few species whatever the seed: Emerald's Route 101 gave
+  8 distinct species over 200 seeds (Scatterbug in 16% of slots, Gen 5 and
+  Gen 7 never), and Crystal's Route 29 gave about 6 (Charmander and Sentret,
+  every time, in every mode). Three causes, three fixes:
+  - **Plausible basics.** Most modern species have no observed wild level as
+    low as an early route's (they are met later by game design, not because
+    they are strong), so a level 2-3 slot had only ~27 candidates, 15 of them
+    Gen 9. A first-stage species with base stats up to 340 now counts as
+    available from level 2 (`SpawnConfig.plausible_basic`), with a small score
+    penalty so species with observed data still win a close call. Only the
+    lower level bound moves; evolution-level and generation-cap rules are
+    unchanged.
+  - **Wider, softer draw.** A role was drawn from its best 8/12/16 scorers
+    (LIMITED/EVERY MAP/RANDOM) weighted by score gap. It is now a softmax over
+    the scorers within a score window of the best (top 24/32/48), so nothing
+    clearly worse than the best fit is drawn but many more species get real
+    odds. No table gets larger and the scoring cost is unchanged.
+  - **Gen 9 is no longer taxed for being estimated.** PokéAPI has no Gen 9
+    encounters, so every Gen 9 species is on an estimated profile and took the
+    -12 `estimated_profile` penalty, which kept the whole generation out of
+    LIMITED (0% of slots). A generation with under 20% observed data is
+    exempted.
+  Measured, same maps and method: Emerald Route 101 LIMITED 8 -> 57 distinct
+  species (top species 18% -> 6%, Gen 9 0% -> 14%), RANDOM 22 -> 81; Crystal
+  Route 29 LIMITED 14 -> 50; Red Route 1 LIMITED 9 -> 25. Build time unchanged.
+- **Existing saves get different rosters once.** The seed is unchanged, but the
+  selection changed, so every game's LIMITED tables differ from 0.10.0's.
+  `generator_test.lua`'s pinned fixture was re-pinned (ROUTE_B).
+- Gold, Silver and Crystal are still limited to Gen 1-2 species: `national_dex`
+  cannot register anything past #251 there. This makes that pool much more
+  varied; it cannot add later generations.
+
 ## [0.10.0] - 2026-10-08
 
 ### Removed

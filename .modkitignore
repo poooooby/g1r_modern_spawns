@@ -23,3 +23,7 @@ tests/fixtures/empty/national_dex/manifest.json
 tests/gen3_test.lua
 tests/rse_test.lua
 tests/forms_test.lua
+tests/variety_test.lua
+tests/variety_gen2_test.lua
+tests/complete_test.lua
+tests/frlg_area_test.lua

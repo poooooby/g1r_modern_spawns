@@ -28,6 +28,9 @@
 --   random  the engine rolls the game's own table; encounter.species then
 --           swaps the rolled slot's species for a fresh draw (nonce = the
 --           session's encounter count)
+--   complete  like seeded, but every role also holds a pool (every species
+--           under the cap is in one); encounter.species draws the rolled
+--           slot's species from its pool
 
 return function(deps)
   local mod, Config, Generator, SpeciesPool, MapContext, Rng =
@@ -46,6 +49,7 @@ return function(deps)
   local visitTables = {}                           -- map mode: [mapId] = { key, result }
   local memory = Generator.newMemory()             -- map/random: session history
   local encounterCount = 0                         -- random: draws this session
+  local speciesIndex                               -- dex area: species -> maps
   local warned = {}
 
   local function warnOnce(key, fmt, ...)
@@ -169,6 +173,7 @@ return function(deps)
     visitTables = {}
     memory = Generator.newMemory()
     homesCache.key, homesCache.homes = nil, nil
+    speciesIndex = nil
   end
 
   -- The Mod Manager's SEED row shows the `seed` OPTION, which is global,
@@ -253,13 +258,16 @@ return function(deps)
   end
 
   -- SEEDED: every map, generated once per (seed, cap, data version).
+  -- COMPLETE DEX: the same, plus every role's pool (Generator.buildAtlas).
   function Runtime.tables()
     local gen = Runtime.effectiveGeneration()
     if not gen then return nil end
     local seed = Runtime.seed()
-    local key = table.concat({ seed, gen, DATA_VERSION }, ":")
+    local complete = Config.spawnMode(mod) == "complete"
+    local key = table.concat({ seed, gen, DATA_VERSION, complete and "complete" or "seeded" }, ":")
     if cache.key == key then return cache.tables end
-    local ok, result = pcall(Generator.buildAll, context(gen, seed))
+    local build = complete and Generator.buildAtlas or Generator.buildAll
+    local ok, result = pcall(build, context(gen, seed))
     if not ok then
       warnOnce("generate", "table generation failed (%s) -- wild tables stay "
         .. "as the game has them", tostring(result))
@@ -284,6 +292,7 @@ return function(deps)
       return nil
     end
     visitTables[mapId] = { key = key, result = result }
+    speciesIndex = nil
     announce(gen, seed)
     return result
   end
@@ -368,10 +377,75 @@ return function(deps)
     return fresh and fresh.slots[index] and fresh.slots[index].species or nil
   end
 
+  -- COMPLETE DEX: the pool behind each slot of a generated table, or nil.
+  local function poolsOf(mapId, kind)
+    if Config.spawnMode(mod) ~= "complete" then return nil end
+    local entry = entryFor(mapId)
+    return entry and entry.pools and entry.pools[kind] or nil
+  end
+
+  function Runtime.poolFor(mapId, terrain)
+    return poolsOf(mapId, kindOf(terrain))
+  end
+
+  -- COMPLETE DEX: one species out of a slot's pool, each equally likely; a
+  -- species with looks (Rotom's appliances, ...) shows as itself or one of
+  -- them. Only registered species are ever answered.
+  local completeCount = 0
+  local function poolPick(mapId, kind, index, list)
+    completeCount = completeCount + 1
+    local rng = Rng.new(Rng.hash(Runtime.seed(), "complete", mapId, kind, index, completeCount))
+    local id = list[rng:int(1, #list)]
+    local c = pool and pool.byId[id]
+    if c and c.variants then
+      local options = { id }
+      for _, v in ipairs(c.variants) do options[#options + 1] = v end
+      id = options[rng:int(1, #options)]
+    end
+    return world.hasSpecies(id) and id or nil
+  end
+
+  -- COMPLETE DEX: the pool species for the slot the engine just rolled.
+  -- Gen 3 rolls the game's own table (the adapter maps it back to a slot);
+  -- Gen 1 rolls the primary table this mod handed it.
+  local function completeSpecies(mapId, kind, ctx, rolled)
+    local pools = poolsOf(mapId, kind)
+    if not pools then return nil end
+    local index
+    if world.substituteAfterRoll then
+      index = world.slotIndex(mapId, kind, ctx, rolled)
+    else
+      local def = generated(mapId, kind)
+      for i, slot in ipairs(def and def.slots or {}) do
+        if slot.species == rolled.species and slot.level == rolled.level then
+          index = i
+          break
+        end
+      end
+    end
+    local list = index and pools[index]
+    return list and #list > 0 and poolPick(mapId, kind, index, list) or nil
+  end
+
   -- For consumers that pick species themselves, one pick per call (visible
   -- overworld spawns): the fixed table under SEEDED / EVERY MAP, a fresh
-  -- one-off draw under RANDOM. Same shape as tableFor.
+  -- one-off draw under RANDOM, and under COMPLETE DEX the primary table with
+  -- each slot drawn from its pool. Same shape as tableFor.
   function Runtime.drawFor(mapId, terrain)
+    if Config.spawnMode(mod) == "complete" then
+      local kind = kindOf(terrain)
+      local def = generated(mapId, kind)
+      local pools = poolsOf(mapId, kind)
+      if not (def and pools) then return Runtime.tableFor(mapId, terrain) end
+      local copy = { rate = def.rate, buckets = def.buckets, slots = {} }
+      for i, slot in ipairs(def.slots) do
+        local s = { level = slot.level, maxLevel = slot.maxLevel, species = slot.species }
+        local list = pools[i]
+        if list and #list > 0 then s.species = poolPick(mapId, kind, i, list) or s.species end
+        copy.slots[i] = s
+      end
+      return world.assemble(mapId, kind, copy)
+    end
     if Config.spawnMode(mod) ~= "random" then return Runtime.tableFor(mapId, terrain) end
     local kind = kindOf(terrain)
     local draw = type(mapId) == "string" and randomDraw(mapId) or nil
@@ -398,22 +472,24 @@ return function(deps)
       log:info("live sync: first write for %s (live table found: %s)", mapId,
         tostring(arrays ~= nil and #arrays or "no"))
     end
+    -- COMPLETE DEX writes each slot's primary species (one per slot)
+    local drawFor = Config.spawnMode(mod) == "complete" and Runtime.tableFor or Runtime.drawFor
     if world.generation == 2 then
-      local grass = Runtime.drawFor(mapId, "grass")
+      local grass = drawFor(mapId, "grass")
       if grass and type(grass.slots) == "table" then
         for _, time in ipairs({ "MORN", "DAY", "NITE" }) do
           local list = grass.slots[time]
           if list then LiveSync.apply(mapId, "grass", time, list) end
         end
       end
-      local water = Runtime.drawFor(mapId, "water")
+      local water = drawFor(mapId, "water")
       if water and water.slots then LiveSync.apply(mapId, "water", nil, water.slots) end
       return
     end
     local terrains = world.generation == 3 and { "land", "water" }
       or { "grass", "water", "superRod" }
     for _, terrain in ipairs(terrains) do
-      local t = Runtime.drawFor(mapId, terrain)
+      local t = drawFor(mapId, terrain)
       -- Gen 1's Super Rod assembles to a bare list, not { slots = ... }.
       local slots = t and (t.slots or t)
       if type(slots) == "table" then LiveSync.apply(mapId, terrain, nil, slots) end
@@ -424,7 +500,8 @@ return function(deps)
   -- and RANDOM have nothing fixed to sync ahead of a visit; map.entered
   -- (Runtime.install) covers those as the player reaches them instead.
   local function liveSyncAll()
-    if not (LiveSync and Runtime.isActive() and Config.spawnMode(mod) == "seeded") then
+    local mode = Config.spawnMode(mod)
+    if not (LiveSync and Runtime.isActive() and (mode == "seeded" or mode == "complete")) then
       log:info("live sync: skipped (module %s, active %s, spawn mode %s) -- "
         .. "only SEEDED syncs every map up front; other modes sync per map entered",
         tostring(LiveSync ~= nil), tostring(Runtime.isActive()),
@@ -456,9 +533,13 @@ return function(deps)
   function Runtime.legendaryHomes()
     local gen = Runtime.effectiveGeneration()
     if not gen then return nil end
-    local key = gen .. ":" .. DATA_VERSION
+    -- COMPLETE DEX guarantees every legendary/mythical a home
+    local complete = Config.spawnMode(mod) == "complete"
+    local key = gen .. ":" .. DATA_VERSION .. (complete and ":complete" or "")
     if homesCache.key == key then return homesCache.homes end
-    local ok, homes = pcall(Generator.legendaryHomes, context(gen, Runtime.seed()))
+    local ctx = context(gen, Runtime.seed())
+    ctx.guaranteeHomes = complete
+    local ok, homes = pcall(Generator.legendaryHomes, ctx)
     if not ok then
       warnOnce("legendary", "legendary homes failed to build (%s) -- no "
         .. "legendary encounters this session", tostring(homes))
@@ -467,6 +548,121 @@ return function(deps)
     homesCache.key, homesCache.homes = key, homes
     return homes
   end
+
+  -- -------------------------------------------------------- dex area
+
+  -- The species registered at a numeric species slot (Gen 3 hands its
+  -- Pokedex pages a slot, not an id).
+  local slotIds
+  function Runtime.speciesOfSlot(slot)
+    slot = tonumber(slot)
+    if not slot then return nil end
+    if not slotIds then
+      slotIds = {}
+      for _, id in ipairs(registryIds("pokemon")) do
+        local rec = registryGet("pokemon", id)
+        local index = type(rec) == "table" and tonumber(rec.index)
+        if index then slotIds[index] = id end
+      end
+    end
+    return slotIds[slot]
+  end
+
+  -- Where a species can be met under the current settings, for the
+  -- Pokedex's AREA page: { [mapId] = { [kind] = true } }. nil while inactive
+  -- (the page keeps the cart's own answer); empty under RANDOM, which has no
+  -- fixed tables. SEEDED (LIMITED) and COMPLETE read every map's tables and
+  -- pools; EVERY MAP only the maps generated this session (a map is drawn
+  -- again on each visit). With LEGENDARIES ON, a legendary's home maps.
+  -- Built once and reused: the Pokedex asks about every row of a 1025-row
+  -- list (src/dex_area.lua's peek), so each answer must be a lookup. Dropped
+  -- with the tables (Runtime.invalidate) and whenever EVERY MAP draws a map.
+  local function buildSpeciesIndex()
+    local index = {}
+    local function mark(id, mapId, kind)
+      local maps = index[id] or {}
+      index[id] = maps
+      maps[mapId] = maps[mapId] or {}
+      maps[mapId][kind] = true
+    end
+    local entries = {}
+    if Config.spawnMode(mod) == "map" then
+      for mapId, held in pairs(visitTables) do entries[mapId] = held.result end
+    else
+      entries = Runtime.tables() or {}
+    end
+    for mapId, entry in pairs(entries) do
+      for kind, def in pairs(entry) do
+        if kind ~= "explain" and kind ~= "pools" and type(def) == "table" then
+          for _, slot in ipairs(def.slots or {}) do mark(slot.species, mapId, kind) end
+        end
+      end
+      for kind, pools in pairs(entry.pools or {}) do
+        for _, list in pairs(pools) do
+          for _, sid in ipairs(list) do mark(sid, mapId, kind) end
+        end
+      end
+    end
+    if Config.legendaries(mod) then
+      for mapId, byKind in pairs(Runtime.legendaryHomes() or {}) do
+        for kind, hosts in pairs(byKind) do
+          for _, host in ipairs(hosts) do mark(host.id, mapId, kind) end
+        end
+      end
+    end
+    -- a species with looks matches its looks, and a look its base
+    local baseOf = {}
+    for _, c in ipairs((Runtime.pool() or {}).list or {}) do
+      for _, v in ipairs(c.variants or {}) do baseOf[v] = c.id end
+    end
+    return { maps = index, baseOf = baseOf }
+  end
+
+  function Runtime.mapsWithSpecies(id)
+    if not Runtime.isActive() or type(id) ~= "string" then return nil end
+    local out = {}
+    if Config.spawnMode(mod) == "random" then return out end
+    speciesIndex = speciesIndex or buildSpeciesIndex()
+    local match = { id }
+    local p = Runtime.pool()
+    local c = p and p.byId[id]
+    for _, v in ipairs(c and c.variants or {}) do match[#match + 1] = v end
+    if speciesIndex.baseOf[id] then match[#match + 1] = speciesIndex.baseOf[id] end
+    for _, one in ipairs(match) do
+      for mapId, kinds in pairs(speciesIndex.maps[one] or {}) do
+        out[mapId] = out[mapId] or {}
+        for kind in pairs(kinds) do out[mapId][kind] = true end
+      end
+    end
+    return out
+  end
+
+  -- LEGENDARIES ON (every mode but RANDOM): like a roaming legendary after
+  -- the news report, every hosted legendary/mythical is marked SEEN in the
+  -- Pokedex, so its AREA page shows where to look before it is ever met.
+  -- Gen 3 only (the dex the AREA page reads). A seen flag is permanent, the
+  -- same as the cart's own; turning LEGENDARIES off later does not unsee.
+  local function markLegendariesSeen()
+    if world.generation ~= 3 or not Runtime.isActive() or not Config.legendaries(mod)
+      or Config.spawnMode(mod) == "random" then
+      return
+    end
+    local dex = mod.game and mod.game.session and mod.game.session.dex
+    local okDex, Dex = pcall(require, "src.core.game3.dex")
+    if not (dex and okDex and type(Dex) == "table" and type(Dex.setSeen) == "function") then
+      return
+    end
+    for _, byKind in pairs(Runtime.legendaryHomes() or {}) do
+      for _, hosts in pairs(byKind) do
+        for _, host in ipairs(hosts) do
+          local rec = registryGet("pokemon", host.id)
+          local slot = type(rec) == "table" and tonumber(rec.index)
+          if slot then pcall(Dex.setSeen, dex, slot) end
+        end
+      end
+    end
+  end
+  Runtime.markLegendariesSeen = markLegendariesSeen
 
   -- An integer source for the rare roll: the engine's own encounter RNG when
   -- the hook got one (love.math.random), else a seeded fallback.
@@ -572,6 +768,13 @@ return function(deps)
         end
         return decided(ctx, out)
       end
+      if Config.spawnMode(mod) == "complete" then
+        local ok, species = pcall(completeSpecies, ctx.mapId, kind, ctx, out)
+        if ok and species then
+          local swapped = withSpecies(out, species)
+          if swapped then return decided(ctx, swapped) end
+        end
+      end
       -- Engines whose roll ignores the table handed to `next` (Gen 3): map
       -- the slot the engine rolled to its generated species now.
       if world.substituteAfterRoll then
@@ -654,6 +857,7 @@ return function(deps)
       pendingSeed = nil
       syncSeedOption(Runtime.seed())
       liveSyncAll()
+      markLegendariesSeen()
     end)
     mod.events:on("save.loaded", function()
       Runtime.invalidate()
@@ -661,12 +865,14 @@ return function(deps)
       pendingSeed = nil
       syncSeedOption(Runtime.seed())
       liveSyncAll()
+      markLegendariesSeen()
     end)
     mod.events:on("checkpoint.restored", function()
       Runtime.invalidate()
       if LiveSync then LiveSync.restore() end
       syncSeedOption(Runtime.seed())
       liveSyncAll()
+      markLegendariesSeen()
     end)
 
     mod.events:on("mod.options_changed", function(ev)
@@ -687,6 +893,7 @@ return function(deps)
         pcall(function() Config.write(mod, mod.game, "reroll_seed", "idle") end)
       end
       liveSyncAll()
+      markLegendariesSeen()
     end)
   end
 

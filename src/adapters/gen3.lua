@@ -229,6 +229,13 @@ return function(reg, MapContext, mod)
     return #out > 0 and out or { mapId }
   end
 
+  -- The map's mapGroup, mapNum (the Pokedex AREA page keys maps by them).
+  function A.mapGroupNum(mapId)
+    local rec = maps()[mapId]
+    if not rec then return nil end
+    return tonumber(rec.mapGroup), tonumber(rec.mapNum)
+  end
+
   -- kind: "land" | "water". See gen1.lua's liveSlots and live_sync.lua's
   -- header for why this returns one array per alias, not one array.
   function A.liveSlots(mapId, kind)

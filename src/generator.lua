@@ -97,9 +97,23 @@ local function terrainOk(c, terrain, relaxed)
   return t.grass or t.cave or (relaxed and not (t.water or t.fish)) or false
 end
 
-local function levelDistance(c, role)
-  if c.lo <= role.maxLevel and c.hi >= role.minLevel then return 0 end
-  if c.lo > role.maxLevel then return c.lo - role.maxLevel end
+-- The lowest level a candidate counts as appearing at. A first-stage,
+-- low-base-stat species ("plausible basic", SpawnConfig.plausible_basic) is
+-- treated as available from `floor_level` even when its observed wild levels
+-- start later: most modern species are only met at higher levels by game
+-- design, so the observed data alone leaves an early slot with a couple of
+-- dozen candidates. Only the LOWER bound moves; `hi` is never raised.
+local function effectiveLo(c, rule)
+  if rule and c.basic and c.bst <= rule.max_bst and c.lo > rule.floor_level then
+    return rule.floor_level
+  end
+  return c.lo
+end
+
+local function levelDistance(c, role, rule)
+  local lo = effectiveLo(c, rule)
+  if lo <= role.maxLevel and c.hi >= role.minLevel then return 0 end
+  if lo > role.maxLevel then return lo - role.maxLevel end
   return role.minLevel - c.hi
 end
 
@@ -115,7 +129,7 @@ local function eligible(c, env, role, tier)
   if tier >= 3 then return true end
   if not terrainOk(c, env.terrain, tier >= 2) then return false end
   if tier >= 2 then return true end
-  return levelDistance(c, role) <= env.config.strict_level_distance
+  return levelDistance(c, role, env.config.plausible_basic) <= env.config.strict_level_distance
     and not underleveled(c, role, env.config.evolve_tolerance)
 end
 
@@ -137,11 +151,17 @@ local function score(c, role, env, labelled)
     else penalties[#penalties + 1] = label end
   end
 
-  local dist = levelDistance(c, role)
+  local rule = env.config.plausible_basic
+  local dist = levelDistance(c, role, rule)
   if dist == 0 then
     add(W.level_overlap, "level_overlap")
   else
     add(dist * W.level_distance, "level_distance")
+  end
+  -- fitting only through the basic's lowered floor: observed data wins a
+  -- close call, the same way an estimated profile does
+  if rule and levelDistance(c, role) > dist then
+    add(rule.penalty, "plausible_basic")
   end
   local mid = (role.minLevel + role.maxLevel) / 2
   add(math.abs(c.typ - mid) * W.typical_distance, "typical_level_gap")
@@ -191,7 +211,9 @@ local function score(c, role, env, labelled)
     end
   end
 
-  if c.source == "estimate" then add(W.estimated_profile, "estimated_profile") end
+  if c.source == "estimate" and not c.estimateOnlyGen then
+    add(W.estimated_profile, "estimated_profile")
+  end
 
   local gap = math.abs((RARITY_RANK[c.rarity] or 2) - (RARITY_RANK[role.rarity] or 2))
   if gap == 0 then add(W.rarity_match, "rarity_match")
@@ -243,11 +265,25 @@ local function choose(role, env, rng)
       end)
       local selection = env.selection or {}
       local top = math.min(#scored, selection.top or env.config.top_candidates)
-      local power = selection.power or 2
-      local floor = scored[top].score
       local weights = {}
-      for i = 1, top do
-        weights[i] = (scored[i].score - floor + 1) ^ power
+      if selection.temperature then
+        -- Softmax over the scorers within `window` points of the best: a
+        -- long, flat-enough shortlist so seeds and draws differ, but nothing
+        -- more than `window` worse than the best fit is ever drawn.
+        local best = scored[1].score
+        local window = selection.window or math.huge
+        for i = 1, top do
+          if best - scored[i].score > window then break end
+          weights[i] = math.exp((scored[i].score - best) / selection.temperature)
+        end
+      else
+        -- the original rule (SpawnConfig.selection without a temperature):
+        -- weighted by score above the worst of the top N, to a power
+        local power = selection.power or 2
+        local floor = scored[top].score
+        for i = 1, top do
+          weights[i] = (scored[i].score - floor + 1) ^ power
+        end
       end
       local pick = scored[rng:weighted(weights) or 1]
       pick.tier = tier
@@ -295,6 +331,12 @@ local function redistribute(def, env, rng, weights)
         reasons = pick and copyList(pick.reasons) or { "kept_vanilla" },
         penalties = pick and copyList(pick.penalties) or {},
       }
+    end
+    -- COMPLETE DEX (buildAtlas) collects every walking/surfing role as a seat
+    -- whose pool the coverage pass extends; the primary is the role's pick
+    if env.seats and env.terrain ~= "fish" then
+      env.seats[#env.seats + 1] = { mapId = env.mapId, kind = env.kind, role = role,
+                                    env = env, base = species, pool = { shown } }
     end
     local c = pick and pick.c or env.pool.byId[species]
     env.state.species[species] = true
@@ -375,6 +417,7 @@ function Generator.buildMap(ctx, mapId, memory, nonce, remember)
       areaSpecies = areaSpecies[area],
       selection = ctx.selection,
       slotTimes = entry.times, timeOf = world.timeOf,
+      mapId = mapId, kind = kind, seats = ctx.seats,
     }
     -- SEEDED passes no nonce and must hash exactly as 0.1.0 did, so a save's
     -- rosters survive upgrades; an extra field would reshuffle every draw
@@ -408,6 +451,104 @@ function Generator.buildAll(ctx)
   return out
 end
 
+-- ------------------------------------------------------------ complete dex
+
+-- COMPLETE DEX: every species under the cap is catchable somewhere. There are
+-- more species than slots on every game (Emerald: ~940 at GEN 1-9 against
+-- 1319 walking/surfing slots in 454 roles), so a role carries a POOL: the
+-- engine still rolls the slot with the game's own odds, and the species is
+-- drawn from that slot's pool afterwards (src/runtime.lua).
+--
+-- Pass 1 is buildAll exactly (same seed key per map), which gives every role
+-- its primary species. Pass 2 places every species still missing: hardest
+-- first (fewest strict-tier roles), each scored against every role through
+-- the usual tiers, minus `pool_penalty` per species a role already holds so
+-- extras spread out, then a seeded softmax draw among the best. A role holds
+-- at most `max_pool` species while any other role has room, so late-game
+-- evolutions overflow to the next-best area instead of all landing in the
+-- last high-level cave. Tier 3 takes any role, so coverage is total.
+--
+-- Returns buildAll's shape plus result.pools[kind][slot] = { species ids },
+-- the primary first; slots of one role share one list.
+function Generator.buildAtlas(ctx)
+  local seats = {}
+  local actx = setmetatable({ seats = seats }, { __index = ctx })
+  local memory = Generator.newMemory()
+  local out = {}
+  for _, mapId in ipairs(ctx.world.mapOrder()) do
+    local result = Generator.buildMap(actx, mapId, memory)
+    if result then
+      result.pools = {}
+      out[mapId] = result
+    end
+  end
+
+  local placed = {}
+  for _, seat in ipairs(seats) do
+    placed[seat.pool[1]] = true
+    placed[seat.base] = true
+  end
+
+  local missing = {}
+  for _, c in ipairs(ctx.pool.list) do
+    if not c.special and c.gen <= ctx.maxGen and not placed[c.id] then
+      local strict = 0
+      for _, seat in ipairs(seats) do
+        if eligible(c, seat.env, seat.role, 1) then strict = strict + 1 end
+      end
+      missing[#missing + 1] = { c = c, strict = strict }
+    end
+  end
+  table.sort(missing, function(a, b)
+    if a.strict ~= b.strict then return a.strict < b.strict end
+    return a.c.id < b.c.id
+  end)
+
+  local rules = ctx.config.complete
+  for _, m in ipairs(missing) do
+    local c, scored = m.c, {}
+    -- a full role (`max_pool`) is skipped while any tier has room elsewhere;
+    -- only when every role is full does the last pass ignore the cap
+    for pass = 1, 4 do
+      local tier, capped = math.min(pass, 3), pass <= 3
+      for i, seat in ipairs(seats) do
+        if eligible(c, seat.env, seat.role, tier)
+          and (not capped or #seat.pool < rules.max_pool) then
+          scored[#scored + 1] = { seat = seat, order = i,
+            score = score(c, seat.role, seat.env, false)
+              + (#seat.pool - 1) * rules.pool_penalty }
+        end
+      end
+      if #scored > 0 then break end
+    end
+    if #scored > 0 then
+      table.sort(scored, function(a, b)
+        if a.score ~= b.score then return a.score > b.score end
+        return a.order < b.order
+      end)
+      local best, weights = scored[1].score, {}
+      for i = 1, math.min(#scored, rules.top) do
+        if best - scored[i].score > rules.window then break end
+        weights[i] = math.exp((scored[i].score - best) / rules.temperature)
+      end
+      local rng = ctx.Rng.new(ctx.Rng.hash(ctx.seed, "atlas", c.id, ctx.maxGen,
+                                           ctx.dataVersion))
+      local seat = scored[rng:weighted(weights) or 1].seat
+      seat.pool[#seat.pool + 1] = c.id
+      seat.env.state.species[c.id] = true
+    end
+  end
+
+  for _, seat in ipairs(seats) do
+    local result = out[seat.mapId]
+    if result then
+      result.pools[seat.kind] = result.pools[seat.kind] or {}
+      for _, i in ipairs(seat.role.slots) do result.pools[seat.kind][i] = seat.pool end
+    end
+  end
+  return out
+end
+
 -- ------------------------------------------------------------ legendaries
 
 -- Where each legendary/mythical may appear when LEGENDARIES is ON. They are
@@ -430,7 +571,7 @@ function Generator.legendaryHomes(ctx)
   if #specials == 0 then return {} end
 
   -- every (map, table) a legendary could host in, with its scoring env
-  local slots, order = {}, 0
+  local slots, all, order = {}, {}, 0
   local emptyHistory = { previous = {}, recent = {}, recentFamilies = {} }
   for _, mapId in ipairs(world.mapOrder()) do
     local info = world.mapInfo(mapId)
@@ -447,7 +588,7 @@ function Generator.legendaryHomes(ctx)
           end
           local place = ctx.MapContext.describe(mapId, info, terrain)
           order = order + 1
-          if hi >= rules.min_level then slots[#slots + 1] = {
+          local candidate = {
             mapId = mapId, kind = kind, order = order,
             role = { minLevel = lo, maxLevel = hi, rarity = "v" },
             env = {
@@ -456,7 +597,9 @@ function Generator.legendaryHomes(ctx)
               state = { species = {}, families = {}, gens = {} },
               history = emptyHistory, areaSpecies = {},
             },
-          } end
+          }
+          all[#all + 1] = candidate
+          if hi >= rules.min_level then slots[#slots + 1] = candidate end
         end
       end
     end
@@ -497,6 +640,28 @@ function Generator.legendaryHomes(ctx)
       local list = homes[slot.mapId][slot.kind] or {}
       homes[slot.mapId][slot.kind] = list
       list[#list + 1] = { id = fit.c.id, score = fit.score, category = fit.c.special }
+    end
+  end
+  -- COMPLETE DEX: every special in the cap must be reachable, so one left
+  -- without a home gets its best walking/surfing table, ignoring the level
+  -- floor, the level tolerance and the per-table limit.
+  if ctx.guaranteeHomes then
+    for _, c in ipairs(specials) do
+      if not perSpecies[c.id] then
+        local best, bestScore
+        for _, slot in ipairs(all) do
+          local value = score(c, slot.role, slot.env, false)
+          if not terrainOk(c, slot.env.terrain, false) then value = value - 100 end
+          if not best or value > bestScore then best, bestScore = slot, value end
+        end
+        if best then
+          perSpecies[c.id] = 1
+          homes[best.mapId] = homes[best.mapId] or {}
+          local list = homes[best.mapId][best.kind] or {}
+          homes[best.mapId][best.kind] = list
+          list[#list + 1] = { id = c.id, score = bestScore, category = c.special }
+        end
+      end
     end
   end
   for _, byKind in pairs(homes) do

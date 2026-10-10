@@ -75,7 +75,9 @@ return function(deps)
     return deepCopy(Runtime.legendaryHomes())
   end
 
-  -- "seeded" | "map" | "random". Under "random" there is no fixed table:
+  -- "seeded" | "map" | "random" | "complete" (COMPLETE DEX: tableFor is each
+  -- slot's primary species, poolFor what it can turn into). Under "random"
+  -- there is no fixed table:
   -- tableFor/superRodFor/explain answer nil and each encounter is drawn fresh.
   exports.spawnMode = function()
     return Config.spawnMode(mod)
@@ -113,6 +115,22 @@ return function(deps)
   -- RANDOM, so each pick sees what that mode would roll. Same shape as tableFor.
   exports.drawFor = function(mapId, terrain)
     return deepCopy(Runtime.drawFor(mapId, terrain or "grass"))
+  end
+
+  -- COMPLETE DEX only: the species each slot of tableFor's table can turn
+  -- into, { [slot] = { species ids } } (the slot's own species first); nil
+  -- in every other mode. Since 0.12.0.
+  exports.poolFor = function(mapId, terrain)
+    return deepCopy(Runtime.poolFor(mapId, terrain or "grass"))
+  end
+
+  -- Where a species can be met under the current settings:
+  -- { [mapId] = { land|grass|water = true } } (a copy). Generated tables and
+  -- COMPLETE pools, the maps drawn this session under EVERY MAP, and home
+  -- maps with LEGENDARIES ON; empty under RANDOM; nil while inactive. The Gen 3
+  -- Pokedex AREA page and its undiscovered-entry view answer from this. Since 0.11.0.
+  exports.locate = function(speciesId)
+    return deepCopy(Runtime.mapsWithSpecies(speciesId))
   end
 
   -- The LEGENDARIES roll for such a pick: a legendary (1/1024) or mythical

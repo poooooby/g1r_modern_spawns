@@ -340,6 +340,12 @@ function SpeciesPool.build(world, profiles, generationOfDex)
       evolves = evo.into[record.id] == true,
       special = profileSpecial[record.dex],
     }
+    -- A first-stage species: nothing evolves INTO it, so it needs no minimum
+    -- level to exist. The generator may count a low-BST one as plausible on an
+    -- early slot even when its observed wild levels only start later (most
+    -- modern species are met at higher levels by game design, not because
+    -- they are strong); see SpawnConfig.plausible_basic.
+    c.basic = c.stage == 1 and not c.special and not (record.form or record.baseSpecies)
     local p = profileSpecies[record.dex]
     -- a form shares its base's dex number, and so its profile: the base's wild
     -- data does not describe a Galarian Darumaka, the runtime estimate does
@@ -369,6 +375,22 @@ function SpeciesPool.build(world, profiles, generationOfDex)
     end
     list[#list + 1] = c
     byIdOut[c.id] = c
+  end
+  -- A generation with almost no observed wild data (Gen 9: PokéAPI has no
+  -- Scarlet/Violet encounters) has every species on an estimated profile, so
+  -- the penalty that makes observed data win a close call would only tax that
+  -- whole generation out of the draw. Flag its candidates so the generator
+  -- skips the penalty there: there is nothing observed to prefer instead.
+  local perGen = {}
+  for _, c in ipairs(list) do
+    local g = perGen[c.gen] or { total = 0, observed = 0 }
+    perGen[c.gen] = g
+    g.total = g.total + 1
+    if c.source == "profile" then g.observed = g.observed + 1 end
+  end
+  for _, c in ipairs(list) do
+    local g = perGen[c.gen]
+    c.estimateOnlyGen = g.total > 0 and g.observed / g.total < 0.2 or false
   end
   -- looks hang off their base species' candidate, in a fixed order
   table.sort(looks, function(a, b) return a.id < b.id end)

@@ -57,11 +57,28 @@ Config.SpawnConfig = {
     -- Power Plant, Ice in Seafoam): the strongest "belongs here" signal
     theme_bonus = 40,
   },
+  -- A first-stage species whose base stats total at most `max_bst` counts as
+  -- available from `floor_level` on an early slot even when its observed wild
+  -- levels start later (most modern species are met at higher levels by game
+  -- design, not because they are strong). `penalty` keeps species with
+  -- observed data ahead in a close call. See generator.lua effectiveLo.
+  plausible_basic = { max_bst = 340, floor_level = 2, penalty = -4 },
+  -- `top` caps the shortlist, `window` drops anything more than that many
+  -- score points below the best fit, and weight = exp((score - best) /
+  -- temperature): a higher temperature spreads the draw wider. SEEDED stays
+  -- the tightest (a playthrough's roster should read as fitting), the modes
+  -- that redraw spread widest.
   selection = {
-    seeded = { top = 8, power = 2 },
-    map = { top = 12, power = 1 },
-    random = { top = 16, power = 1 },
+    seeded = { top = 24, window = 30, temperature = 12 },
+    map = { top = 32, window = 40, temperature = 14 },
+    random = { top = 48, window = 50, temperature = 16 },
+    complete = { top = 24, window = 30, temperature = 12 },
   },
+  -- COMPLETE DEX's coverage pass (generator.lua buildAtlas): each species
+  -- not already a primary goes to one role, drawn like `selection` among the
+  -- best `top` within `window`; `pool_penalty` per species a role already
+  -- holds spreads the extras across the game instead of piling them up.
+  complete = { top = 16, window = 25, temperature = 8, pool_penalty = -12, max_pool = 6 },
   -- a slot this many levels below a species' evolve level is implausible
   evolve_tolerance = 3,
 
@@ -119,8 +136,13 @@ end
 --   "random"  a new species on every encounter
 -- All three draw from the same per-save seed, so switching modes never
 -- changes it; only REROLL SEED or typing a seed does.
-Config.SPAWN_MODES = { "seeded", "map", "random" }
-Config.SPAWN_MODE_LABELS = { seeded = "SEEDED", map = "EVERY MAP", random = "RANDOM" }
+--   "complete" every species under the cap is catchable somewhere: each role
+--              holds a pool, drawn from after the engine rolls the slot
+Config.SPAWN_MODES = { "seeded", "map", "random", "complete" }
+-- Shown as LIMITED and COMPLETE since 0.11.0; the stored values stay
+-- "seeded"/"complete" so existing settings keep working.
+Config.SPAWN_MODE_LABELS = { seeded = "LIMITED", map = "EVERY MAP", random = "RANDOM",
+                             complete = "COMPLETE" }
 Config.DEFAULT_SPAWN_MODE = "seeded"
 
 function Config.spawnMode(mod)

@@ -32,8 +32,9 @@ return {
     label = "SPAWN MODE",
     type = "choice",
     default = "seeded",
-    choices = { { "SEEDED", "seeded" }, { "EVERY MAP", "map" }, { "RANDOM", "random" } },
-    description = "SEEDED: each map keeps one roster for the whole playthrough. EVERY MAP: a map's roster is drawn again each time you enter it. RANDOM: every encounter draws a new species (still suited to the level and terrain). All three use the save's seed, which only changes when you reroll it or type one below.",
+    choices = { { "LIMITED", "seeded" }, { "EVERY MAP", "map" }, { "RANDOM", "random" },
+                { "COMPLETE", "complete" } },
+    description = "LIMITED: each map keeps one roster for the whole playthrough. EVERY MAP: a map's roster is drawn again each time you enter it. RANDOM: every encounter draws a new species (still suited to the level and terrain). COMPLETE: every species GENERATIONS allows lives somewhere, so the whole dex can be caught; each slot holds a few species that share its odds. All four use the save's seed, which only changes when you reroll it or type one below.",
   },
   {
     key = "legendaries",
@@ -41,7 +42,7 @@ return {
     type = "choice",
     default = "off",
     choices = { { "OFF", "off" }, { "ON", "on" } },
-    description = "ON: legendary and mythical Pokemon can appear in the wild, only on a few maps that suit them (level, terrain, habitat), and very rarely: 1 in 1024 encounters there for a legendary, 1 in 2048 for a mythical. Each one stops appearing once you own it. OFF: never in the wild.",
+    description = "ON: legendary and mythical Pokemon can appear in the wild, only on a few maps that suit them (level, terrain, habitat), and very rarely: 1 in 1024 encounters there for a legendary, 1 in 2048 for a mythical. Each one stops appearing once you own it. Except under RANDOM, every one is marked as seen in the Pokedex (like a roaming legendary after the news report) so its AREA page shows where to look. OFF: never in the wild.",
   },
   {
     -- Mirrors the loaded save's seed (src/runtime.lua keeps it in sync);
@@ -52,7 +53,7 @@ return {
     type = "text",
     maxLen = 10,
     default = "",
-    description = "The seed every spawn draw comes from, one per save. Press A to type a new one (letters, up to 10). The same seed and settings always give the same SEEDED tables, so seeds can be shared. It is kept with your next SAVE.",
+    description = "The seed every spawn draw comes from, one per save. Press A to type a new one (letters, up to 10). The same seed and settings always give the same LIMITED and COMPLETE tables, so seeds can be shared. It is kept with your next SAVE.",
   },
   {
     -- An action, not a setting: stepping to REROLL draws a new seed, and the

@@ -43,6 +43,9 @@ T.check(differs, "different seeds can produce different tables")
 -- balance change moves these, update them and say so in CHANGELOG.md; an
 -- accidental change (0.2.0 once added a field to the RNG hash) reshuffles
 -- every existing playthrough.
+-- Re-pinned at 0.11.0: the shortlist became a softmax within a score window and
+-- plausible basics were admitted at low levels (SpawnConfig.selection /
+-- plausible_basic), which moved ROUTE_B's middle role. ROUTE_A did not move.
 local function speciesList(tbl)
   local out = {}
   for i, slot in ipairs(tbl.slots) do out[i] = slot.species end
@@ -51,7 +54,7 @@ end
 T.eq(speciesList(a.ROUTE_A.grass),
      "HOOTHOOT,STARLY,HOOTHOOT,STARLY,HOOTHOOT,STARLY,HOOTHOOT,STARLY,HOOTHOOT,STARLY",
      "seed 42 ROUTE_A is unchanged")
-T.eq(speciesList(a.ROUTE_B.grass), "PIDGEY,LECHONK,MARILL", "seed 42 ROUTE_B is unchanged")
+T.eq(speciesList(a.ROUTE_B.grass), "PIDGEY,RATTATA,MARILL", "seed 42 ROUTE_B is unchanged")
 
 -- ------- structure preservation
 

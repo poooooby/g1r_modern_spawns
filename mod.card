@@ -1,17 +1,20 @@
 -- Sharing metadata (25-community-and-ecosystem.md 3.2). Read by tooling and
 -- the manager's detail pane; never by the loader's merge.
 return {
-  summary = "Dynamic Gen 1-9 wild encounters for Red through Emerald, built from each game's own tables.",
+  summary = "Dynamic Gen 1-9 wild encounters for Red, Blue, Yellow and FireRed through Emerald, built from each game's own tables.",
   author = "poooooby",
-  tags = { "mechanic", "encounters", "tool", "gen2", "gen3" },
+  tags = { "mechanic", "encounters", "tool", "gen3" },
   differences = {
     changed = {
       "every wild grass, cave, surf and Super Rod table picks its species from the generations GENERATIONS allows",
       "each table keeps the game's own encounter rate, slot levels and odds; only species change",
+      "early routes draw from a much wider pool: low-stat first-stage species count as available from level 2, and the pick is a softer weighted draw over many more scorers (0.11.0 reshuffles existing saves' LIMITED rosters once)",
     },
     added = {
       "settings in OPTIONS -> MODS -> Modern Spawns: MODERN SPAWNS (ON/OFF) and GENERATIONS (GEN 1 .. GEN 1-9)",
-      "SPAWN MODE: SEEDED, EVERY MAP or RANDOM, all drawn from the save's seed",
+      "SPAWN MODE: LIMITED, EVERY MAP, RANDOM or COMPLETE, all drawn from the save's seed",
+      "COMPLETE: every species in the GENERATIONS range is catchable somewhere; each slot holds a small pool sharing its odds",
+      "Gen 3 Pokedex AREA page shows where this mod puts each species; with national_dex_gen3 0.7.0+ an undiscovered species can be opened (name, picture and cry hidden) to see where it lives",
       "SEED (type a code) and REROLL SEED, also in the MODS menu",
       "LEGENDARIES: rare legendary (1/1024) and mythical (1/2048) encounters on fitting home maps, until owned",
       "exports apiVersion / isActive / maxGeneration / tableFor / drawFor / legendaryFor / superRodFor / explain / candidates / profileOf",
@@ -20,7 +23,7 @@ return {
     },
     known = {
       "Red/Blue/Yellow: the Old Rod and Good Rod keep the game's own catches",
-      "Gold/Silver/Crystal: the Old Rod, swarms, the Bug Contest, Headbutt, Rock Smash and roamers keep the game's own Pokemon",
+      "Gold/Silver/Crystal are marked incompatible until national_dex registers species past #251 on Gen 2 again",
       "FireRed/LeafGreen/Ruby/Sapphire/Emerald: fishing, Rock Smash and static encounters keep the game's own Pokemon",
       "legendary and mythical species never enter the wild tables; with LEGENDARIES ON they appear only through the rare roll",
       "on Gen 3 only the wild forms spawn (Galar/Hisui and the looks of Rotom, Flabebe, Alcremie and more); item and fusion forms never do; Gen 1 and 2 spawn no forms",

@@ -1,14 +1,13 @@
 {
   "id": "modern_spawns",
   "name": "Modern Spawns",
-  "version": "0.10.0",
+  "version": "0.11.0",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
   "category": "MECHANIC",
   "games": [
     "gen1",
-    "gen2",
     "gen3"
   ],
   "game_version": ">=0.3.0",
@@ -17,8 +16,7 @@
     {
       "id": "national_dex",
       "games": [
-        "gen1",
-        "gen2"
+        "gen1"
       ],
       "github": "sanjinpepic/gen1recomp-national-dex"
     },
@@ -39,7 +37,7 @@
     "wildfollowers"
   ],
   "options_schema": "options.lua",
-  "description": "Redistributes every wild encounter table across Gen 1-9 species, dynamically, in Red, Blue, Yellow, Gold, Silver, Crystal, FireRed and LeafGreen: each map keeps the game's own rates, slot levels, odds and (in Gold/Silver/Crystal) day/night structure, and only the species are re-picked by level, terrain, habitat, type and rarity. Settings in OPTIONS > MODS > Modern Spawns: on/off, a generation cap, SEEDED / EVERY MAP / RANDOM rosters, rare legendaries, and a per-save seed. Published through mod.exports as a framework other mods can build on. Needs national_dex (NATIONAL DEX option ON) on Red to Crystal, or national_dex_gen3 on FireRed/LeafGreen.",
+  "description": "Redistributes every wild encounter table across Gen 1-9 species, dynamically, in Red, Blue, Yellow, FireRed, LeafGreen, Ruby, Sapphire and Emerald: each map keeps the game's own rates, slot levels, odds, and only the species are re-picked by level, terrain, habitat, type and rarity. Settings in OPTIONS > MODS > Modern Spawns: on/off, a generation cap, SEEDED / EVERY MAP / RANDOM rosters, rare legendaries, and a per-save seed. Published through mod.exports as a framework other mods can build on. Needs national_dex (NATIONAL DEX option ON) on Red/Blue/Yellow, or national_dex_gen3 on the Gen 3 games.",
   "permissions": [
     "engine_internals"
   ],
