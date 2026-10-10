@@ -7,7 +7,7 @@
 --
 -- Everything returned is a COPY: a consumer can never mutate the tables the
 -- encounter hooks hand the engine. Functions answer nil while modern spawns
--- are inactive (MODERN SPAWNS off, GEN 1, or no species past #151), which
+-- are inactive (MODERN SPAWNS off, or no species registered at all), which
 -- a consumer should read as "use the game's own tables".
 --
 -- API VERSIONING: apiVersion only goes up, and only when an existing field
@@ -50,7 +50,9 @@ return function(deps)
 
   -- Added fields don't bump it (0.7.0 added drawFor / legendaryFor): test
   -- for a newer function by presence, `type(exports.drawFor) == "function"`.
-  exports.apiVersion = 1
+  -- 2: isActive is true on GEN 1 and with only the cart's species (it was false for both),
+  -- and maxGeneration can answer 1.
+  exports.apiVersion = 2
 
   exports.isActive = function()
     return Runtime.isActive()
@@ -64,7 +66,8 @@ return function(deps)
   -- The player's settings, whatever is in force.
   exports.settings = function()
     return { enabled = Config.enabled(mod), maxGeneration = Config.maxGeneration(mod),
-             spawnMode = Config.spawnMode(mod), legendaries = Config.legendaries(mod) }
+             spawnMode = Config.spawnMode(mod), legendaries = Config.legendaries(mod),
+             shinyChain = Config.shinyChain(mod) }
   end
 
   -- Where legendaries/mythicals may appear when LEGENDARIES is ON:
@@ -182,5 +185,32 @@ return function(deps)
   -- Drop cached tables (e.g. after a consumer changes something they read).
   exports.invalidate = function()
     Runtime.invalidate()
+  end
+
+  -- Shiny chains (src/chain.lua): one species beaten or caught in a row is met
+  -- more, is more likely to be shiny and has better stats. This mod counts the
+  -- chain and swaps the species of the encounters it rolls; a consumer that
+  -- picks its own encounters (visible overworld spawns) asks here, and applies
+  -- the shiny chance and perfect stats itself (they are engine-specific).
+  --
+  -- The current chain: { species = id, count = n }, or nil.
+  exports.chain = function()
+    local c = Runtime.chain
+    return c and c.species and { species = c.species, count = c.count } or nil
+  end
+  -- For one pick on a map: the chained species when the chain makes this
+  -- encounter it (rolled here; call once per pick), else nil.
+  exports.chainSpeciesFor = function(mapId, terrain)
+    return Runtime.chainSpeciesFor(mapId, terrain or "grass")
+  end
+  -- For an encounter of `species` (an id, or the engine's species number):
+  -- { shiny = chance 0..1, perfectIvs = n }, or nil when it is not chained.
+  exports.chainBonus = function(species)
+    return Runtime.chainBonus(species)
+  end
+  -- A wild Pokemon fought outside a real battle counts too: result "win" /
+  -- "catch" extends or starts the chain, "run" ends it.
+  exports.chainRecord = function(species, result)
+    Runtime.chainRecord(species, result)
   end
 end

@@ -3,6 +3,51 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Added
+
+- **Shiny chains.** Win or catch the same species again and again and the chain grows:
+  - It turns up more often wherever it can be met: 1 in 8 encounters at 2, every encounter
+    from 9. This works for step encounters and, through `chainSpeciesFor`, for a consumer's
+    visible spawns.
+  - It's more likely to be shiny (`1 - (8191/8192)^count`, about 1 in 82 at 100).
+  - It gets 1 / 2 / 3 perfect stats from 10 / 25 / 40.
+  - Running from it or blacking out ends the chain. It's kept with the save and works while
+    MODERN SPAWNS and the new SHINY CHAINS option (default ON) are on. With SHINY CHAINS off,
+    nothing is counted or changed, and a chain in progress is kept for later.
+  - New exports: `chain`, `chainSpeciesFor`, `chainBonus`, `chainRecord`. The shiny and the
+    stats are applied by the game-family mod (Wilds of Hoenn on Gen 3).
+
+  Inspired by TTiN and Untamed Tohjo, used with permission.
+
+## [0.12.0] - Unreleased
+
+### Added
+
+- **Works with no species mod at all.** `national_dex` and `national_dex_gen3` are now optional:
+  with only the game's own Pokémon, Red/Blue/Yellow shuffle their 151 and Emerald (and the other
+  Gen 3 games) mix their 386. A species mod still widens the pool.
+- **GEN 1 shuffles Gen 1** instead of meaning "the original tables". MODERN SPAWNS OFF is the way
+  back to the original tables.
+- **COMPLETE is the default SPAWN MODE**, so every species in range is catchable out of the box.
+  A mode already chosen in the Mod Manager is kept; a save that never chose one starts in
+  COMPLETE. Checked: Red with no species mod puts all 146 non-legendary species somewhere, and
+  Emerald all 365.
+- `mod.exports.apiVersion` is 2: `isActive()` is now true on GEN 1 and with only the cart's
+  species, and `maxGeneration()` can answer 1.
+
+- **Gold, Silver and Crystal are supported again**, on their own 251 Pokémon. `national_dex`
+  can no longer add species past #251 on Gen 2 (gen1recomp's Gen 2 schema change), which is
+  why 0.11.0 marked them incompatible; with no species mod required they work again, mixing
+  Gen 1-2.
+
+### Changed
+
+- Gen 2 grass tables whose every slot held one species (Ruins of Alph's Unown) split by slot
+  position, as Gen 3 one-species tables do, keeping each species the same morning, day and
+  night.
+
 ## [0.11.1] - 2026-10-10
 
 ### Changed

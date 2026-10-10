@@ -5,7 +5,7 @@
 -- mod.content (the merged, frozen registries): encounter tables, Super Rod
 -- groups, map order, map tilesets and the species registry. The
 -- redistributed tables are handed to the engine per roll through the hooks,
--- so switching MODERN SPAWNS off (or picking GEN 1) is immediate there.
+-- so switching MODERN SPAWNS off is immediate there.
 --
 -- Separately, live_sync ALSO writes the generated species directly into the
 -- running game's own data (game.data.encounters / gen2Encounters /
@@ -39,6 +39,7 @@ return function(deps)
   local log = mod.log
 
   local HOOK_PRIORITY = -100
+  local Chain = deps.Chain
   local SEED_KEY = "seed"
   local DATA_VERSION = profiles and profiles.version or 0
 
@@ -217,18 +218,19 @@ return function(deps)
   -- --------------------------------------------------------- activity
 
   -- The generation cap actually in force: nil means "leave the runtime
-  -- tables alone" (MODERN SPAWNS off, GEN 1, or nothing past #151 exists).
+  -- tables alone" (MODERN SPAWNS off, or no species registered at all).
   function Runtime.effectiveGeneration()
     if not Config.enabled(mod) then return nil end
     local cap = Config.maxGeneration(mod)
-    if cap <= 1 then return nil end
     local p = Runtime.pool()
-    if not p then return nil end
-    if poolMaxGen <= 1 then
-      warnOnce("no_modern_species", "no species past #151 are registered -- "
-        .. "turn national_dex's NATIONAL DEX option ON for modern spawns; "
-        .. "wild tables stay as the game has them until then")
-      return nil
+    if not p or #p.list == 0 then return nil end
+    -- the cart's own species are enough (Red's 151, Emerald's 386): a species mod only widens
+    -- the pool. GEN 1 shuffles Gen 1 like any other cap; MODERN SPAWNS OFF is the way back
+    -- to the game's own tables.
+    if poolMaxGen < cap then
+      warnOnce("pool_below_cap", "GENERATIONS allows up to Gen %d but only %s species are "
+        .. "registered -- a species mod (national_dex, national_dex_gen3) adds "
+        .. "more", cap, poolMaxGen == 1 and "Gen 1" or ("Gen 1-" .. poolMaxGen))
     end
     return math.min(cap, poolMaxGen)
   end
@@ -743,6 +745,65 @@ return function(deps)
     return ok and species or nil
   end
 
+  -- ------------------------------------------------------------- chain
+
+  -- Shiny chains (src/chain.lua), kept in the save. Only while this mod is
+  -- active: it decides where the chained species can be met.
+  local chain = Chain and Chain.new({
+    get = function(key)
+      local ok, value = pcall(mod.save.get, mod.save, key)
+      return ok and value or nil
+    end,
+    set = function(key, value) pcall(mod.save.set, mod.save, key, value) end,
+  }) or nil
+  Runtime.chain = chain
+
+  -- This mod's id for a species the engine names by number (Gen 3) or by id.
+  local function chainId(species)
+    if type(species) == "number" then return Runtime.speciesOfSlot(species) end
+    if type(species) == "string" then
+      return Runtime.speciesOfSlot(tonumber(species)) or species
+    end
+    return nil
+  end
+  Runtime.chainId = chainId
+
+  -- the chain works while MODERN SPAWNS and SHINY CHAINS are both on
+  local function chainOn()
+    return chain ~= nil and Config.shinyChain(mod) and Runtime.isActive()
+  end
+
+  local function canMeet(mapId, kind, species)
+    local maps = Runtime.mapsWithSpecies(species)
+    return maps ~= nil and maps[mapId] ~= nil and maps[mapId][kind] == true
+  end
+
+  -- a 0..1 draw for a consumer's own encounter (no engine RNG handed in)
+  local function chainDraw()
+    return math.random()
+  end
+
+  --- The chained species for an encounter on this map and kind, when the
+  --- chain makes it so (rolled here), else nil.
+  function Runtime.chainSpeciesFor(mapId, terrain)
+    if not (chainOn() and type(mapId) == "string") then return nil end
+    local kind = kindOf(terrain)
+    return chain:forced(chain.species and canMeet(mapId, kind, chain.species), chainDraw)
+  end
+
+  --- { shiny = chance, perfectIvs = n } for an encounter of `species` (this
+  --- mod's id or the engine's number), or nil.
+  function Runtime.chainBonus(species)
+    if not chainOn() then return nil end
+    return chain:bonus(chainId(species))
+  end
+
+  --- A wild Pokemon fought outside a real battle (an overworld companion's
+  --- fight) counts like one.
+  function Runtime.chainRecord(species, result)
+    if chainOn() then chain:record(chainId(species), result) end
+  end
+
   -- ------------------------------------------------------------- hooks
 
   -- The encounter handed back with a new species, in the shape the running
@@ -810,6 +871,13 @@ return function(deps)
       local okL, legend = pcall(legendaryFor, ctx, kind)
       if okL and legend then
         local swapped = withSpecies(out, legend)
+        if swapped then return decided(ctx, swapped) end
+      end
+      -- the chained species, when the chain makes it so
+      if chainOn() and chain.species then
+        local forced = chain:forced(canMeet(ctx.mapId, kind, chain.species),
+          function() return (rollInt(ctx, 1, 10000) - 1) / 10000 end)
+        local swapped = forced and withSpecies(out, forced)
         if swapped then return decided(ctx, swapped) end
       end
       if Config.spawnMode(mod) == "random" then
@@ -902,7 +970,25 @@ return function(deps)
     -- only once the seed for THIS save is settled -- save.created applies
     -- pendingSeed after invalidating, so syncing any earlier would use the
     -- wrong seed.
+    -- the chain: every wild battle won or caught, or run from
+    local battleSpecies
+    mod.events:on("battle.started", function(ev)
+      battleSpecies = nil
+      if type(ev) == "table" and ev.kind == "wild" then
+        battleSpecies = chainId(ev.speciesId) or chainId(ev.species)
+      end
+    end)
+    mod.events:on("battle.ended", function(ev)
+      local species = battleSpecies
+      battleSpecies = nil
+      if chainOn() and species then chain:record(species, type(ev) == "table" and ev.result or nil) end
+    end)
+    mod.events:on("world.blacked_out", function()
+      if chain then chain:clear() end
+    end)
+
     mod.events:on("save.created", function()
+      if chain then chain:load() end
       Runtime.invalidate()
       if LiveSync then LiveSync.restore() end
       if pendingSeed then Runtime.setSeed(pendingSeed) end
@@ -912,6 +998,7 @@ return function(deps)
       markLegendariesSeen()
     end)
     mod.events:on("save.loaded", function()
+      if chain then chain:load() end
       Runtime.invalidate()
       if LiveSync then LiveSync.restore() end
       pendingSeed = nil
@@ -920,6 +1007,7 @@ return function(deps)
       markLegendariesSeen()
     end)
     mod.events:on("checkpoint.restored", function()
+      if chain then chain:load() end
       Runtime.invalidate()
       if LiveSync then LiveSync.restore() end
       syncSeedOption(Runtime.seed())

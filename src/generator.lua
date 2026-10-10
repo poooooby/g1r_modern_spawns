@@ -73,15 +73,35 @@ local function buildRoles(slots, weights, times)
   -- or all Tentacool) would be one role, so one species however it is drawn. Each slot is a
   -- role of its own instead, keeping the cart's odds per slot, so these tables vary like any
   -- other.
+  -- A Gen 2 grass table holds morning, day and night (`times`), and a role there spans all
+  -- three: the nth slot of each time shares one role, so a species stays out all day as the
+  -- cart's own do.
   if #roles == 1 and #roles[1].slots > 1 then
     local only = roles[1]
     roles = {}
+    local byKey, nth = {}, {}
     for _, i in ipairs(only.slots) do
       local slot = slots[i]
-      local role = { species = only.species, slots = { i }, first = i, weight = weights[i] or 0,
-                     minLevel = slot.level, maxLevel = slot.maxLevel or slot.level }
-      if times and times[i] then role.times = { [times[i]] = true } end
-      roles[#roles + 1] = role
+      local key = i
+      if times and times[i] then
+        nth[times[i]] = (nth[times[i]] or 0) + 1
+        key = "n" .. nth[times[i]]
+      end
+      local role = byKey[key]
+      if not role then
+        role = { species = only.species, slots = {}, first = i, weight = 0,
+                 minLevel = slot.level, maxLevel = slot.maxLevel or slot.level }
+        byKey[key] = role
+        roles[#roles + 1] = role
+      end
+      role.slots[#role.slots + 1] = i
+      role.weight = role.weight + (weights[i] or 0)
+      role.minLevel = math.min(role.minLevel, slot.level)
+      role.maxLevel = math.max(role.maxLevel, slot.maxLevel or slot.level)
+      if times and times[i] then
+        role.times = role.times or {}
+        role.times[times[i]] = true
+      end
     end
   end
   for _, role in ipairs(roles) do

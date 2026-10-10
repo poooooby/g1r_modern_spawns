@@ -143,7 +143,7 @@ Config.SPAWN_MODES = { "seeded", "map", "random", "complete" }
 -- "seeded"/"complete" so existing settings keep working.
 Config.SPAWN_MODE_LABELS = { seeded = "LIMITED", map = "EVERY MAP", random = "RANDOM",
                              complete = "COMPLETE" }
-Config.DEFAULT_SPAWN_MODE = "seeded"
+Config.DEFAULT_SPAWN_MODE = "complete"
 
 function Config.spawnMode(mod)
   local value = get(mod, "spawn_mode", Config.DEFAULT_SPAWN_MODE)
@@ -178,6 +178,12 @@ end
 -- LEGENDARIES (default OFF): rare hosted legendary/mythical encounters.
 function Config.legendaries(mod)
   local value = get(mod, "legendaries", "off")
+  return value == "on" or value == true
+end
+
+-- SHINY CHAINS (src/chain.lua): on by default.
+function Config.shinyChain(mod)
+  local value = get(mod, "shiny_chain", "on")
   return value == "on" or value == true
 end
 

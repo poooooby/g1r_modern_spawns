@@ -18,6 +18,7 @@
 --   src/adapters/gen1.lua Red/Blue/Yellow data + hook shapes
 --   src/adapters/gen2.lua Gold/Silver/Crystal data + hook shapes
 --   src/adapters/gen3.lua every Gen 3 game's data + hook shapes
+--   src/chain.lua         shiny chains (one species beaten in a row)
 --   src/live_sync.lua     writes generated species into the live game data,
 --                         restorable, for mods that read it directly
 --   src/runtime.lua       seed, cache, encounter hooks, events, seed option sync
@@ -63,6 +64,7 @@ return function(mod)
   local makeLiveSync = loadSibling(mod, "src/live_sync.lua")
   local makeApi = loadSibling(mod, "src/api.lua")
   local makeDexArea = loadSibling(mod, "src/dex_area.lua")
+  local Chain = loadSibling(mod, "src/chain.lua", true)
   -- one adapter per engine: Red/Blue/Yellow, Gold/Silver/Crystal,
   -- FireRed/LeafGreen
   local adapters = {
@@ -89,7 +91,7 @@ return function(mod)
   local Runtime = makeRuntime({
     mod = mod, Config = Config, Generator = Generator, SpeciesPool = SpeciesPool,
     MapContext = MapContext, Rng = Rng, profiles = profiles, adapters = adapters,
-    makeLiveSync = makeLiveSync,
+    makeLiveSync = makeLiveSync, Chain = Chain,
   })
   Runtime.install()
 

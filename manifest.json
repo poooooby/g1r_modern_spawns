@@ -1,43 +1,31 @@
 {
   "id": "modern_spawns",
   "name": "Modern Spawns",
-  "version": "0.11.1",
+  "version": "0.12.0",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
   "category": "MECHANIC",
   "games": [
     "gen1",
+    "gen2",
     "gen3"
   ],
   "game_version": ">=0.3.0",
   "priority": 100,
-  "dependencies": [
-    {
-      "id": "national_dex",
-      "games": [
-        "gen1"
-      ],
-      "github": "sanjinpepic/gen1recomp-national-dex"
-    },
-    {
-      "id": "national_dex_gen3",
-      "games": [
-        "gen3"
-      ],
-      "github": "poooooby/national_dex_gen3"
-    }
-  ],
+  "dependencies": [],
   "optional_dependencies": [
     "wilds_of_kanto_gen3",
-    "wilds_of_hoenn"
+    "wilds_of_hoenn",
+    "national_dex",
+    "national_dex_gen3"
   ],
   "conflicts": [
     "1025Dex",
     "wildfollowers"
   ],
   "options_schema": "options.lua",
-  "description": "Redistributes every wild encounter table across Gen 1-9 species, dynamically, in Red, Blue, Yellow, FireRed, LeafGreen, Ruby, Sapphire and Emerald: each map keeps the game's own rates, slot levels, odds, and only the species are re-picked by level, terrain, habitat, type and rarity. Settings in OPTIONS > MODS > Modern Spawns: on/off, a generation cap, SEEDED / EVERY MAP / RANDOM rosters, rare legendaries, and a per-save seed. Published through mod.exports as a framework other mods can build on. Needs national_dex (NATIONAL DEX option ON) on Red/Blue/Yellow, or national_dex_gen3 on the Gen 3 games.",
+  "description": "Redistributes every wild encounter table across Gen 1-9 species, dynamically, in Red, Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald: each map keeps the game's own rates, slot levels, odds, and only the species are re-picked by level, terrain, habitat, type and rarity. Settings in OPTIONS > MODS > Modern Spawns: on/off, a generation cap, SEEDED / EVERY MAP / RANDOM rosters, rare legendaries, and a per-save seed. Published through mod.exports as a framework other mods can build on. Works on the game's own Pokemon alone; a species mod widens the pool: national_dex (NATIONAL DEX option ON) on Red/Blue/Yellow, national_dex_gen3 on FireRed to Emerald. COMPLETE mode (the default) makes every species catchable.",
   "permissions": [
     "engine_internals"
   ],

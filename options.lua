@@ -25,13 +25,13 @@ return {
       { "GEN 1-4", "4" }, { "GEN 1-5", "5" }, { "GEN 1-6", "6" },
       { "GEN 1-7", "7" }, { "GEN 1-8", "8" }, { "GEN 1-9", "9" },
     },
-    description = "Which generations wild Pokemon may come from. GEN 1 keeps the game's original tables. Species past #151 need national_dex with its NATIONAL DEX option ON; without them the original tables are kept.",
+    description = "Which generations wild Pokemon may come from. With only the game's own Pokemon (no species mod), GEN 1 shuffles Red/Blue/Yellow's 151, Gold/Silver/Crystal mix their 251 and the Gen 3 games their 386. A species mod adds more: national_dex (Red/Blue/Yellow), national_dex_gen3 (FireRed to Emerald). MODERN SPAWNS OFF gives the original tables.",
   },
   {
     key = "spawn_mode",
     label = "SPAWN MODE",
     type = "choice",
-    default = "seeded",
+    default = "complete",
     choices = { { "LIMITED", "seeded" }, { "EVERY MAP", "map" }, { "RANDOM", "random" },
                 { "COMPLETE", "complete" } },
     description = "LIMITED: each map keeps one roster for the whole playthrough. EVERY MAP: a map's roster is drawn again each time you enter it. RANDOM: every encounter draws a new species (still suited to the level and terrain). COMPLETE: every species GENERATIONS allows lives somewhere, so the whole dex can be caught; each slot holds a few species that share its odds. All four use the save's seed, which only changes when you reroll it or type one below.",
@@ -43,6 +43,14 @@ return {
     default = "off",
     choices = { { "OFF", "off" }, { "ON", "on" } },
     description = "ON: legendary and mythical Pokemon can appear in the wild, only on a few maps that suit them (level, terrain, habitat), and very rarely: 1 in 1024 encounters there for a legendary, 1 in 2048 for a mythical. Each one stops appearing once you own it. Except under RANDOM, every one is marked as seen in the Pokedex (like a roaming legendary after the news report) so its AREA page shows where to look. OFF: never in the wild.",
+  },
+  {
+    key = "shiny_chain",
+    label = "SHINY CHAINS",
+    type = "choice",
+    default = "on",
+    choices = { { "ON", "on" }, { "OFF", "off" } },
+    description = "ON: win or catch the same species again and again to build a chain. The longer it gets, the more often that species appears (every encounter from 9 in a row), the likelier it is to be shiny, and from 10 / 25 / 40 it has 1 / 2 / 3 perfect stats. Running from it or blacking out ends the chain. Shinies and stats need a mod that applies them (Wilds of Hoenn). OFF: nothing is counted or changed; a chain you had is kept for later.",
   },
   {
     -- Mirrors the loaded save's seed (src/runtime.lua keeps it in sync);

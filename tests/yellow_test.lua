@@ -76,9 +76,9 @@ T.eq(Runtime.call("encounter.roll", function(def) return def end,
      Data.encounters.ROUTE_1, "OFF rolls Yellow's own table")
 loader.modOptions.modern_spawns.enabled = "on"
 loader.modOptions.modern_spawns.max_generation = "1"
-T.eq(Runtime.call("encounter.roll", function(def) return def end,
-                  Data.encounters.ROUTE_1, { mapId = "ROUTE_1", terrain = "grass" }),
-     Data.encounters.ROUTE_1, "GEN 1 rolls Yellow's own table")
+T.check(Runtime.call("encounter.roll", function(def) return def end,
+                  Data.encounters.ROUTE_1, { mapId = "ROUTE_1", terrain = "grass" })
+     ~= Data.encounters.ROUTE_1, "GEN 1 shuffles Yellow's Gen 1 species")
 
 run.release()
 GameVersion.set("red")

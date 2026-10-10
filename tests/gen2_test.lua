@@ -60,16 +60,24 @@ local function checkTables(version, data, api)
       T.eq(enc and enc.species, mine.slots[time][1].species,
            version .. " " .. mapId .. " " .. time .. ": Encounter.grassSlot rolls it")
     end
-    -- one vanilla species -> one new species, across all three times
+    -- one vanilla species -> one new species, across all three times; a table whose every slot
+    -- held one species (Ruins of Alph's Unown) gets one per slot position instead, still the
+    -- same morning, day and night
+    local distinct = {}
+    for _, time in ipairs(TIMES) do
+      for _, slot in ipairs(vanilla.slots[time]) do distinct[slot.species] = true end
+    end
+    local single = next(distinct, next(distinct)) == nil
     local mapped = {}
     for _, time in ipairs(TIMES) do
       for i, slot in ipairs(vanilla.slots[time]) do
         local new = mine.slots[time][i].species
-        if mapped[slot.species] and mapped[slot.species] ~= new then
+        local key = single and i or slot.species
+        if mapped[key] and mapped[key] ~= new then
           T.check(false, version .. " " .. mapId .. ": " .. slot.species
                   .. " became two species across the day")
         end
-        mapped[slot.species] = new
+        mapped[key] = new
       end
     end
   end

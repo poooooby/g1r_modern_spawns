@@ -1,6 +1,7 @@
 # Excluded from the packaged mod (modkit matches exact relative paths).
 # Development docs and the Python data generator
 pokemon_spawn_generator/README.md
+DEVELOPMENT.md
 pokemon_spawn_generator/generate_spawn_data.py
 pokemon_spawn_generator/pokemon_spawn_profiles.schema.json
 # Test suites (they require engine modules) and their national_dex stubs
@@ -27,3 +28,5 @@ tests/variety_test.lua
 tests/variety_gen2_test.lua
 tests/complete_test.lua
 tests/frlg_area_test.lua
+tests/chain_test.lua
+CLAUDE.md

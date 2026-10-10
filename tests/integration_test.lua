@@ -155,15 +155,20 @@ for species in pairs(preview.dist) do
   T.check(inTable, species .. " in the preview is in the rolled table")
 end
 
--- ------- OFF and GEN 1 hand back the game's own tables
+-- ------- OFF hands back the game's own tables; GEN 1 shuffles Gen 1
 
 setOption(run, "enabled", "off")
 T.eq(roll("ROUTE_1", "grass", vanillaGrass), vanillaGrass, "OFF rolls the original table")
 T.check(not api.isActive(), "and reports inactive")
 setOption(run, "enabled", "on")
 setOption(run, "max_generation", "1")
-T.eq(roll("ROUTE_1", "grass", vanillaGrass), vanillaGrass, "GEN 1 rolls the original table")
-T.eq(api.tableFor("ROUTE_1", "grass"), nil, "and tableFor answers nil")
+T.check(roll("ROUTE_1", "grass", vanillaGrass) ~= vanillaGrass, "GEN 1 rolls a generated table")
+local gen1Only = true
+for _, slot in ipairs(api.tableFor("ROUTE_1", "grass").slots) do
+  local p = api.profileOf(slot.species)
+  if not (p and p.generation == 1) then gen1Only = false end
+end
+T.check(gen1Only, "and it holds Gen 1 species only")
 setOption(run, "max_generation", "9")
 
 -- ------- settings live only in MODS -> Modern Spawns
@@ -177,7 +182,7 @@ local schema, byKey = H.schema()
 local keys = {}
 for i, row in ipairs(schema) do keys[i] = row.key end
 T.eq(table.concat(keys, ","),
-     "enabled,max_generation,spawn_mode,legendaries,seed,reroll_seed",
+     "enabled,max_generation,spawn_mode,legendaries,shiny_chain,seed,reroll_seed",
      "the Mod Manager schema carries every setting, in menu order")
 T.eq(byKey.enabled.label, "MODERN SPAWNS", "MODERN SPAWNS row")
 T.eq(byKey.max_generation.label, "GENERATIONS", "GENERATIONS row")

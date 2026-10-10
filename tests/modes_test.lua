@@ -42,7 +42,7 @@ end
 -- ------- seed: old numeric seeds, persistence across modes
 
 T.eq(api.seed(), "777", "a 0.1.0 numeric seed reads back as its digits")
-T.eq(api.spawnMode(), "seeded", "SEEDED is the default mode")
+T.eq(api.spawnMode(), "complete", "COMPLETE is the default mode")
 local seededRoute1 = H.serialize(api.tableFor("ROUTE_1", "grass"))
 
 setOption("spawn_mode", "map")

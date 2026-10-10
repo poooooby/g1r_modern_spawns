@@ -20,7 +20,9 @@ T.check(run.mods.modern_spawns and run.mods.modern_spawns.state == "loaded",
         "modern_spawns targets FireRed")
 local loader = run.loader
 loader.modSave.modern_spawns = { seed = "KANTO" }
-loader.modOptions.modern_spawns = { enabled = "on", max_generation = "9" }
+-- LIMITED: these checks are about one fixed table per map (COMPLETE, the default, draws a
+-- pool per encounter)
+loader.modOptions.modern_spawns = { enabled = "on", max_generation = "9", spawn_mode = "seeded" }
 local set, game = H.manager(loader)
 local api = loader.exports.modern_spawns
 T.eq(api.generation(), 3, "the Gen 3 adapter runs")
@@ -113,9 +115,13 @@ eachSlot(function(mapId, kind, i, slot)
   local out = encounter(mapId, kind, slot)
   T.check(out.species <= 411, mapId .. " slot " .. i .. " respects GEN 1-3")
 end)
+-- GEN 1 shuffles the Gen 1 species (#1-151) like any other cap
 set("max_generation", "1")
-local plain = encounter("FR_ROUTE_1", "land", live.FR_ROUTE_1.land.slots[1])
-T.eq(plain.species, P.keyName(live.FR_ROUTE_1.land.slots[1].species), "GEN 1: the game's own encounter")
+eachSlot(function(mapId, kind, i, slot)
+  local out = encounter(mapId, kind, slot)
+  local n = P.national and P.national(out.species) or out.species
+  T.check(tonumber(n) and tonumber(n) <= 151, mapId .. " slot " .. i .. " respects GEN 1")
+end)
 set("max_generation", "9")
 set("enabled", "off")
 plain = encounter("FR_ROUTE_1", "land", live.FR_ROUTE_1.land.slots[1])
