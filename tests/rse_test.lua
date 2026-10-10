@@ -93,12 +93,15 @@ for _, game in ipairs({ "emerald", "ruby", "sapphire" }) do
     loader.events:emit("save.loaded", {})
     local generated = api.tableFor(grassMap, "land") or api.tableFor(grassMap, "grass")
     T.check(#aliases > 0, game .. ": " .. grassMap .. " has alias ids to check")
+    -- in the cart's own spelling: the numeric species slot (the engine's roll does
+    -- tonumber(entry.species); a species id there broke every roll on the map)
     local allAliasesMatch = true
     for _, id in ipairs(aliases) do
       local area = data.gen3Encounters[id].land
       if area then
         for i, slot in ipairs(area.slots) do
-          if not generated or slot.species ~= generated.slots[i].species then
+          local rec = generated and loader.content.pokemon:get(generated.slots[i].species)
+          if type(slot.species) ~= "number" or not rec or slot.species ~= tonumber(rec.index) then
             allAliasesMatch = false
           end
         end

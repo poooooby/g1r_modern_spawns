@@ -70,15 +70,28 @@ eachSlot(function(mapId, kind, i, slot)
   T.eq(out.speciesId, out.species, where .. " speciesId agrees")
   T.check(P._names[out.species] ~= nil, where .. " is a registered species")
   T.eq(out.level, slot.minLevel, where .. " keeps the rolled level")
+  -- slots that held one species share one new species -- except in a table whose every slot
+  -- held the same one (all-Magikarp water), which gets a species per slot
+  local area = live[mapId][kind]
+  local distinct = {}
+  for _, s in ipairs(area.slots) do distinct[s.species] = true end
+  local single = next(distinct, next(distinct)) == nil
   local key = mapId .. kind .. slot.species
-  if mapping[key] and mapping[key] ~= out.species then
+  if not single and mapping[key] and mapping[key] ~= out.species then
     T.check(false, where .. ": one vanilla species became two")
   end
   mapping[key] = out.species
-  -- and it is what the published table says
+  -- and it is what the published table says for a slot this roll could have come from (same
+  -- cart species, level in range: several, when the cart's slots all held one species)
   local tbl = api.tableFor(mapId, kind)
-  local rec = loader.content.pokemon:get(tbl.slots[i].species)
-  T.eq(rec and rec.index, out.species, where .. " matches tableFor")
+  local fits = false
+  for j, s in ipairs(area.slots) do
+    if s.species == slot.species and slot.minLevel >= s.minLevel and slot.minLevel <= s.maxLevel then
+      local rec = loader.content.pokemon:get(tbl.slots[j].species)
+      if rec and rec.index == out.species then fits = true end
+    end
+  end
+  T.check(fits, where .. " matches tableFor")
 end)
 
 -- the roll itself is left to the engine: its table is never swapped

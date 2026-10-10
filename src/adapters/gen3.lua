@@ -140,7 +140,13 @@ return function(reg, MapContext, mod)
   -- in a preview.
   function A.rollKind(ctx)
     if type(ctx) ~= "table" then return nil end
-    return ctx.terrain == "water" and "water" or "land"
+    if ctx.terrain == "water" then return "water" end
+    if ctx.terrain == "land" or ctx.terrain == "grass" or ctx.terrain == "indoor" then return "land" end
+    -- no terrain from the engine (Emerald's rules read the tile themselves): a surfing
+    -- player's roll is a water roll, as the rules decide it (encounter_rules/rse.lua classify)
+    local Player = package.loaded["src.core.game3.player"]
+    if type(Player) == "table" and Player.surfing == true then return "water" end
+    return "land"
   end
   A.kindOfTerrain = function(terrain)
     if terrain == "water" then return "water" end
@@ -162,11 +168,15 @@ return function(reg, MapContext, mod)
     return dist
   end
 
-  -- The slot of the game's own table the engine rolled: same species, level
-  -- inside that slot's range. `rolled.species` is the engine's name for it.
-  function A.slotIndex(mapId, kind, _, rolled)
+  -- Every slot the engine's roll could have come from: same species, level inside the slot's
+  -- range. `rolled.species` is the engine's name for it. Live sync puts the generated species
+  -- into the game's own table, which is what the engine rolls on, so that table is asked first:
+  -- its slots now hold different species, which pins the slot down. The cart's own table comes
+  -- second; there several slots can match (all five of Sootopolis' surf slots are Magikarp), and
+  -- the caller then picks among them by their odds.
+  function A.slotCandidates(mapId, kind, _, rolled)
     local area = slotsOf(maps()[mapId], kind)
-    if not area then return nil end
+    if not area then return {} end
     local want = rolled.species
     if type(want) == "number" then
       local rec = reg.get("pokemon", want)
@@ -180,13 +190,39 @@ return function(reg, MapContext, mod)
       local rec = wantSlot and reg.get("pokemon", name)
       return type(rec) == "table" and tonumber(rec.index) == wantSlot
     end
-    for i, s in ipairs(area.slots) do
-      if same(s.species) and (not level
-          or (level >= (s.minLevel or level) and level <= (s.maxLevel or level))) then
-        return i
-      end
+    local function inRange(s)
+      return not level or (level >= (s.minLevel or level) and level <= (s.maxLevel or level))
     end
-    return nil
+    local out = {}
+    local live = A.liveSlots and A.liveSlots(mapId, kind)
+    for i, s in ipairs(live and live[1] or {}) do
+      local sp = s.species
+      local hit = sp == want or (wantSlot ~= nil and tonumber(sp) == wantSlot)
+        or (type(sp) == "string" and same(sp))
+      if hit and inRange(s) then out[#out + 1] = i end
+    end
+    if #out > 0 then return out end
+    for i, s in ipairs(area.slots) do
+      if same(s.species) and inRange(s) then out[#out + 1] = i end
+    end
+    return out
+  end
+
+  -- The first of them (enough to tell a land roll from a water one), or nil.
+  function A.slotIndex(mapId, kind, ctx, rolled)
+    return A.slotCandidates(mapId, kind, ctx, rolled)[1]
+  end
+
+  -- The cart's odds per slot of a kind, for picking among several candidates.
+  function A.slotWeights(kind)
+    return kind == "water" and WATER_WEIGHTS or LAND_WEIGHTS
+  end
+
+  -- What live sync writes into a slot: the species' numeric slot, as the cart stores it (the
+  -- engine's roll reads `tonumber(entry.species)`), or nil to leave that slot alone.
+  function A.liveValue(id)
+    local rec = reg.get("pokemon", id)
+    return type(rec) == "table" and tonumber(rec.index) or nil
   end
 
   -- The encounter handed back to the engine: the species as its numeric

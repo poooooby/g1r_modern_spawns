@@ -367,10 +367,26 @@ return function(deps)
     return nil
   end
 
+  -- The slot the engine just rolled. When the roll could have come from several (a table whose
+  -- slots all held one species, levels overlapping), one is picked by the cart's own odds, from
+  -- the save's seed, so every slot's species turns up as often as its slot does.
+  local slotDraws = 0
+  local function rolledSlot(mapId, kind, ctx, rolled)
+    if not world.slotCandidates then return world.slotIndex(mapId, kind, ctx, rolled) end
+    local list = world.slotCandidates(mapId, kind, ctx, rolled) or {}
+    if #list <= 1 then return list[1] end
+    local odds = world.slotWeights and world.slotWeights(kind) or {}
+    local weights = {}
+    for i, index in ipairs(list) do weights[i] = odds[index] or 1 end
+    slotDraws = slotDraws + 1
+    local rng = Rng.new(Rng.hash(Runtime.seed(), "slot", mapId, kind, slotDraws))
+    return list[rng:weighted(weights) or 1]
+  end
+
   -- RANDOM: the species a fresh draw puts in the slot the engine just rolled
   -- (the adapter maps the roll back to a slot of the game's own table), or nil.
   local function randomSpecies(mapId, kind, ctx, rolled)
-    local index = world.slotIndex(mapId, kind, ctx, rolled)
+    local index = rolledSlot(mapId, kind, ctx, rolled)
     if not index then return nil end
     local draw = randomDraw(mapId)
     local fresh = draw and checked(draw[kind])
@@ -413,7 +429,7 @@ return function(deps)
     if not pools then return nil end
     local index
     if world.substituteAfterRoll then
-      index = world.slotIndex(mapId, kind, ctx, rolled)
+      index = rolledSlot(mapId, kind, ctx, rolled)
     else
       local def = generated(mapId, kind)
       for i, slot in ipairs(def and def.slots or {}) do
@@ -431,7 +447,26 @@ return function(deps)
   -- overworld spawns): the fixed table under SEEDED / EVERY MAP, a fresh
   -- one-off draw under RANDOM, and under COMPLETE DEX the primary table with
   -- each slot drawn from its pool. Same shape as tableFor.
+  local drawForImpl
+  local drawLogged = {}
+  -- The first request per map and terrain is logged with what it answered, so a report of
+  -- "the visible spawns ignore Modern Spawns" can tell whether the spawning mod asked at all.
   function Runtime.drawFor(mapId, terrain)
+    local result = drawForImpl(mapId, terrain)
+    local key = tostring(mapId) .. ":" .. tostring(terrain)
+    if not drawLogged[key] then
+      drawLogged[key] = true
+      local species = {}
+      for _, s in ipairs(type(result) == "table" and type(result.slots) == "table" and result.slots or {}) do
+        species[#species + 1] = tostring(s.species)
+      end
+      log:info("drawFor %s %s (%s): %s", tostring(mapId), tostring(terrain),
+        tostring(Config.spawnMode(mod)), #species > 0 and table.concat(species, " ") or "nothing")
+    end
+    return result
+  end
+
+  drawForImpl = function(mapId, terrain)
     if Config.spawnMode(mod) == "complete" then
       local kind = kindOf(terrain)
       local def = generated(mapId, kind)
@@ -755,6 +790,23 @@ return function(deps)
       local kind = world.rollKind(ctx)
       if not kind then return out end
       if not Runtime.isActive() then return out end
+      -- Gen 3: the roll itself says which table it came from when the terrain did not
+      -- (a surfing roll reported as land would match no slot and keep the cart's species)
+      if world.generation == 3 and world.slotIndex then
+        local okI, index = pcall(world.slotIndex, ctx.mapId, kind, ctx, out)
+        if not (okI and index) then
+          local other = kind == "water" and "land" or "water"
+          local okO, otherIndex = pcall(world.slotIndex, ctx.mapId, other, ctx, out)
+          if okO and otherIndex then
+            kind = other
+          else
+            warnOnce("noslot:" .. tostring(ctx.mapId) .. ":" .. kind,
+              "%s: a %s roll (%s, level %s, terrain %s) matches no slot of the map's tables -- "
+              .. "this encounter keeps the game's species", tostring(ctx.mapId), kind,
+              tostring(out.species), tostring(out.level), tostring(ctx.terrain))
+          end
+        end
+      end
       local okL, legend = pcall(legendaryFor, ctx, kind)
       if okL and legend then
         local swapped = withSpecies(out, legend)
@@ -779,7 +831,7 @@ return function(deps)
       -- the slot the engine rolled to its generated species now.
       if world.substituteAfterRoll then
         local ok, species = pcall(function()
-          local index = world.slotIndex(ctx.mapId, kind, ctx, out)
+          local index = rolledSlot(ctx.mapId, kind, ctx, out)
           local def = index and generated(ctx.mapId, kind)
           return def and def.slots[index] and def.slots[index].species
         end)

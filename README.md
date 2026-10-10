@@ -7,6 +7,27 @@ dynamically rather than from hand-written per-map lists. It's for players who
 want a modern Pokédex's worth of wild Pokémon in Kanto, Johto and Hoenn, and for mod
 authors who want a spawn framework to build on.
 
+## What's new in 0.11.0
+
+- **Much more variety.** Early routes used to offer the same few Pokémon whatever
+  the seed. Now each route draws from a far wider mix, including many more Gen 9
+  Pokémon. Your saved game's wild Pokémon will change once when you update; your
+  seed stays the same.
+- **A new spawn mode, COMPLETE.** Every Pokémon in your GENERATIONS range lives
+  somewhere in the game, so you can catch the whole Pokédex in one playthrough.
+  With LEGENDARIES ON, every legendary and mythical gets a home too.
+- **SEEDED is now called LIMITED.** It works exactly as before, and your setting
+  is kept.
+- **The Pokédex AREA page shows where Pokémon are** (FireRed, LeafGreen, Ruby,
+  Sapphire and Emerald). It shows the spots Modern Spawns picked, not the original
+  game's, including the Sevii Islands and places you haven't discovered yet.
+- **Look up Pokémon you haven't seen yet.** With National Dex Gen 3 0.7.0 or
+  later, scroll to any number in the Pokédex and press A. The name and picture
+  stay hidden, but the AREA page tells you where to find it.
+- **Legendaries show up in the Pokédex early.** With LEGENDARIES ON, each
+  legendary with a home is marked as seen, like a roaming legendary after the TV
+  report, so you can check where to look before you meet it.
+- **Gold, Silver and Crystal aren't supported right now** (see below).
 
 ## Requirements
 
@@ -22,7 +43,7 @@ marked incompatible until `national_dex` is fixed; the Gen 2 code is kept.
     species #152–1025. With it off, Modern Spawns leaves the original tables
     alone and logs why.
   - **FireRed / LeafGreen / Ruby / Sapphire / Emerald:** `national_dex_gen3`, which registers
-    #387–1025 as data only (no sprites; pair it with a sprite mod) on every Gen 3 game. On
+    #387–1025 on every Gen 3 game. It ships no battle sprites, so pair it with a sprite mod.
 
 ## Options
 
@@ -232,8 +253,6 @@ FireRed's own `gen3_test.lua`.
   never do. Gen 1 and 2 spawn no forms.
 - On Gold, Silver and Crystal, the preview (`mod.world:effectiveEncounters`)
   shows the DAY list, because the preview has no time of day.
-- A table whose original slots all held one species (Route 19's surf table,
-  for example) still gets one species.
 - Under COMPLETE, `tableFor` and the live encounter data show each
   slot's first pool species only; `poolFor` lists the rest. Kanto Gear's
   guide therefore shows one species per slot. Gen 3 fishing has no hook, so

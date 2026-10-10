@@ -3,6 +3,40 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.11.1] - 2026-10-10
+
+### Changed
+
+- **Tables that held only one species now get several.** A table whose every slot held the
+  same Pokémon (Sootopolis City's surf table is five Magikarp, Route 19's all Tentacool) used
+  to become a single species, which could even be the original one again. Each slot now gets
+  its own species, at the cart's own odds per slot. In every mode: on one test seed
+  Sootopolis surfing went from 1 species to 5 in LIMITED, 43 in EVERY MAP, 73 in RANDOM and
+  8 in COMPLETE. LIMITED rosters change once on existing saves (the seed is kept), on these
+  maps and, through the rolling history, on the maps after them.
+- When a roll could have come from several such slots, one is picked by the cart's odds, so
+  each slot's Pokémon appears as often as its slot does.
+
+### Fixed
+
+- **FireRed, LeafGreen, Ruby, Sapphire and Emerald: wild Pokémon stuck on the same few
+  species** (mostly Charmander), in every mode. Live sync wrote Modern Spawns' species names
+  into the game's own encounter tables, where the cart stores a species *number*, and the
+  game rolls from those tables. Each roll then had no real species and fell back to the
+  wrong one. Live sync now writes the number, as the cart does.
+- **RANDOM and COMPLETE did not redraw per encounter on Gen 3.** With the game's tables
+  synced, a roll no longer matched the cart's original table, so the per-encounter draw
+  (RANDOM) and the slot's pool (COMPLETE) were skipped. A roll is now matched against the
+  synced table too.
+- The same fix lets Wilds of Hoenn's visible spawns and Kanto Gear's wild-encounter guide
+  read those tables correctly.
+- **Surfing kept the original game's Pokémon** (for example only Magikarp in Sootopolis City)
+  when the game reported a surfing step without saying it was on water: Modern Spawns looked
+  for the roll in the land table, found nothing, and left it alone. A surfing roll is now
+  read as a water roll, and a roll that matches neither table is logged once per map.
+- New for those reports: one log line per map when a roll matches no slot, naming the map,
+  the rolled Pokémon and its terrain.
+
 ## [0.11.0] - 2026-10-09
 
 ### Added

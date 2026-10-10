@@ -69,6 +69,21 @@ local function buildRoles(slots, weights, times)
       total = total + (weights[i] or 0)
     end
   end
+  -- A table whose every slot held one species (Sootopolis' and Route 19's surf: all Magikarp
+  -- or all Tentacool) would be one role, so one species however it is drawn. Each slot is a
+  -- role of its own instead, keeping the cart's odds per slot, so these tables vary like any
+  -- other.
+  if #roles == 1 and #roles[1].slots > 1 then
+    local only = roles[1]
+    roles = {}
+    for _, i in ipairs(only.slots) do
+      local slot = slots[i]
+      local role = { species = only.species, slots = { i }, first = i, weight = weights[i] or 0,
+                     minLevel = slot.level, maxLevel = slot.maxLevel or slot.level }
+      if times and times[i] then role.times = { [times[i]] = true } end
+      roles[#roles + 1] = role
+    end
+  end
   for _, role in ipairs(roles) do
     role.rarity = rarityForShare(total > 0 and role.weight / total or 0)
     if role.times then

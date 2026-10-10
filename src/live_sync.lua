@@ -58,6 +58,8 @@ return function(deps)
     for _, entry in ipairs(list) do
       for i, slot in ipairs(entry.arr) do
         local sp = species[i] and species[i].species
+        -- in the game's own spelling: Gen 3 stores a numeric species slot, not an id
+        if sp ~= nil and world.liveValue then sp = world.liveValue(sp) end
         if sp ~= nil then
           slot.species = sp
           wrote = true

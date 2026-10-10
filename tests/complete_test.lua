@@ -297,6 +297,72 @@ set("enabled", "off")
 T.eq(ms.locate(extra), nil, "MODERN SPAWNS OFF: locate answers nil (the page is the cart's own)")
 set("enabled", "on")
 
+-- ------- live sync on Gen 3: the game's own tables keep the cart's numeric species
+-- (the engine rolls them with tonumber(entry.species); a name there broke every roll), and
+-- a roll from the synced table is still recognised, so RANDOM redraws per encounter
+
+set("spawn_mode", "random")
+loader.events:emit("map.entered", { mapId = MAP })
+local synced = data.gen3Encounters[MAP].land.slots
+local numeric = true
+for _, s in ipairs(synced) do if type(s.species) ~= "number" then numeric = false end end
+T.check(numeric, "live sync writes numeric species slots on Gen 3")
+local drawnLive = {}
+for n = 1, 120 do
+  local s = synced[(n % #synced) + 1]
+  local out = Runtime.call("encounter.species", function(e) return e end,
+    { species = P.keyName(s.species), speciesId = s.species, level = s.minLevel },
+    { mapId = MAP, terrain = "land", rng = function() return 4321 end })
+  drawnLive[tostring(out and (out.speciesId or out.species))] = true
+end
+local nLive = 0
+for _ in pairs(drawnLive) do nLive = nLive + 1 end
+T.check(nLive > 20, "RANDOM: rolls from the synced table still redraw (" .. nLive .. " species)")
+set("spawn_mode", "complete")
+
+-- ------- a surfing roll the engine reports with no terrain, or as land (Emerald's rules read
+-- the tile themselves), is still a water roll: Sootopolis's all-Magikarp surf table gets its
+-- pool's species, not the cart's Magikarp
+
+local SOOT = "EM_SOOTOPOLIS_CITY"
+local slotToId = {}
+for _, c in ipairs(ms.candidates({ maxGeneration = 9, includeSpecial = true })) do
+  for _, id in ipairs({ c.id, unpack(c.variants or {}) }) do
+    local r = loader.content.pokemon:get(id)
+    if r and r.index then slotToId[tonumber(r.index)] = id end
+  end
+end
+local sootPools = ms.poolFor(SOOT, "water")
+local sootSlots = live[SOOT].water.slots
+for _, terrain in ipairs({ "nil", "land" }) do
+  local magikarp, outside = 0, 0
+  for n = 1, 40 do
+    local i = (n % #sootSlots) + 1
+    local s = sootSlots[i]
+    local out = Runtime.call("encounter.species", function(e) return e end,
+      { species = P.keyName(s.species), speciesId = s.species, level = s.minLevel },
+      { mapId = SOOT, terrain = terrain ~= "nil" and terrain or nil, rng = function() return 4321 end })
+    local id = out and slotToId[tonumber(out.speciesId or out.species)]
+    if id == "MAGIKARP" then magikarp = magikarp + 1 end
+    -- the roll could have come from any slot its level fits (all five are Magikarp)
+    local inPool = false
+    for j, js in ipairs(sootSlots) do
+      if s.minLevel >= js.minLevel and s.minLevel <= js.maxLevel then
+        for _, sid in ipairs(sootPools[j]) do if sid == id then inPool = true end end
+      end
+    end
+    if not inPool then outside = outside + 1 end
+  end
+  T.eq(outside, 0, "Sootopolis surfing (terrain " .. terrain .. "): every encounter comes from its slot's pool")
+  T.check(magikarp < 40, "Sootopolis surfing (terrain " .. terrain .. "): not all Magikarp")
+end
+-- a table whose slots all held one species now has a species per slot
+local sootSpecies = {}
+for _, slot in ipairs(ms.tableFor(SOOT, "water").slots) do sootSpecies[slot.species] = true end
+local nSoot = 0
+for _ in pairs(sootSpecies) do nSoot = nSoot + 1 end
+T.check(nSoot > 1, "Sootopolis's all-Magikarp surf table becomes several species (" .. nSoot .. ")")
+
 -- ------- the other modes are untouched: SEEDED still has no pools
 
 set("spawn_mode", "seeded")
