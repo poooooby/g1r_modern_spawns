@@ -3,6 +3,10 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.12.0] - 2026-10-10
+
+### Added
+
 - **Regional forms of the original Pokemon** (National Dex Gen 3 0.8): the Alolan, Galarian,
   Hisuian and Paldean forms are wild candidates of their own, like the Galarian and Hisuian forms
   of the newer species. The legendary Galarian birds and Hisuian Typhlosion (a starter) are left
@@ -23,10 +27,6 @@ All notable changes to this mod are documented here, in
     stats are applied by the game-family mod (Wilds of Hoenn on Gen 3).
 
   Inspired by TTiN and Untamed Tohjo, used with permission.
-
-## [0.12.0] - 2026-10-10
-
-### Added
 
 - **Works with no species mod at all.** `national_dex` and `national_dex_gen3` are now optional:
   with only the game's own Pokémon, Red/Blue/Yellow shuffle their 151 and Emerald (and the other
