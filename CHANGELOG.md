@@ -3,11 +3,7 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-## [Unreleased]
-
-### Added
-
-- **Regional forms of the original Pokemon** (National Dex Gen 3 0.7): the Alolan, Galarian,
+- **Regional forms of the original Pokemon** (National Dex Gen 3 0.8): the Alolan, Galarian,
   Hisuian and Paldean forms are wild candidates of their own, like the Galarian and Hisuian forms
   of the newer species. The legendary Galarian birds and Hisuian Typhlosion (a starter) are left
   out. Hisuian Qwilfish is now wild too.
