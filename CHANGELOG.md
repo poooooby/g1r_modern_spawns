@@ -28,7 +28,7 @@ All notable changes to this mod are documented here, in
 
   Inspired by TTiN and Untamed Tohjo, used with permission.
 
-## [0.12.0] - Unreleased
+## [0.12.0] - 2026-10-10
 
 ### Added
 
