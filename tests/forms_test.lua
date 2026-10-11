@@ -39,6 +39,10 @@ local function species()
   add(H.mon("LYCANROC", 745, { "ROCK" }, { 75, 115, 65, 112, 80 }))
   add(form("LYCANROC_MIDNIGHT", 745, "LYCANROC", "MIDNIGHT", { "ROCK" }, { 85, 115, 75, 82, 82 }))
   add(form("LYCANROC_DUSK", 745, "LYCANROC", "DUSK", { "ROCK" }, { 75, 117, 65, 110, 76 }))
+  -- a regional form of a cart species (national_dex_gen3 0.7)
+  add(form("MEOWTH_ALOLA", 52, "MEOWTH", "ALOLA", { "DARK" }, { 40, 35, 35, 90, 50 }))
+  add(form("TAUROS_PALDEA_AQUA_BREED", 128, "TAUROS", "PALDEA_AQUA_BREED", { "FIGHTING", "WATER" },
+           { 75, 110, 105, 100, 30 }))
   return list
 end
 
@@ -58,6 +62,10 @@ T.check(pool.byId.DARUMAKA_GALAR.habitats.snow, "and its own habitats")
 T.eq(pool.byId.DARUMAKA_GALAR.family, pool.byId.DARUMAKA.family, "it shares its base species' family")
 T.eq(pool.byId.DARMANITAN_GALAR_STANDARD.stage, 2, "and keeps its place in its own evolution line")
 T.check(pool.byId.DARMANITAN_GALAR_STANDARD ~= nil, "regional evolutions are candidates too")
+T.check(pool.byId.MEOWTH_ALOLA ~= nil, "a regional form of a cart species is a candidate")
+T.eq(pool.byId.MEOWTH_ALOLA.gen, 7, "counted in its region's generation (Alola, 7), not its base's")
+T.eq(pool.byId.DARUMAKA_GALAR.gen, 8, "Galar is 8")
+T.eq(pool.byId.TAUROS_PALDEA_AQUA_BREED and pool.byId.TAUROS_PALDEA_AQUA_BREED.gen, 9, "and a Paldean breed 9")
 
 for _, id in ipairs({ "FLABEBE_YELLOW", "ROTOM_HEAT", "LYCANROC_MIDNIGHT" }) do
   T.eq(pool.byId[id], nil, id .. " is a look, not a candidate")

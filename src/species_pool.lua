@@ -42,6 +42,19 @@ local REGIONAL = set({
   "DARUMAKA_GALAR", "DARMANITAN_GALAR_STANDARD", "YAMASK_GALAR", "STUNFISK_GALAR",
   "ZORUA_HISUI", "ZOROARK_HISUI", "LILLIGANT_HISUI", "BRAVIARY_HISUI", "SLIGGOO_HISUI",
   "GOODRA_HISUI", "AVALUGG_HISUI",
+  -- regional forms of the cart's own species (national_dex_gen3 0.7): the legendary birds
+  -- and the starter Typhlosion are left out, as the other legendaries and starters are
+  "RATTATA_ALOLA", "RATICATE_ALOLA", "RAICHU_ALOLA", "SANDSHREW_ALOLA", "SANDSLASH_ALOLA",
+  "VULPIX_ALOLA", "NINETALES_ALOLA", "DIGLETT_ALOLA", "DUGTRIO_ALOLA", "MEOWTH_ALOLA",
+  "PERSIAN_ALOLA", "GEODUDE_ALOLA", "GRAVELER_ALOLA", "GOLEM_ALOLA", "GRIMER_ALOLA",
+  "MUK_ALOLA", "EXEGGUTOR_ALOLA", "MAROWAK_ALOLA",
+  "MEOWTH_GALAR", "PONYTA_GALAR", "RAPIDASH_GALAR", "SLOWPOKE_GALAR", "SLOWBRO_GALAR",
+  "SLOWKING_GALAR", "FARFETCHD_GALAR", "WEEZING_GALAR", "MR_MIME_GALAR", "CORSOLA_GALAR",
+  "ZIGZAGOON_GALAR", "LINOONE_GALAR",
+  "GROWLITHE_HISUI", "ARCANINE_HISUI", "VOLTORB_HISUI", "ELECTRODE_HISUI", "SNEASEL_HISUI",
+  "QWILFISH_HISUI",
+  "WOOPER_PALDEA", "TAUROS_PALDEA_COMBAT_BREED", "TAUROS_PALDEA_BLAZE_BREED",
+  "TAUROS_PALDEA_AQUA_BREED",
 })
 
 local LOOKS = set({
@@ -278,6 +291,17 @@ local function buildEvolutionIndex(records, byId, evolutionOf)
   return { from = from, into = into, family = find, stage = stage, union = union }
 end
 
+-- A regional form belongs to the generation that introduced its region, not its base's:
+-- an Alolan Meowth is Gen 7, so a "Gen 1-3" or "Gen 1" cap leaves it out.
+local REGION_GEN = { ALOLA = 7, GALAR = 8, HISUI = 8, PALDEA = 9 }
+local function regionGeneration(record)
+  local form = type(record.form) == "string" and record.form or ""
+  for region, gen in pairs(REGION_GEN) do
+    if form == region or form:sub(1, #region + 1) == region .. "_" then return gen end
+  end
+  return nil
+end
+
 -- ------------------------------------------------------------------ build
 
 -- world.species()      -> list of runtime pokemon records
@@ -330,7 +354,7 @@ function SpeciesPool.build(world, profiles, generationOfDex)
     local c = {
       id = record.id,
       dex = record.dex,
-      gen = profileGen[record.dex] or generationOfDex(record.dex) or 9,
+      gen = regionGeneration(record) or profileGen[record.dex] or generationOfDex(record.dex) or 9,
       types = types,
       typeList = typeList,
       bst = bst(record),

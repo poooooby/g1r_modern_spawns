@@ -7,6 +7,13 @@ All notable changes to this mod are documented here, in
 
 ### Added
 
+- **Regional forms of the original Pokemon** (National Dex Gen 3 0.7): the Alolan, Galarian,
+  Hisuian and Paldean forms are wild candidates of their own, like the Galarian and Hisuian forms
+  of the newer species. The legendary Galarian birds and Hisuian Typhlosion (a starter) are left
+  out. Hisuian Qwilfish is now wild too.
+- A regional form counts in the generation of its region (Alola 7, Galar and Hisui 8, Paldea 9),
+  not its base species', so a Gen 1-3 or Gen 1 cap leaves it out.
+
 - **Shiny chains.** Win or catch the same species again and again and the chain grows:
   - It turns up more often wherever it can be met: 1 in 8 encounters at 2, every encounter
     from 9. This works for step encounters and, through `chainSpeciesFor`, for a consumer's
