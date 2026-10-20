@@ -292,6 +292,8 @@ local function encounter(rngValue)
     { mapId = hostMap, terrain = terrain, daytime = "DAY", kind = "wild",
       rng = function(lo) return rngValue or lo end })
 end
+T.check(hostSet[encounter(1).species] == nil, "no legendary before the Hall of Fame")
+game.save.hallOfFame = { count = 1, entered = true, teams = {} }
 local won = encounter(1)
 T.check(hostSet[won.species] ~= nil, "a winning roll brings a hosted legendary on "
   .. hostMap .. " (" .. tostring(won.species) .. ")")

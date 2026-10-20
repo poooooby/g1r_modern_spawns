@@ -3,7 +3,7 @@
 -- mods/national_dex_gen3).
 --
 -- COMPLETE DEX: every species the GENERATIONS cap allows is catchable
--- somewhere. Each role keeps its primary species (the SEEDED pick) and also
+-- somewhere. Each role keeps its primary species (a buildAll pick) and also
 -- holds a pool; the engine rolls the slot with the game's own odds and the
 -- species is drawn from that slot's pool afterwards. With LEGENDARIES ON
 -- every legendary/mythical under the cap has a home.
@@ -45,7 +45,9 @@ for _, c in ipairs(ms.candidates({ maxGeneration = 9 })) do
   for _, v in ipairs(c.variants or {}) do lookOf[v] = c.id end
 end
 
--- the species every pool holds, looks folded onto their base
+-- the species every pool holds, looks folded onto their base. A regional form
+-- (VULPIX_ALOLA) is a candidate of its own and must be in a pool itself: its
+-- base species does not stand in for it, nor it for its base.
 local function covered()
   local seen = {}
   for _, mapId in ipairs(maps) do
@@ -54,8 +56,6 @@ local function covered()
         for _, id in ipairs(list) do
           seen[id] = true
           if lookOf[id] then seen[lookOf[id]] = true end
-          local p = ms.profileOf(id)
-          if p and p.baseSpecies then seen[p.baseSpecies] = true end
         end
       end
     end
@@ -71,10 +71,14 @@ for _, cap in ipairs({ "3", "5", "9" }) do
   ms.tableFor(maps[1], "land")
   local took = os.clock() - t0
   T.check(took < 3, "GEN 1-" .. cap .. " atlas builds in under 3 s (" .. string.format("%.2f", took) .. " s)")
-  local seen, absent = covered(), {}
+  local seen, absent, forms = covered(), {}, 0
   local expected = ms.candidates({ maxGeneration = tonumber(cap) })
   for _, c in ipairs(expected) do
-    if not seen[c.id] and not (c.baseSpecies and seen[c.baseSpecies]) then absent[#absent + 1] = c.id end
+    if not seen[c.id] then absent[#absent + 1] = c.id end
+    if c.baseSpecies then forms = forms + 1 end
+  end
+  if cap == "9" then
+    T.check(forms >= 40, "GEN 1-9 counts the regional forms one by one (" .. forms .. ")")
   end
   T.eq(#absent, 0, "GEN 1-" .. cap .. ": all " .. #expected .. " species are catchable ("
     .. table.concat(absent, ", ", 1, math.min(#absent, 8)) .. ")")
@@ -187,6 +191,44 @@ for _ in pairs(poolSpecies) do nPool = nPool + 1 end
 T.check(nPool > nPrimary and distinct > nPrimary, "Route 101 shows more than its primaries ("
   .. nPrimary .. " primaries, " .. nPool .. " in pools, " .. distinct .. " drawn)")
 
+-- the cart's own species stay catchable where the cart put them: every
+-- walking and surfing slot's pool holds the species the slot had
+local kept, missed, firstMiss = 0, 0, nil
+for _, mapId in ipairs(maps) do
+  if mapId:match("^EM_") then
+    for _, terrain in ipairs({ "land", "water" }) do
+      local pools = ms.poolFor(mapId, terrain) or {}
+      local area = live[mapId] and live[mapId][terrain]
+      for i, slot in ipairs(area and area.slots or {}) do
+        -- the live slot holds the numeric species slot: compare by index
+        if pools[i] then
+          local found = false
+          for _, id in ipairs(pools[i]) do
+            local rec = loader.content.pokemon:get(id)
+            if rec and tonumber(rec.index) == tonumber(slot.species) then found = true end
+          end
+          if found then kept = kept + 1 else
+            missed = missed + 1
+            firstMiss = firstMiss or (mapId .. " " .. terrain .. " " .. i .. " " .. slot.species)
+          end
+        end
+      end
+    end
+  end
+end
+T.check(kept > 500, "the cart's own species stay in their slots' pools (" .. kept .. ")")
+T.eq(missed, 0, "no original species is missing from its slot (" .. tostring(firstMiss) .. ")")
+set("max_generation", "2")
+local hoenn = false
+for _, list in pairs(ms.poolFor("EM_ROUTE101", "land") or {}) do
+  for _, id in ipairs(list) do
+    local p = ms.profileOf(id)
+    if p and p.generation > 2 then hoenn = true end
+  end
+end
+T.check(not hoenn, "GEN 1-2 keeps Route 101's own Hoenn species out (the cap still rules)")
+set("max_generation", "9")
+
 -- pools stay small: the extras spread across the game
 local largest, total, roles = 0, 0, 0
 for _, mapId in ipairs(maps) do
@@ -202,7 +244,8 @@ for _, mapId in ipairs(maps) do
   end
 end
 print(string.format("pools: %d roles (aliases counted), avg %.2f, largest %d", roles, total / roles, largest))
-T.check(largest <= 6, "no role's pool holds more than 6 species (" .. largest .. ")")
+-- max_pool (6) plus the cart's own species for the role
+T.check(largest <= 7, "no role's pool holds more than 7 species (" .. largest .. ")")
 
 -- ------- LEGENDARIES ON: every legendary and mythical has a home
 

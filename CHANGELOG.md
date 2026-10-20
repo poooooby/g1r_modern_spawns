@@ -3,6 +3,51 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.13.0] - 2026-10-20
+
+### Changed
+
+- **Places keep their character.** Hoenn's and the Sevii Islands' named places have themes of
+  their own (they all read as plain routes before): Mt. Pyre and the Lost Cave draw Ghosts,
+  New Mauville Electric and Steel types, Petalburg Woods and Berry Forest Bugs and Grass types,
+  Route 111's desert Ground types, Shoal Cave and Icefall Cave Ice types, plus Granite Cave,
+  Meteor Falls, Fiery Path, Jagged Pass, Mt. Ember, Sky Pillar, Tanoby and more. Gen 3 towns and
+  sea routes read as towns and sea.
+- **Fit comes before variety.** On a themed map (a theme type, or a cave, forest, ruins, snow,
+  desert, mountain, water or coast habitat) the first-choice candidates must share the theme; a
+  shared "route" tag no longer counts as a habitat match (nearly every species has one), and
+  the map's theme type weighs twice as much. Measured over Emerald and FireRed seeds, themed
+  places went from mixed rosters (Mt. Pyre: Shellos and Spritzee; New Mauville: Arcanine) to
+  85-100% on theme, with the variety checks still met.
+- **Indoor and look-alike places are read correctly** (FireRed/LeafGreen, Ruby/Sapphire/Emerald):
+  Pokémon Tower, the Pokémon Mansion, the Power Plant, Mt. Pyre's floors and the S.S. Anne no
+  longer count as grassy routes, and New Mauville, Sky Pillar and the Abandoned Ship no longer
+  count as caves (the game flags them underground). Route 112 is a mountain route. An audit
+  confirmed every wild map in all five Gen 3 games gets generated tables.
+- **LIMITED is the classic mode.** It draws from a tighter shortlist (best 12 within 20 points,
+  was 24 within 30) and favours a newcomer that shares the types of the Pokémon it replaces, so a
+  route keeps its original character. Two seeds now share about 12-15% of their LIMITED
+  species (5% before). EVERY MAP, RANDOM and COMPLETE keep their wider draw, so LIMITED and
+  COMPLETE no longer share their main species on one seed. The variety checks for LIMITED now
+  bar any newcomer from dominating a route, and cap how much of it the game's own species win
+  back (35% of Route 101, 50% of Crystal's Route 29, where only Gen 1-2 species exist).
+- **COMPLETE's extra species respect themes.** A species that misses a themed map's theme goes
+  to a map it fits or a plain route first (it could land in Mt. Pyre or Artisan Cave before:
+  3.3% of extras on themed Emerald maps, now 0%). Every species is still catchable: checked on
+  Emerald, FireRed, Red (with and without National Dex) and Crystal, every GENERATIONS setting,
+  regional forms counted one by one.
+- **This reshuffles existing LIMITED and COMPLETE rosters** on every game (the pinned fixture in
+  the generator test moved), so a save's wild Pokémon change once after updating.
+- **Legendaries wait for the League.** With LEGENDARIES ON, legendaries and mythicals appear
+  only once the save has entered the Hall of Fame (Gen 1 and 2) or set the game-clear flag
+  (Gen 3). Their homes still show on the Pokédex AREA page before then.
+
+### Added
+
+- **COMPLETE keeps the original Pokémon.** Each slot's pool also holds the species the game
+  itself had there (when it's under the GENERATIONS cap), so Viridian Forest's Pikachu or
+  Route 101's Zigzagoon stay catchable where they always were, alongside the newcomers.
+
 ## [0.12.0] - 2026-10-10
 
 ### Added

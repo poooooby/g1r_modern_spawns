@@ -46,15 +46,17 @@ T.check(differs, "different seeds can produce different tables")
 -- Re-pinned at 0.11.0: the shortlist became a softmax within a score window and
 -- plausible basics were admitted at low levels (SpawnConfig.selection /
 -- plausible_basic), which moved ROUTE_B's middle role. ROUTE_A did not move.
+-- Re-pinned at 0.13.0: a "route" habitat in common became a weak hint
+-- (habitat_generic) instead of a full habitat match, which moved both routes.
 local function speciesList(tbl)
   local out = {}
   for i, slot in ipairs(tbl.slots) do out[i] = slot.species end
   return table.concat(out, ",")
 end
 T.eq(speciesList(a.ROUTE_A.grass),
-     "HOOTHOOT,STARLY,HOOTHOOT,STARLY,HOOTHOOT,STARLY,HOOTHOOT,STARLY,HOOTHOOT,STARLY",
+     "PIDGEY,LECHONK,PIDGEY,LECHONK,PIDGEY,LECHONK,PIDGEY,LECHONK,PIDGEY,LECHONK",
      "seed 42 ROUTE_A is unchanged")
-T.eq(speciesList(a.ROUTE_B.grass), "PIDGEY,RATTATA,MARILL", "seed 42 ROUTE_B is unchanged")
+T.eq(speciesList(a.ROUTE_B.grass), "STARLY,HOOTHOOT,MARILL", "seed 42 ROUTE_B is unchanged")
 
 -- ------- structure preservation
 

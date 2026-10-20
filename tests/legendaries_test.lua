@@ -86,6 +86,11 @@ setOption("legendaries", "on")
 local hostList = homes.POWER_PLANT.grass
 local hostSet = {}
 for _, h in ipairs(hostList) do hostSet[h.id] = h.category end
+-- only once the League is beaten: the save's Hall of Fame holds a team
+local early = encounter("POWER_PLANT", "grass", 1)
+T.check(hostSet[early.species] == nil, "before the Hall of Fame even a winning roll gives no legendary")
+T.eq(api.legendaryFor("POWER_PLANT", "grass"), nil, "legendaryFor waits for the League too")
+game.save.hallOfFame = { { { species = "VENUSAUR", level = 60 } } }
 local won, slot = encounter("POWER_PLANT", "grass", 1)
 T.check(hostSet[won.species] ~= nil, "ON + winning roll: a Power Plant host appears ("
   .. tostring(won.species) .. ")")

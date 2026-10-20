@@ -134,6 +134,14 @@ return function(deps)
     return ok and owned == true
   end
 
+  -- Whether the loaded save has beaten the League (the LEGENDARIES roll waits
+  -- for it). Unknown reads as not yet.
+  local clearedIn = world.leagueCleared -- the adapter's leagueCleared(game)
+  function world.leagueCleared()
+    local ok, cleared = pcall(clearedIn, mod.game)
+    return ok and cleared == true
+  end
+
   Runtime.world = world
 
   -- -------------------------------------------------------------- pool
@@ -713,9 +721,12 @@ return function(deps)
   end
 
   -- A hosted legendary (1 in `chance`) or mythical (1 in `mythical_chance`)
-  -- for this encounter, or nil. Owned and unregistered species never appear.
+  -- for this encounter, or nil. Only once the League is beaten (the game's
+  -- own Hall of Fame / game-clear state); owned and unregistered species never
+  -- appear.
   local function legendaryFor(ctx, kind)
     if not Config.legendaries(mod) then return nil end
+    if not world.leagueCleared() then return nil end
     local homes = Runtime.legendaryHomes()
     local byKind = homes and ctx and homes[ctx.mapId]
     local hosts = byKind and byKind[kind]

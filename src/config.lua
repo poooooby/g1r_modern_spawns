@@ -65,11 +65,13 @@ Config.SpawnConfig = {
   plausible_basic = { max_bst = 340, floor_level = 2, penalty = -4 },
   -- `top` caps the shortlist, `window` drops anything more than that many
   -- score points below the best fit, and weight = exp((score - best) /
-  -- temperature): a higher temperature spreads the draw wider. SEEDED stays
-  -- the tightest (a playthrough's roster should read as fitting), the modes
-  -- that redraw spread widest.
+  -- temperature): a higher temperature spreads the draw wider. SEEDED
+  -- (LIMITED) is the classic mode: the tightest draw, and `resemble` adds
+  -- that much per type a replacement shares with the species it replaces,
+  -- so a table keeps its original character. COMPLETE keeps the wider draw
+  -- its coverage needs, and the modes that redraw spread widest.
   selection = {
-    seeded = { top = 24, window = 30, temperature = 12 },
+    seeded = { top = 12, window = 20, temperature = 10, resemble = 8 },
     map = { top = 32, window = 40, temperature = 14 },
     random = { top = 48, window = 50, temperature = 16 },
     complete = { top = 24, window = 30, temperature = 12 },
@@ -92,8 +94,9 @@ Config.SpawnConfig = {
     terrain_partial = 8,      -- cave table, grass-only species
     habitat_match = 20,
     habitat_extra = 4,        -- per additional shared habitat
+    habitat_generic = 4,      -- only a "route"/"general" tag in common
     type_match = 12,          -- per type shared with the replaced species
-    map_type = 10,            -- type the map favors (GHOST in a tower...)
+    map_type = 20,            -- type the map favors (GHOST in a tower...)
     rarity_match = 5,
     rarity_mismatch = -15,    -- two or more rarity steps apart
     new_species = 10,

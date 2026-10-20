@@ -29,4 +29,6 @@ tests/variety_gen2_test.lua
 tests/complete_test.lua
 tests/frlg_area_test.lua
 tests/chain_test.lua
+tests/placement_test.lua
 CLAUDE.md
+.claude/skills/lua-developer/SKILL.md

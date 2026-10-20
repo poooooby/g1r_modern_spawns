@@ -120,6 +120,34 @@ end
 
 -- -------------------------------------------------------------- filtering
 
+-- Habitat tags that say nothing about a place: nearly every species has been
+-- met on some route, so sharing one is a weak hint, not a fit.
+local GENERIC_HABITATS = { route = true, general = true }
+-- Tags that make a map a PLACE (a cave, a forest, a tower, a beach) rather
+-- than an ordinary route: such a map, or one with a theme type (GHOST in a
+-- tower, ELECTRIC in a power plant), draws its strict tier from species that
+-- share one of these or a theme type.
+local THEME_HABITATS = { cave = true, forest = true, ruins = true, snow = true,
+                         desert = true, mountain = true, water = true, coast = true }
+
+local function themed(env)
+  if next(env.mapTypes or {}) then return true end
+  for h in pairs(env.habitats or {}) do
+    if THEME_HABITATS[h] then return true end
+  end
+  return false
+end
+
+local function fitsTheme(c, env)
+  for t in pairs(c.types) do
+    if env.mapTypes[t] then return true end
+  end
+  for h in pairs(c.habitats) do
+    if THEME_HABITATS[h] and env.habitats[h] then return true end
+  end
+  return false
+end
+
 local function terrainOk(c, terrain, relaxed)
   local t = c.terrains
   if terrain == "water" or terrain == "fish" then
@@ -156,14 +184,16 @@ local function underleveled(c, role, tolerance)
   return c.evolveLevel ~= nil and role.maxLevel < c.evolveLevel - tolerance
 end
 
--- tier 1: terrain + plausible level; tier 2: terrain; tier 3: anything
--- non-special under the cap. Special species are never eligible at any tier.
+-- tier 1: terrain + plausible level (+ the place's theme on a themed map);
+-- tier 2: terrain; tier 3: anything non-special under the cap. Special
+-- species are never eligible at any tier.
 local function eligible(c, env, role, tier)
   if c.special then return false end
   if c.gen > env.maxGen then return false end
   if tier >= 3 then return true end
   if not terrainOk(c, env.terrain, tier >= 2) then return false end
   if tier >= 2 then return true end
+  if env.themed and not fitsTheme(c, env) then return false end
   return levelDistance(c, role, env.config.plausible_basic) <= env.config.strict_level_distance
     and not underleveled(c, role, env.config.evolve_tolerance)
 end
@@ -212,12 +242,16 @@ local function score(c, role, env, labelled)
     add(W.terrain_partial, "terrain_partial")
   end
 
-  local shared = 0
+  local shared, generic = 0, false
   for h in pairs(c.habitats) do
-    if env.habitats[h] then shared = shared + 1 end
+    if env.habitats[h] then
+      if GENERIC_HABITATS[h] then generic = true else shared = shared + 1 end
+    end
   end
   if shared > 0 then
     add(W.habitat_match + (shared - 1) * W.habitat_extra, "habitat_match")
+  elseif generic then
+    add(W.habitat_generic, "habitat_generic")
   end
 
   local vanilla = env.pool.byId[role.species]
@@ -227,6 +261,10 @@ local function score(c, role, env, labelled)
       if vanilla.types[t] then same = same + 1 end
     end
     if same > 0 then add(math.min(same, 2) * W.type_match, "type_match") end
+    -- LIMITED (SpawnConfig.selection.seeded.resemble): a replacement that
+    -- shares the replaced species' types keeps the original table's character
+    local resemble = env.selection and env.selection.resemble
+    if resemble and same > 0 then add(math.min(same, 2) * resemble, "resembles_replaced") end
   end
   for t in pairs(c.types) do
     if env.mapTypes[t] then
@@ -454,6 +492,7 @@ function Generator.buildMap(ctx, mapId, memory, nonce, remember)
       slotTimes = entry.times, timeOf = world.timeOf,
       mapId = mapId, kind = kind, seats = ctx.seats,
     }
+    env.themed = themed(env)
     -- SEEDED passes no nonce and must hash exactly as 0.1.0 did, so a save's
     -- rosters survive upgrades; an extra field would reshuffle every draw
     local key = nonce == nil
@@ -494,7 +533,8 @@ end
 -- engine still rolls the slot with the game's own odds, and the species is
 -- drawn from that slot's pool afterwards (src/runtime.lua).
 --
--- Pass 1 is buildAll exactly (same seed key per map), which gives every role
+-- Pass 1 is buildAll (same seed key per map, drawn with COMPLETE's own
+-- `selection`, so the primaries differ from LIMITED's), which gives every role
 -- its primary species. Pass 2 places every species still missing: hardest
 -- first (fewest strict-tier roles), each scored against every role through
 -- the usual tiers, minus `pool_penalty` per species a role already holds so
@@ -504,7 +544,17 @@ end
 -- last high-level cave. Tier 3 takes any role, so coverage is total.
 --
 -- Returns buildAll's shape plus result.pools[kind][slot] = { species ids },
--- the primary first; slots of one role share one list.
+-- the primary first and the cart's own species for the role last; slots of
+-- one role share one list.
+local COVERAGE_PASSES = {
+  { tier = 1, capped = true },
+  { tier = 2, capped = true, onTheme = true },
+  { tier = 2, capped = true },
+  { tier = 3, capped = true, onTheme = true },
+  { tier = 3, capped = true },
+  { tier = 3, capped = false },
+}
+
 function Generator.buildAtlas(ctx)
   local seats = {}
   local actx = setmetatable({ seats = seats }, { __index = ctx })
@@ -542,13 +592,15 @@ function Generator.buildAtlas(ctx)
   local rules = ctx.config.complete
   for _, m in ipairs(missing) do
     local c, scored = m.c, {}
-    -- a full role (`max_pool`) is skipped while any tier has room elsewhere;
-    -- only when every role is full does the last pass ignore the cap
-    for pass = 1, 4 do
-      local tier, capped = math.min(pass, 3), pass <= 3
+    -- a full role (`max_pool`) is skipped while any tier has room elsewhere,
+    -- and a species that misses a themed map's theme tries the roles it fits
+    -- and the unthemed ones first, so it lands on a plain route rather than in
+    -- a tower; only when every role is full does the last pass ignore the cap
+    for _, pass in ipairs(COVERAGE_PASSES) do
       for i, seat in ipairs(seats) do
-        if eligible(c, seat.env, seat.role, tier)
-          and (not capped or #seat.pool < rules.max_pool) then
+        if eligible(c, seat.env, seat.role, pass.tier)
+          and (not pass.capped or #seat.pool < rules.max_pool)
+          and (not pass.onTheme or not seat.env.themed or fitsTheme(c, seat.env)) then
           scored[#scored + 1] = { seat = seat, order = i,
             score = score(c, seat.role, seat.env, false)
               + (#seat.pool - 1) * rules.pool_penalty }
@@ -571,6 +623,21 @@ function Generator.buildAtlas(ctx)
       local seat = scored[rng:weighted(weights) or 1].seat
       seat.pool[#seat.pool + 1] = c.id
       seat.env.state.species[c.id] = true
+    end
+  end
+
+  -- The cart's own species stay catchable where the cart put them: each
+  -- seat's pool also holds the species its role replaced (Viridian Forest's
+  -- Pikachu, Route 119's Feebas), when it is under the cap. Added last, so it
+  -- never takes a `max_pool` place from coverage, and never as the primary.
+  for _, seat in ipairs(seats) do
+    local original = ctx.pool.byId[seat.role.species]
+    if original and not original.special and original.gen <= ctx.maxGen then
+      local present = false
+      for _, id in ipairs(seat.pool) do
+        if id == original.id then present = true break end
+      end
+      if not present then seat.pool[#seat.pool + 1] = original.id end
     end
   end
 
@@ -633,6 +700,7 @@ function Generator.legendaryHomes(ctx)
               history = emptyHistory, areaSpecies = {},
             },
           }
+          candidate.env.themed = themed(candidate.env)
           all[#all + 1] = candidate
           if hi >= rules.min_level then slots[#slots + 1] = candidate end
         end

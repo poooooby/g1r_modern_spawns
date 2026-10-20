@@ -168,6 +168,19 @@ set("spawn_mode", "seeded")
 set("legendaries", "on")
 local homes = api.legendaryHomes()
 T.check(homes.FR_POWER_PLANT ~= nil, "the Power Plant hosts legendaries")
+-- the game's own FLAG_SYS_GAME_CLEAR (set by the Hall of Fame) unlocks the roll
+game.save.flags = {}
+local hostIndex = {}
+for _, h in ipairs(homes.FR_POWER_PLANT.land) do
+  hostIndex[loader.content.pokemon:get(h.id).index] = true
+end
+local early = false
+for _ = 1, 5000 do
+  local out = encounter("FR_POWER_PLANT", "land", live.FR_POWER_PLANT.land.slots[1])
+  if hostIndex[out.species] then early = true break end
+end
+T.check(not early, "no legendary before FLAG_SYS_GAME_CLEAR")
+game.save.flags.FLAG_SYS_GAME_CLEAR = true
 T.eq(homes.FR_ROUTE_1, nil, "Route 1 hosts none")
 local hosts, hostSlots = {}, {}
 for _, h in ipairs(homes.FR_POWER_PLANT.land) do
@@ -191,6 +204,36 @@ for _ = 1, 20000 do
 end
 T.check(not again, "owned legendaries (session.dex.owned) never appear again")
 game.session = nil
+
+-- ------- the Sevii Islands' places have themes (see placement_test.lua)
+
+local MapContext = dofile((arg[0]:gsub("\\", "/"):match("^(.*)/") or ".") .. "/../src/map_context.lua")
+local SEVII = {
+  { "FR_FIVE_ISLAND_LOST_CAVE_ROOM1", 0.40, "Ghost in the Lost Cave" },
+  { "FR_FOUR_ISLAND_ICEFALL_CAVE_1F", 0.75, "Ice/Water in Icefall Cave" },
+  { "FR_THREE_ISLAND_BERRY_FOREST", 0.75, "Bug/Grass in Berry Forest" },
+  { "FR_MT_EMBER_EXTERIOR", 0.55, "Fire/Rock on Mt. Ember" },
+}
+local fitN, allN = {}, {}
+for s = 1, 8 do
+  loader.modSave.modern_spawns = { seed = "SEVII" .. s }
+  api.invalidate()
+  for _, place in ipairs(SEVII) do
+    local theme = MapContext.describe(place[1], nil, "grass").types
+    for _, slot in ipairs((api.tableFor(place[1], "land") or {}).slots or {}) do
+      allN[place[1]] = (allN[place[1]] or 0) + 1
+      local p = api.profileOf(slot.species)
+      for _, t in ipairs(p and p.types or {}) do
+        if theme[(tostring(t):gsub("_TYPE$", ""))] then fitN[place[1]] = (fitN[place[1]] or 0) + 1 break end
+      end
+    end
+  end
+end
+for _, place in ipairs(SEVII) do
+  local share = (fitN[place[1]] or 0) / math.max(1, allN[place[1]] or 0)
+  T.check(share >= place[2], string.format("%s: %d%% (want %d%%+)", place[3],
+    math.floor(share * 100 + 0.5), math.floor(place[2] * 100)))
+end
 
 run.release()
 T.finish("modern_spawns gen3")

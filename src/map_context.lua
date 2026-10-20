@@ -1,12 +1,13 @@
 -- What kind of place a map is, read from the runtime alone.
 --
 -- No per-map data ships with this mod: a map's habitat tags come from its
--- tileset (data.maps[id].tileset), a handful of keyword rules on the map id,
--- and the terrain being rolled. The tags use the same vocabulary the
+-- tileset (data.maps[id].tileset; on Gen 3, which names none, its map type),
+-- keyword rules on the map id for named places, and the terrain being rolled. The tags use the same vocabulary the
 -- generated species profiles use (forest, cave, water, coast, mountain,
 -- route, grassland, desert, snow, ruins, urban), so matching is a set test.
--- `types` are soft preferences for the map (GHOST in a tower, ELECTRIC in a
--- power plant) scored in the generator, never filters.
+-- `types` are the map's theme (GHOST in a tower, ELECTRIC in a power plant):
+-- scored in the generator, and on a themed map the strict tier only takes
+-- species that share a theme type or a place habitat (a thin tier widens).
 
 local MapContext = {}
 
@@ -35,16 +36,23 @@ local TILESET = {
 }
 
 -- Gen 2 map headers also carry an environment; it fills in whatever the
--- tileset did not say.
+-- tileset did not say. Gen 3 maps have no tileset name at all: the adapter
+-- turns their map type into one of these.
 local ENVIRONMENT = {
   ROUTE = { "route", "grassland" },
   TOWN = { "urban", "route" },
   CAVE = { "cave" },
   DUNGEON = { "ruins" },
+  OCEAN = { "coast", "water" },
+  -- a Gen 3 indoor map (a tower floor, a mansion, a power plant) says
+  -- nothing about its place; its keyword rules do
+  INDOOR = {},
 }
 
--- Keyword rules on the map id: { pattern, habitats, types }. First the
--- specific places, then the broad ones; every matching rule applies.
+-- Keyword rules on the map id: { pattern, habitats, types, replaces }. First
+-- the specific places, then the broad ones; every matching rule applies. A
+-- rule with `replaces` drops what the tileset or map type said (New
+-- Mauville is flagged underground, but it is a power plant, not a cave).
 local KEYWORDS = {
   { "SEAFOAM", { "cave", "water", "snow", "coast" }, { "ICE", "WATER" } },
   { "POWER_PLANT", { "urban" }, { "ELECTRIC", "STEEL" } },
@@ -74,6 +82,47 @@ local KEYWORDS = {
   { "SILVER_CAVE", { "cave", "mountain" }, { "ICE", "STEEL", "DRAGON" } },
   { "NATIONAL_PARK", { "grassland", "forest" }, { "BUG" } },
   { "DRAGONS_DEN", { "cave", "water" }, { "DRAGON" } },
+  -- Hoenn (Ruby / Sapphire / Emerald); a substring covers every alias
+  -- (EM_MT_PYRE_6F, MT_PYRE_6F, ...)
+  { "WOODS", { "forest" }, { "BUG", "GRASS" } },
+  { "GRANITE_CAVE", { "cave" }, { "ROCK", "STEEL", "FIGHTING" } },
+  { "RUSTURF_TUNNEL", { "cave" }, { "ROCK", "NORMAL" } },
+  { "METEOR_FALLS", { "cave", "water" }, { "DRAGON", "ROCK", "PSYCHIC" } },
+  { "FIERY_PATH", { "cave", "mountain" }, { "FIRE", "POISON" } },
+  { "JAGGED_PASS", { "mountain" }, { "FIRE", "GROUND" } },
+  { "MAGMA_HIDEOUT", { "cave", "mountain" }, { "FIRE", "ROCK" } },
+  { "DESERT", { "desert" }, { "GROUND", "ROCK" } },
+  { "ROUTE111", { "desert" }, { "GROUND" } },
+  { "ROUTE112", { "mountain" }, { "GROUND", "FIRE" } },
+  { "ROUTE113", { "mountain" }, { "GROUND", "STEEL" } },
+  { "ROUTE119", { "forest" }, { "GRASS", "BUG" } },
+  { "ROUTE120", { "forest" }, { "GRASS", "DARK" } },
+  { "MIRAGE_TOWER", { "desert", "ruins" }, { "GROUND", "ROCK" } },
+  { "NEW_MAUVILLE", { "urban" }, { "ELECTRIC", "STEEL" }, true },
+  { "MT_PYRE", { "ruins" }, { "GHOST" } },
+  { "MT_PYRE_EXTERIOR", { "mountain" }, nil },
+  { "MT_PYRE_SUMMIT", { "mountain" }, nil },
+  { "ABANDONED_SHIP", { "ruins", "coast" }, { "GHOST", "WATER" }, true },
+  { "SHOAL_CAVE", { "cave", "snow", "water", "coast" }, { "ICE", "WATER" } },
+  { "SEAFLOOR_CAVERN", { "cave", "water" }, { "WATER", "ROCK" } },
+  { "CAVE_OF_ORIGIN", { "cave" }, { "DARK", "GHOST" } },
+  { "SKY_PILLAR", { "ruins", "mountain" }, { "DRAGON", "GHOST", "PSYCHIC" }, true },
+  { "ARTISAN_CAVE", { "cave" }, { "ROCK", "NORMAL" } },
+  { "ALTERING_CAVE", { "cave" }, { "ROCK", "POISON" } },
+  -- the Sevii Islands (FireRed / LeafGreen)
+  { "LOST_CAVE", { "cave" }, { "GHOST" } },
+  { "ICEFALL_CAVE", { "cave", "snow", "water" }, { "ICE", "WATER" } },
+  { "MT_EMBER", { "mountain", "cave" }, { "FIRE", "ROCK" } },
+  { "PATTERN_BUSH", { "forest" }, { "BUG", "GRASS" } },
+  { "TANOBY_RUINS", { "ruins" }, { "PSYCHIC", "ROCK" } },
+  { "RUIN_VALLEY", { "ruins", "mountain" }, { "PSYCHIC", "ROCK" } },
+  { "SEVAULT_CANYON", { "mountain" }, { "ROCK", "FIGHTING", "GROUND" } },
+  { "WATER_LABYRINTH", { "water", "coast" }, { "WATER" } },
+  { "KINDLE_ROAD", { "mountain", "coast" }, { "FIRE" } },
+  { "CAPE_BRINK", { "coast" }, nil },
+  { "TREASURE_BEACH", { "coast" }, nil },
+  { "OUTCAST_ISLAND", { "coast", "water" }, nil },
+  { "BOND_BRIDGE", { "coast", "water" }, nil },
 }
 
 -- Sea routes. A map id is the only runtime handle on "this route is open
@@ -95,6 +144,9 @@ function MapContext.describe(mapId, mapInfo, terrain)
   local environment = type(mapInfo) == "table" and mapInfo.environment or nil
   if next(habitats) == nil then addAll(habitats, ENVIRONMENT[environment]) end
   local id = tostring(mapId or "")
+  for _, rule in ipairs(KEYWORDS) do
+    if id:find(rule[1], 1, true) and rule[4] then habitats = {} break end
+  end
   for _, rule in ipairs(KEYWORDS) do
     if id:find(rule[1], 1, true) then
       addAll(habitats, rule[2])

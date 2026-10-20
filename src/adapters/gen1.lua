@@ -199,5 +199,12 @@ return function(reg, MapContext, mod)
     return dex ~= nil and dex.owned ~= nil and dex.owned[id] == true
   end
 
+  -- The League is beaten once the Hall of Fame holds a team (save.hallOfFame
+  -- is the list of inducted teams).
+  function A.leagueCleared(game)
+    local hof = game and game.save and game.save.hallOfFame
+    return type(hof) == "table" and #hof > 0
+  end
+
   return A
 end

@@ -43,8 +43,12 @@ end
 
 T.eq(api.seed(), "777", "a 0.1.0 numeric seed reads back as its digits")
 T.eq(api.spawnMode(), "complete", "COMPLETE is the default mode")
+-- LIMITED (the classic mode) draws tighter than COMPLETE, so their primary
+-- tables differ on one seed; take LIMITED's before the round trip
+setOption("spawn_mode", "seeded")
 local seededRoute1 = H.serialize(api.tableFor("ROUTE_1", "grass"))
-
+setOption("spawn_mode", "complete")
+T.eq(api.seed(), "777", "switching to COMPLETE keeps the seed")
 setOption("spawn_mode", "map")
 T.eq(api.seed(), "777", "switching to EVERY MAP keeps the seed")
 setOption("spawn_mode", "random")

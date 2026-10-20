@@ -18,22 +18,28 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
   across the generations. Each map keeps the game's own encounter rate, levels and odds; only
   the Pokémon change.
 - 🧭 **Pokémon that belong there:** Species are chosen to fit each spot's levels, terrain and
-  habitat. Water types by the sea, Ghosts in towers, night owls stay nocturnal in Johto, and
-  late evolutions turn up in late areas.
+  habitat. Water types by the sea, Ghosts in Pokémon Tower and Mt. Pyre, Electric types in the
+  Power Plant and New Mauville, Bugs in the forests, Ground types in the desert, Ice types in
+  the frozen caves. Named places in Kanto, Johto, Hoenn and the Sevii Islands each keep their
+  character, night owls stay nocturnal in Johto, and late evolutions turn up in late areas.
 - 🎲 **Four ways to play:**
-  - **LIMITED:** one set roster per map for your whole playthrough.
+  - **LIMITED:** the classic feel. One set roster per map for your whole playthrough, picked to
+    fit like the original games: newcomers tend to share the types of the Pokémon they
+    replace, so each route and cave keeps its character.
   - **EVERY MAP:** a fresh roster each time you enter a map.
   - **RANDOM:** a new species every encounter.
-  - **COMPLETE:** every species in your range lives somewhere, so you can catch the whole
-    Pokédex in one run.
+  - **COMPLETE:** catch them all. Every species in your range lives somewhere, so you can catch
+    the whole Pokédex in one run. The game's own Pokémon stay where they always were too (Pikachu in
+    Viridian Forest, Zigzagoon on Route 101), alongside the newcomers.
 - 🌱 **Seeds you can share:** Each save has its own seed. Type in a friend's seed for the same
   wild Pokémon.
 
 ### Rare Finds
 
-- 👑 **Legendaries in the wild** (optional): Legendary and mythical Pokémon can make their home
-  on a few fitting maps, very rarely (1 in 1024 encounters there, 1 in 2048 for a mythical),
-  until you own them.
+- 👑 **Legendaries in the wild** (optional): Once you've entered the Hall of Fame, legendary
+  and mythical Pokémon can turn up on a few fitting maps, very rarely (1 in 1024 encounters
+  there, 1 in 2048 for a mythical), until you own them. On Gen 3 their Pokédex AREA page shows
+  where to look before then.
 - ✨ **Shiny chains:** Win or catch the same species again and again. It turns up more often
   (every encounter from a chain of 9), is likelier to be shiny (about 1 in 82 at 100) and gains
   perfect stats (1 / 2 / 3 from a chain of 10 / 25 / 40). Running from it or blacking out ends
@@ -52,7 +58,7 @@ Open **OPTIONS → MODS → Modern Spawns**. Changes apply from the next encount
 | **MODERN SPAWNS** | ON / OFF | ON | OFF keeps the game's original tables. |
 | **GENERATIONS** | GEN 1 … GEN 1-9 | GEN 1-9 | Which generations can appear (up to what's installed). GEN 1 shuffles the Gen 1 Pokémon. |
 | **SPAWN MODE** | LIMITED / EVERY MAP / RANDOM / COMPLETE | COMPLETE | How rosters are drawn (see above). |
-| **LEGENDARIES** | OFF / ON | OFF | Rare legendaries and mythicals on their home maps. |
+| **LEGENDARIES** | OFF / ON | OFF | Rare legendaries and mythicals on their home maps, after the League. |
 | **SHINY CHAINS** | ON / OFF | ON | Build chains by beating one species in a row. OFF pauses it; your chain is kept. |
 | **SEED** | up to 10 letters | your save's | Type a seed to share or replay a world. |
 | **REROLL SEED** | - / REROLL | - | Draw a new random seed for this save. |

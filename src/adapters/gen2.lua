@@ -322,5 +322,13 @@ return function(reg, MapContext, mod)
       or (dex.owned ~= nil and dex.owned[id] == true)
   end
 
+  -- The League is beaten once the Hall of Fame has an entry
+  -- (save.hallOfFame = { count, entered, teams }).
+  function A.leagueCleared(game)
+    local hof = game and game.save and game.save.hallOfFame
+    if type(hof) ~= "table" then return false end
+    return (tonumber(hof.count) or 0) > 0 or hof.entered == true
+  end
+
   return A
 end

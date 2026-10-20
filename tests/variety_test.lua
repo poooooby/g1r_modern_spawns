@@ -51,22 +51,33 @@ local function sample(mode, n)
   return counts, total
 end
 
-local function summarize(counts, total)
+-- Route 101's own species. LIMITED is the classic mode: a replacement that
+-- resembles what it replaces scores higher, so the cart's own species win
+-- their slots back now and then. That is the point, so the "no species
+-- dominates" bar is for newcomers (Scatterbug once took 16% of every seed);
+-- the originals get their own cap so LIMITED stays a remix.
+local ORIGINAL = { WURMPLE = true, POOCHYENA = true, ZIGZAGOON = true }
+
+local function summarize(counts, total, skip)
   local distinct, topShare, topId = 0, 0, nil
   for id, c in pairs(counts) do
     distinct = distinct + 1
-    if c / total > topShare then topShare, topId = c / total, id end
+    if not (skip and skip[id]) and c / total > topShare then topShare, topId = c / total, id end
   end
   return distinct, topShare, topId
 end
 
--- ------- SEEDED: many seeds, many different rosters
+-- ------- SEEDED (LIMITED): many seeds, many different rosters
 
 local counts, total = sample("seeded", 200)
-local distinct, topShare, topId = summarize(counts, total)
+local distinct, topShare, topId = summarize(counts, total, ORIGINAL)
 T.check(distinct >= 30, "SEEDED over 200 seeds: at least 30 distinct species (" .. distinct .. ")")
-T.check(topShare <= 0.12, "no species dominates SEEDED (" .. tostring(topId) .. " "
+T.check(topShare <= 0.12, "no newcomer dominates SEEDED (" .. tostring(topId) .. " "
   .. math.floor(topShare * 100 + 0.5) .. "%)")
+local originals = 0
+for id in pairs(ORIGINAL) do originals = originals + (counts[id] or 0) end
+T.check(originals / total <= 0.35, "the route's own species hold at most 35% of LIMITED's slots ("
+  .. math.floor(originals * 100 / total + 0.5) .. "%)")
 T.check((counts.SCATTERBUG or 0) / total <= 0.10, "Scatterbug is not the answer for Route 101 (any more)")
 
 local gens = {}

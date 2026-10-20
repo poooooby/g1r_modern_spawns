@@ -69,9 +69,12 @@ return function(reg, MapContext, mod)
   function A.mapInfo(mapId)
     local value = reg.get("maps", mapId)
     if type(value) ~= "table" then return nil end
-    -- MAP_TYPE_UNDERGROUND (4): caves roll the land table on every tile
-    return { tileset = value.tileset, mapType = value.mapType,
-             environment = value.mapType == 4 and "CAVE" or "ROUTE" }
+    -- MAP_TYPE_UNDERGROUND (4): caves roll the land table on every tile.
+    -- Town (1), city (2), underwater (5), ocean route (6) and indoor (8:
+    -- only its place keywords say what it is); routes (3) read as routes.
+    local environment = ({ [1] = "TOWN", [2] = "TOWN", [4] = "CAVE", [5] = "OCEAN",
+                           [6] = "OCEAN", [8] = "INDOOR" })[value.mapType] or "ROUTE"
+    return { tileset = value.tileset, mapType = value.mapType, environment = environment }
   end
 
   -- No map order exists on Gen 3; the average wild level of a map's tables
@@ -296,6 +299,16 @@ return function(reg, MapContext, mod)
     local rec = reg.get("pokemon", id)
     local slot = type(rec) == "table" and tonumber(rec.index) or nil
     return dex ~= nil and slot ~= nil and dex.owned ~= nil and dex.owned[slot] == true
+  end
+
+  -- The League is beaten once the game's own FLAG_SYS_GAME_CLEAR is set (the
+  -- Hall of Fame sets it); game.save.flags is the engine's live flag view.
+  function A.leagueCleared(game)
+    local ok, value = pcall(function()
+      local flags = game and game.save and game.save.flags
+      return flags and flags.FLAG_SYS_GAME_CLEAR
+    end)
+    return ok and value == true
   end
 
   return A

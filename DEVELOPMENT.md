@@ -43,10 +43,10 @@ exports don't bump it, so test for a newer one by presence,
 | `legendaryHomes()` | `{ [mapId] = { grass = { {id, score, category} }, water = … } }`: where legendaries would appear |
 | `tableFor(mapId, terrain)` | the generated grass / indoor / water table (copy) in the running game's own shape, or nil. Gen 1: `{ rate, slots, buckets? }`. Gen 2 grass: `{ map, rates, slots = { MORN, DAY, NITE } }`; Gen 2 water: `{ map, rate, slots }` |
 | `superRodFor(mapId)` | the Super Rod catches (copy): Gen 1 `{ { species, level } }`, Gen 2 fish rows `{ { chance, species, level } }`; or nil |
-| `poolFor(mapId, terrain)` | COMPLETE only: `{ [slot] = { species ids } }`, what each slot can turn into (its own species first); nil in other modes |
+| `poolFor(mapId, terrain)` | COMPLETE only: `{ [slot] = { species ids } }`, what each slot can turn into (its main species first, the cart's own species for the slot last); nil in other modes |
 | `locate(speciesId)` | `{ [mapId] = { land/grass/water = true } }`: where a species can be met under the current settings (empty under RANDOM, nil while inactive). What the Gen 3 Pokédex AREA page shows |
 | `drawFor(mapId, terrain)` | for a mod that picks species itself, once per pick (visible overworld spawns): `tableFor` under LIMITED / EVERY MAP, a fresh one-off draw under RANDOM |
-| `legendaryFor(mapId, terrain)` | the LEGENDARIES roll for such a pick: a hosted, not-yet-owned legendary (1/1024) or mythical (1/2048) id, or nil |
+| `legendaryFor(mapId, terrain)` | the LEGENDARIES roll for such a pick: a hosted, not-yet-owned legendary (1/1024) or mythical (1/2048) id once the League is beaten, or nil |
 | `chain()` | the current shiny chain `{ species, count }`, or nil |
 | `chainSpeciesFor(mapId, terrain)` | for such a pick: the chained species when the chain makes this encounter it (rolled here), else nil |
 | `chainBonus(species)` | for an encounter of `species` (an id or the engine's number): `{ shiny = chance 0..1, perfectIvs = 0..3 }`, or nil. The consumer makes it shiny and sets the stats |
@@ -87,11 +87,23 @@ The game's own tables are the skeleton; only data the game lacks is added.
 Slots that held the same species form a *role*, and each role gets one new species, scored on
 level fit (and not below its evolution level), terrain and habitat fit, sharing types with the
 species it replaces or the map's theme, rarity against the role's share of the odds, and
-penalties for repeats within the map and the previous few maps. Legendaries never enter a
-table: each gets up to two home maps (levels 30+, fitting terrain, habitat or theme), at most
-three per table, rolled after the game's own encounter. COMPLETE gives each slot a small pool
-(its LIMITED species first, up to 6, under 3 on average) so every species under the cap lives
-somewhere. Gen 2 replaces a species across morning, day and night at once, keeping night-only
+penalties for repeats within the map and the previous few maps. A map's habitats and theme
+types come from [src/map_context.lua](src/map_context.lua): its tileset or map type, plus
+keyword rules on the map id for named places in every region (Mt. Pyre is ruins + GHOST, the
+Lost Cave cave + GHOST). On a themed map (a theme type, or a place habitat such as cave,
+forest, ruins, snow, desert, mountain, water or coast) the strict tier only takes species that
+share a theme type or a place habitat; a thin tier widens as before. A shared "route" or
+"general" tag is only a weak hint (`habitat_generic`), since nearly every species has one.
+Legendaries never enter a table: each gets up to two home maps (levels 30+, fitting terrain,
+habitat or theme), at most three per table, rolled after the game's own encounter and only once
+the save has beaten the League (each adapter's `leagueCleared(game)`: the Hall of Fame on Gen 1
+and 2, `FLAG_SYS_GAME_CLEAR` on Gen 3). How wide each mode draws is
+`SpawnConfig.selection[mode]`: LIMITED (`seeded`) is the classic mode, the tightest draw plus a
+`resemble` bonus per type a replacement shares with the species it replaces; COMPLETE draws
+wider, so the two differ on one seed. COMPLETE gives each slot a small pool (its main species
+first, up to 6 extras from coverage, plus the cart's own species for that slot) so every
+species under the cap lives somewhere and the game's own Pokémon stay where they were; an extra
+that misses a themed map's theme tries the maps it fits and plain routes before any other. Gen 2 replaces a species across morning, day and night at once, keeping night-only
 roles nocturnal. On Gen 3 the engine rolls its own table regardless, so the species is swapped
 right after the roll, at the rolled level. Tuning numbers live in `SpawnConfig`
 ([src/config.lua](src/config.lua)); shiny chains are [src/chain.lua](src/chain.lua).
