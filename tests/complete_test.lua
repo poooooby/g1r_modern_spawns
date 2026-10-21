@@ -47,11 +47,13 @@ end
 
 -- the species every pool holds, looks folded onto their base. A regional form
 -- (VULPIX_ALOLA) is a candidate of its own and must be in a pool itself: its
--- base species does not stand in for it, nor it for its base.
+-- base species does not stand in for it, nor it for its base. The Good and
+-- Super Rods count: their slots are homes like any other (Lapras or Krabby
+-- may live only there).
 local function covered()
   local seen = {}
   for _, mapId in ipairs(maps) do
-    for _, terrain in ipairs({ "land", "water" }) do
+    for _, terrain in ipairs({ "land", "water", "fish.good", "fish.super" }) do
       for _, list in pairs(ms.poolFor(mapId, terrain) or {}) do
         for _, id in ipairs(list) do
           seen[id] = true

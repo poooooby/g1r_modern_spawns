@@ -42,8 +42,8 @@ exports don't bump it, so test for a newer one by presence,
 | `seed()` / `setSeed(text)` / `rerollSeed()` | read or change the loaded save's seed |
 | `legendaryHomes()` | `{ [mapId] = { grass = { {id, score, category} }, water = … } }`: where legendaries would appear |
 | `tableFor(mapId, terrain)` | the generated grass / indoor / water table (copy) in the running game's own shape, or nil. Gen 1: `{ rate, slots, buckets? }`. Gen 2 grass: `{ map, rates, slots = { MORN, DAY, NITE } }`; Gen 2 water: `{ map, rate, slots }` |
-| `superRodFor(mapId)` | the Super Rod catches (copy): Gen 1 `{ { species, level } }`, Gen 2 fish rows `{ { chance, species, level } }`; or nil |
-| `poolFor(mapId, terrain)` | COMPLETE only: `{ [slot] = { species ids } }`, what each slot can turn into (its main species first, the cart's own species for the slot last); nil in other modes |
+| `superRodFor(mapId)` | the Super Rod catches (copy): Gen 1 `{ { species, level } }`, Gen 2 fish rows `{ { chance, species, level } }`, Gen 3 `{ rate, slots = { { species, minLevel, maxLevel } } }`; or nil |
+| `poolFor(mapId, terrain)` | COMPLETE only (terrain `land`/`grass`, `water`, and on Gen 3 `fish.good`/`fish.super`): `{ [slot] = { species ids } }`, what each slot can turn into (its main species first, the cart's own species for the slot last); nil in other modes |
 | `locate(speciesId)` | `{ [mapId] = { land/grass/water = true } }`: where a species can be met under the current settings (empty under RANDOM, nil while inactive). What the Gen 3 Pokédex AREA page shows |
 | `drawFor(mapId, terrain)` | for a mod that picks species itself, once per pick (visible overworld spawns): `tableFor` under LIMITED / EVERY MAP, a fresh one-off draw under RANDOM |
 | `legendaryFor(mapId, terrain)` | the LEGENDARIES roll for such a pick: a hosted, not-yet-owned legendary (1/1024) or mythical (1/2048) id once the League is beaten, or nil |

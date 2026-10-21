@@ -86,7 +86,9 @@ Open **OPTIONS → MODS → Modern Spawns**. Changes apply from the next encount
 
 ## 📌 Good to Know
 
-- Fishing and Rock Smash keep the game's own Pokémon on Gen 3, and the Old Rod everywhere.
+- 🎣 The Good and Super Rods catch new Pokémon too (water species only, at the game's own
+  levels and odds). The Old Rod keeps the game's own catches everywhere, and Rock Smash does on
+  Gen 3.
   Gold, Silver and Crystal also keep swarms, the Bug-Catching Contest, Headbutt and the roaming
   beasts.
 - Early routes have the fewest suitable species, so variety grows as you go.

@@ -3,6 +3,21 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.13.1] - Unreleased
+
+### Added
+
+- **Fishing on FireRed, LeafGreen, Ruby, Sapphire and Emerald.** gen1recomp now lets mods hook
+  Gen 3 fishing, so the Good and Super Rods get new species like every other table: water species
+  only, at the game's own levels and odds. The Old Rod keeps the game's own catches, as on Gen 1
+  and 2. In COMPLETE each rod slot also keeps the game's own fish and holds extras, so water
+  species have more homes; every species is still catchable.
+- Adding fishing did not move any walking or surfing roster: LIMITED's land and surf tables are
+  identical to 0.13.0's (checked on FireRed and Emerald). COMPLETE's extras spread over the new
+  rod slots, so its pools change.
+- `tableFor` / `poolFor` answer `"fish.good"` and `"fish.super"` on Gen 3 (`"fish"` means the
+  Super Rod), and `superRodFor` answers there too.
+
 ## [0.13.0] - 2026-10-20
 
 ### Changed

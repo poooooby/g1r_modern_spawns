@@ -28,6 +28,15 @@ local api = loader.exports.modern_spawns
 T.eq(api.generation(), 3, "the Gen 3 adapter runs")
 T.check(api.isActive(), "active with national_dex_gen3's species")
 
+local function wraps(name)
+  for _, w in ipairs(Runtime.hooks.chains[name] or {}) do
+    if w.owner == "modern_spawns" then return true end
+  end
+  return false
+end
+T.check(wraps("encounter.species"), "encounter.species is wrapped")
+T.check(wraps("encounter.fishing"), "encounter.fishing is wrapped (Good and Super Rods)")
+
 local live = data.gen3Encounters
 
 -- the engine's own result for a vanilla slot (src/core/game3/encounters.lua
@@ -161,6 +170,86 @@ for _ = 1, 8 do
   if H.serialize(api.tableFor("FR_ROUTE_2", "land")) ~= first then changed = true break end
 end
 T.check(changed, "EVERY MAP redraws on FireRed")
+set("spawn_mode", "seeded")
+
+-- ------- fishing: the Good and Super Rods get new species, the Old Rod stays
+
+-- what the engine hands encounter.fishing for one rod (src/core/game3/
+-- encounters.lua fishing_pool): that rod's slots with levels and odds
+local RANGES = { OLD_ROD = { 1, 2 }, GOOD_ROD = { 3, 5 }, SUPER_ROD = { 6, 10 } }
+local function candidates(mapId, rod)
+  local out, r = {}, RANGES[rod]
+  for i = r[1], r[2] do
+    local s = live[mapId].fishing.slots[i]
+    out[#out + 1] = { species = P.keyName(s.species), level = s.minLevel, minLevel = s.minLevel,
+                      maxLevel = s.maxLevel, chance = 10 * i }
+  end
+  return out
+end
+-- the list the engine would roll, after the hooks
+local function cast(mapId, rod)
+  return Runtime.call("encounter.fishing", function(_, _, list) return list end,
+    rod, mapId, candidates(mapId, rod))
+end
+
+local FISH_MAP = "FR_ROUTE_10"
+local old = cast(FISH_MAP, "OLD_ROD")
+T.eq(H.serialize(old), H.serialize(candidates(FISH_MAP, "OLD_ROD")), "the Old Rod is the game's own")
+local fishable, kept, levelsKept = true, true, true
+for _, rod in ipairs({ "GOOD_ROD", "SUPER_ROD" }) do
+  local before, after = candidates(FISH_MAP, rod), cast(FISH_MAP, rod)
+  local generated = api.tableFor(FISH_MAP, rod == "GOOD_ROD" and "fish.good" or "fish.super")
+  T.check(generated ~= nil and #generated.slots == #before, rod .. ": a generated table per rod")
+  for i, entry in ipairs(after) do
+    if type(entry.species) ~= "number" then kept = false end
+    if entry.minLevel ~= before[i].minLevel or entry.maxLevel ~= before[i].maxLevel
+      or entry.chance ~= before[i].chance then levelsKept = false end
+    local p = api.profileOf(generated.slots[i].species)
+    local terrains = {}
+    for _, t in ipairs(p and p.terrains or {}) do terrains[t] = true end
+    local types = {}
+    for _, t in ipairs(p and p.types or {}) do types[t] = true end
+    if not (terrains.water or terrains.fish or types.WATER) then fishable = false end
+    if loader.content.pokemon:get(generated.slots[i].species).index ~= entry.species then kept = false end
+  end
+end
+T.check(kept, "a cast hands the engine the generated species, as species slots")
+T.check(levelsKept, "levels and odds stay the game's own")
+T.check(fishable, "only water species are fished")
+T.eq(H.serialize(api.tableFor(FISH_MAP, "fish")), H.serialize(api.tableFor(FISH_MAP, "fish.super")), "\"fish\" means the Super Rod")
+
+-- every rod table holds only registered species
+local allRegistered = true
+for _, mapId in ipairs(runtimeMaps) do
+  for _, terrain in ipairs({ "fish.good", "fish.super" }) do
+    for _, slot in ipairs((api.tableFor(mapId, terrain) or {}).slots or {}) do
+      if not loader.content.pokemon:get(slot.species) then allRegistered = false end
+    end
+  end
+end
+T.check(allRegistered, "every rod slot is a registered species")
+
+-- COMPLETE: a rod slot is drawn from its pool, which keeps the game's own fish
+set("spawn_mode", "complete")
+local pools = api.poolFor(FISH_MAP, "fish.super")
+T.check(pools ~= nil and #pools == 5, "COMPLETE gives the Super Rod's slots pools")
+local ownKept = true
+for i = 6, 10 do
+  local own = P.keyName(live[FISH_MAP].fishing.slots[i].species)
+  local found = false
+  for _, id in ipairs(pools and pools[i - 5] or {}) do
+    if loader.content.pokemon:get(id).index == live[FISH_MAP].fishing.slots[i].species then found = true end
+  end
+  if not found then ownKept = false end
+end
+T.check(ownKept, "each Super Rod pool keeps the game's own fish for that slot")
+local seen = {}
+for _ = 1, 200 do
+  for _, entry in ipairs(cast(FISH_MAP, "SUPER_ROD")) do seen[entry.species] = true end
+end
+local distinct = 0
+for _ in pairs(seen) do distinct = distinct + 1 end
+T.check(distinct > 5, "COMPLETE casts draw across the pools (" .. distinct .. " species)")
 set("spawn_mode", "seeded")
 
 -- ------- legendaries: rare, hosted, stop once owned

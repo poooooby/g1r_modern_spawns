@@ -19,8 +19,15 @@
 -- is exact. The engine takes the species back as its numeric slot
 -- (withSpecies): a mod species has no name the engine can look up.
 --
--- Left as the game has them: fishing and Rock Smash (the engine raises no
--- hook for them), static and scripted encounters.
+-- Fishing: one 10-slot table per map, Old Rod 1-2, Good Rod 3-5, Super Rod
+-- 6-10 (src/core/game3/encounters.lua FISHING_RANGES). The Good and Super
+-- Rods are generated as tables of their own ("fish.good", "fish.super"); the
+-- engine hands encounter.fishing that rod's candidate list (species, levels,
+-- odds) and rolls whatever list comes back, so only the species change. The
+-- Old Rod stays the game's own, as on Gen 1 and 2.
+--
+-- Left as the game has them: the Old Rod, Rock Smash (no hook), static and
+-- scripted encounters.
 
 return function(reg, MapContext, mod)
   local A = { generation = 3, substituteAfterRoll = true }
@@ -28,6 +35,14 @@ return function(reg, MapContext, mod)
   local LAND_WEIGHTS = { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 }
   local WATER_WEIGHTS = { 60, 30, 5, 4, 1 }
   local KINDS = { { "land", LAND_WEIGHTS }, { "water", WATER_WEIGHTS } }
+  -- the rods this mod generates: slot range of the map's fishing table and
+  -- each slot's odds (percent)
+  local RODS = {
+    { kind = "fish.good", rod = "GOOD_ROD", first = 3, last = 5, weights = { 60, 20, 20 } },
+    { kind = "fish.super", rod = "SUPER_ROD", first = 6, last = 10, weights = { 40, 40, 15, 4, 1 } },
+  }
+  local ROD_KIND = {}
+  for _, r in ipairs(RODS) do ROD_KIND[r.rod] = r.kind end
 
   local function record(id)
     local value = reg.get("encounters", id)
@@ -125,6 +140,25 @@ return function(reg, MapContext, mod)
         }
       end
     end
+    -- Good / Super Rod: COMPLETE gives their slots pools (`pooled`), and
+    -- their picks stay out of the map's shared memory (`isolated`), so adding
+    -- fishing never moved a walking or surfing roster
+    local fishing = slotsOf(rec, "fishing")
+    for _, r in ipairs(RODS) do
+      if fishing and #fishing.slots >= r.last then
+        local slots, w = {}, {}
+        for i = r.first, r.last do
+          local s = fishing.slots[i]
+          slots[#slots + 1] = { species = s.species, level = s.minLevel or 1,
+                                maxLevel = s.maxLevel or s.minLevel or 1 }
+          w[#w + 1] = r.weights[i - r.first + 1]
+        end
+        entries[#entries + 1] = {
+          kind = r.kind, terrain = "fish", pooled = true, isolated = true,
+          def = { rate = fishing.rate, slots = slots }, weights = w,
+        }
+      end
+    end
     return entries
   end
 
@@ -154,14 +188,46 @@ return function(reg, MapContext, mod)
   A.kindOfTerrain = function(terrain)
     if terrain == "water" then return "water" end
     if terrain == "land" or terrain == "grass" or terrain == "indoor" then return "land" end
+    if terrain == "fish" or terrain == "superRod" or terrain == "fish.super" then return "fish.super" end
+    if terrain == "goodRod" or terrain == "fish.good" then return "fish.good" end
     return nil
   end
 
   function A.rollValue() return nil end
-  function A.fishingKind() return nil end
+
+  -- encounter.fishing hands (rod, mapId, candidates): the rod as a name
+  -- ("OLD_ROD" / "GOOD_ROD" / "SUPER_ROD") and that rod's slots as
+  -- { species, level, minLevel, maxLevel, item, chance }. The Old Rod and a
+  -- map without fish answer nil (left as the game has it).
+  function A.fishingKind(rod, mapId, candidates)
+    local kind = ROD_KIND[rod]
+    if not kind or type(candidates) ~= "table" or #candidates == 0 then return nil end
+    return kind
+  end
+
+  -- The rod's candidate list with each slot's species swapped for the
+  -- generated one (its numeric species slot, as the engine stores it); levels,
+  -- odds and held items stay the game's own. nil (left alone) if any slot
+  -- has no species the engine can take.
+  function A.fishingValue(candidates, _, assembled)
+    local out = {}
+    for i, entry in ipairs(candidates) do
+      local gen = assembled.slots[i]
+      local slot = gen and A.liveValue(gen.species)
+      if not slot then return nil end
+      local copy = {}
+      for k, v in pairs(entry) do copy[k] = v end
+      copy.species = slot
+      out[i] = copy
+    end
+    return out
+  end
 
   function A.distribution(table_, kind)
     local weights = kind == "water" and WATER_WEIGHTS or LAND_WEIGHTS
+    for _, r in ipairs(RODS) do
+      if kind == r.kind then weights = r.weights end
+    end
     local dist = {}
     for i, slot in ipairs(table_.slots) do
       if slot.species then

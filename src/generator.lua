@@ -406,8 +406,10 @@ local function redistribute(def, env, rng, weights)
       }
     end
     -- COMPLETE DEX (buildAtlas) collects every walking/surfing role as a seat
-    -- whose pool the coverage pass extends; the primary is the role's pick
-    if env.seats and env.terrain ~= "fish" then
+    -- whose pool the coverage pass extends; the primary is the role's pick.
+    -- A fishing table joins only when its adapter marks it `pooled` (Gen 3's
+    -- Good and Super Rods)
+    if env.seats and (env.terrain ~= "fish" or env.pooled) then
       env.seats[#env.seats + 1] = { mapId = env.mapId, kind = env.kind, role = role,
                                     env = env, base = species, pool = { shown } }
     end
@@ -479,13 +481,29 @@ function Generator.buildMap(ctx, mapId, memory, nonce, remember)
   areaSpecies[area] = areaSpecies[area] or {}
   local state = { species = {}, families = {}, gens = {} }
   local result = { explain = {} }
+  -- `isolated` tables (Gen 3's rods, added after 0.13.0) see what the map
+  -- already holds but share their own picks only with each other: the map's
+  -- memory and the rolling history never hear of them, so adding them did
+  -- not move any walking or surfing roster
+  local isolatedState
 
   for _, entry in ipairs(entries) do
     local kind, terrain = entry.kind, entry.terrain
     local place = ctx.MapContext.describe(mapId, info, terrain)
+    local entryState = state
+    if entry.isolated then
+      if not isolatedState then
+        isolatedState = { species = {}, families = {}, gens = {} }
+        for _, key in ipairs({ "species", "families", "gens" }) do
+          for k, v in pairs(state[key]) do isolatedState[key][k] = v end
+        end
+      end
+      entryState = isolatedState
+    end
     local env = {
       terrain = terrain, habitats = place.habitats, mapTypes = place.types,
-      maxGen = ctx.maxGen, config = config, pool = ctx.pool, state = state,
+      maxGen = ctx.maxGen, config = config, pool = ctx.pool, state = entryState,
+      pooled = entry.pooled,
       history = historyView(history, area, config.history_window_maps),
       areaSpecies = areaSpecies[area],
       selection = ctx.selection,

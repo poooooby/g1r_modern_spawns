@@ -922,9 +922,12 @@ return function(deps)
       return decided(ctx, out)
     end, HOOK_PRIORITY)
 
-    -- Rods with per-map data (Gen 1: the Super Rod; Gen 2: Good and Super).
-    -- A map with no group keeps "Not even a nibble!". Extra arguments (Gen
-    -- 2's time-of-day ctx) are always forwarded.
+    -- Rods with per-map data (Gen 1: the Super Rod; Gen 2 and 3: Good and
+    -- Super). A map with no group keeps "Not even a nibble!", and the Old Rod
+    -- stays the game's own everywhere. Extra arguments (Gen 2's time-of-day
+    -- ctx) are always forwarded. The engine rolls the list handed on with the
+    -- game's own odds; COMPLETE first draws each slot from its pool (Gen 3,
+    -- the only rods with pools), as a walking slot is drawn after its roll.
     mod.hooks:wrap("encounter.fishing", function(nextFn, rod, mapId, candidates, ...)
       local extra = select(1, ...)
       local ok, replaced = pcall(function()
@@ -936,6 +939,19 @@ return function(deps)
           def = draw and checked(draw[kind])
         else
           def = generated(mapId, kind)
+        end
+        local pools = def and poolsOf(mapId, kind)
+        if pools then
+          local drawn = { rate = def.rate, slots = {} }
+          for i, slot in ipairs(def.slots) do
+            local copy = {}
+            for k, v in pairs(slot) do copy[k] = v end
+            local list = pools[i]
+            local pick = list and #list > 0 and poolPick(mapId, kind, i, list)
+            if pick then copy.species = pick end
+            drawn.slots[i] = copy
+          end
+          def = drawn
         end
         return def and world.fishingValue(candidates, kind,
                                           world.assemble(mapId, kind, def))
