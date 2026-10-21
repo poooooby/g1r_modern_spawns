@@ -3,7 +3,7 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
-## [0.13.1] - Unreleased
+## [0.13.1] - 2026-10-20
 
 ### Added
 
