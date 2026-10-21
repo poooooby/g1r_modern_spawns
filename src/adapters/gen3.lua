@@ -44,6 +44,14 @@ return function(reg, MapContext, mod)
   local ROD_KIND = {}
   for _, r in ipairs(RODS) do ROD_KIND[r.rod] = r.kind end
 
+  -- An engine module, or nil. The mod sandbox has no `package` (so no
+  -- package.loaded); its `require` reaches engine modules under this mod's
+  -- engine_internals permission. Guarded: a missing module reads as unknown.
+  local function engine(name)
+    local ok, module = pcall(require, name)
+    return ok and type(module) == "table" and module or nil
+  end
+
   local function record(id)
     local value = reg.get("encounters", id)
     return type(value) == "table" and value or nil
@@ -181,8 +189,8 @@ return function(reg, MapContext, mod)
     if ctx.terrain == "land" or ctx.terrain == "grass" or ctx.terrain == "indoor" then return "land" end
     -- no terrain from the engine (Emerald's rules read the tile themselves): a surfing
     -- player's roll is a water roll, as the rules decide it (encounter_rules/rse.lua classify)
-    local Player = package.loaded["src.core.game3.player"]
-    if type(Player) == "table" and Player.surfing == true then return "water" end
+    local Player = engine("src.core.game3.player")
+    if Player and Player.surfing == true then return "water" end
     return "land"
   end
   A.kindOfTerrain = function(terrain)
@@ -368,11 +376,22 @@ return function(reg, MapContext, mod)
   end
 
   -- The League is beaten once the game's own FLAG_SYS_GAME_CLEAR is set (the
-  -- Hall of Fame sets it); game.save.flags is the engine's live flag view.
+  -- Hall of Fame sets it). Read the way the engine does (src/ui/game3/
+  -- pc_menu.lua script_store, hall_of_fame.lua): the live script store, else
+  -- the session's, by the version's own id (0x82C FireRed, 0x864 Emerald),
+  -- through Flags.getFlag. mod.game is the Game3 instance; its `save` is a
+  -- snapshot keyed by numeric ids, never by the flag's name.
   function A.leagueCleared(game)
     local ok, value = pcall(function()
-      local flags = game and game.save and game.save.flags
-      return flags and flags.FLAG_SYS_GAME_CLEAR
+      local session = game and game.session
+      local Flags = engine("src.core.game3.scripting.flags")
+      if not (session and Flags) then return false end
+      local Space = engine("src.core.game3.scripting.space")
+      local store = (Space and Space.store) or session.store or session
+      local okIds, active = pcall(Flags.active, session)
+      local ids = okIds and active and active.IDS or Flags.IDS
+      local id = ids and ids.FLAG_SYS_GAME_CLEAR
+      return id ~= nil and Flags.getFlag(store, nil, id) == true
     end)
     return ok and value == true
   end

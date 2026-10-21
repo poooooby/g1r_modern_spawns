@@ -3,6 +3,19 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.13.2] - 2026-10-21
+
+### Fixed
+
+- **Legendaries appear on Gen 3 after the League.** 0.13.0's League check read the game-clear
+  flag by name from the save snapshot, where the game never stores it, so on FireRed, LeafGreen,
+  Ruby, Sapphire and Emerald a cleared save never unlocked them. It now reads the flag the way
+  the game does (the live flag store, by each version's own flag number). Gen 1 and 2 were not
+  affected.
+- The Gen 3 surfing check behind a roll with no terrain (Emerald's rules) and the flag check
+  reached engine modules through `package.loaded`, which the mod sandbox does not provide; they
+  use the sandbox's `require` now.
+
 ## [0.13.1] - 2026-10-20
 
 ### Added

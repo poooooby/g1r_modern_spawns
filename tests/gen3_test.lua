@@ -257,8 +257,14 @@ set("spawn_mode", "seeded")
 set("legendaries", "on")
 local homes = api.legendaryHomes()
 T.check(homes.FR_POWER_PLANT ~= nil, "the Power Plant hosts legendaries")
--- the game's own FLAG_SYS_GAME_CLEAR (set by the Hall of Fame) unlocks the roll
-game.save.flags = {}
+-- the game's own FLAG_SYS_GAME_CLEAR (set by the Hall of Fame) unlocks the roll,
+-- read the way the engine reads it: the live flag store, the version's numeric id
+-- (a name key in the save snapshot is not a flag the engine ever writes)
+local Flags = require("src.core.game3.scripting.flags")
+game.session = { version = "firered", flags = {}, vars = {} }
+game.save.flags = { FLAG_SYS_GAME_CLEAR = true }
+local CLEAR = Flags.active(game.session).IDS.FLAG_SYS_GAME_CLEAR
+T.eq(CLEAR, 0x82C, "FireRed's FLAG_SYS_GAME_CLEAR")
 local hostIndex = {}
 for _, h in ipairs(homes.FR_POWER_PLANT.land) do
   hostIndex[loader.content.pokemon:get(h.id).index] = true
@@ -268,8 +274,9 @@ for _ = 1, 5000 do
   local out = encounter("FR_POWER_PLANT", "land", live.FR_POWER_PLANT.land.slots[1])
   if hostIndex[out.species] then early = true break end
 end
-T.check(not early, "no legendary before FLAG_SYS_GAME_CLEAR")
-game.save.flags.FLAG_SYS_GAME_CLEAR = true
+T.check(not early, "no legendary before FLAG_SYS_GAME_CLEAR (a name key in the snapshot does not count)")
+local Space = package.loaded["src.core.game3.scripting.space"]
+Flags.setFlag((Space and Space.store) or game.session, nil, CLEAR, true)
 T.eq(homes.FR_ROUTE_1, nil, "Route 1 hosts none")
 local hosts, hostSlots = {}, {}
 for _, h in ipairs(homes.FR_POWER_PLANT.land) do
@@ -286,7 +293,7 @@ T.check(hit ~= nil, "a hosted legendary eventually appears in the Power Plant")
 T.eq(hit and hit.level, slot.minLevel, "at the rolled level")
 local owned = {}
 for s in pairs(hostSlots) do owned[s] = true end
-game.session = { dex = { owned = owned, seen = {}, caught = {} } }
+game.session.dex = { owned = owned, seen = {}, caught = {} }
 local again = false
 for _ = 1, 20000 do
   if hostSlots[encounter("FR_POWER_PLANT", "land", slot).species] then again = true break end
