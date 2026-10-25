@@ -15,6 +15,13 @@ and, for Gen 3, `mods/national_dex_gen3`. `tests/rse_test.lua` runs against Ruby
 and Emerald directly. Every test, fixture and the data generator are listed by exact path in
 `.modkitignore` so none of them ships.
 
+`preview_complete_gen3_test.lua` checks COMPLETE's public preview against its pool
+and form selection across every land/water map in the chosen Gen 3 edition. Run
+with `POKEPORT_VERSION` and `POKEPORT_GBA_CACHE` to select each imported cart;
+`MODERN_SPAWNS_MOD_PATH` and `NATIONAL_DEX_GEN3_MOD_PATH` can select external checkouts.
+It also rejects native RNG use and verifies that live encounter tables stay intact.
+`preview_gen2_time_test.lua` checks preview time-of-day selection without imported data.
+
 Keep [README.md](README.md) describing the mod as it is now (players read it); what changed
 goes in [CHANGELOG.md](CHANGELOG.md).
 
@@ -61,6 +68,13 @@ tables are regenerated. Modern Spawns wraps `encounter.roll`, `encounter.fishing
 `encounter.table` and `encounter.species` as the innermost wrapper (priority -100), so its
 tables are what the engine rolls; outer mods can still suppress an encounter or post-process
 it through `encounter.species`.
+
+The public `mod.world:effectiveEncounters` query reaches `encounter.table` without
+rolling an encounter. In COMPLETE mode its conditional species weights expand each
+slot's pool and registered variants using the same selection proportions as
+`poolPick`. Temporary labelled copies ask the adapter for slot odds; neither the
+live slot count nor gameplay tables change. Readers can consume this distribution
+without finding Modern Spawns by name or calling its exports.
 
 A mod that suppresses step encounters and picks species itself (visible overworld spawns)
 bypasses those hooks: it should read `drawFor`, `legendaryFor` and `chainSpeciesFor` per
