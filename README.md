@@ -75,7 +75,7 @@ Open **OPTIONS → MODS → Modern Spawns**. Changes apply from the next encount
      with its **NATIONAL DEX** option ON.
    - **FireRed, LeafGreen, Ruby, Sapphire, Emerald:**
      [WoobleDex](https://github.com/poooooby/national_dex_gen3), plus
-     [G9 Battle Sprites (Gen 3)](https://github.com/poooooby/g9-battle-sprites-gen3) for battle art.
+     [WoobleSpritePack](https://github.com/poooooby/g9-battle-sprites-gen3) for battle art.
 
 ## 🔗 Works With
 
