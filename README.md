@@ -46,7 +46,7 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
   the chain. On Gen 3, [Wilds of Hoenn](https://github.com/poooooby/wilds-of-hoenn) adds the
   shinies and stats.
 - 📖 **Pokédex AREA page** (Gen 3): shows where each species lives under your settings. With
-  [National Dex Gen 3](https://github.com/poooooby/national_dex_gen3), you can even look up
+  [WoobleDex](https://github.com/poooooby/national_dex_gen3), you can even look up
   where to find Pokémon you haven't seen yet. Legendaries with a home are marked as seen.
 
 ## ⚙️ Options
@@ -74,7 +74,7 @@ Open **OPTIONS → MODS → Modern Spawns**. Changes apply from the next encount
    - **Red, Blue, Yellow:** [National Dex](https://github.com/sanjinpepic/gen1recomp-national-dex),
      with its **NATIONAL DEX** option ON.
    - **FireRed, LeafGreen, Ruby, Sapphire, Emerald:**
-     [National Dex Gen 3](https://github.com/poooooby/national_dex_gen3), plus
+     [WoobleDex](https://github.com/poooooby/national_dex_gen3), plus
      [G9 Battle Sprites (Gen 3)](https://github.com/poooooby/g9-battle-sprites-gen3) for battle art.
 
 ## 🔗 Works With
