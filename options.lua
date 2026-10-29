@@ -4,7 +4,7 @@
 -- these rows while the mod is disabled. main.lua hands this SAME file to
 -- mod.options:define() at load time (one copy, read twice), which is what
 -- gives mod.options:get() its defaults. These rows are the mod's ONLY
--- settings UI (OPTIONS -> MODS -> Modern Spawns); nothing is added to the
+-- settings UI (OPTIONS -> MODS -> WoobleSpawns); nothing is added to the
 -- top-level OPTION screen.
 return {
   {

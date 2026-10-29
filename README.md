@@ -1,6 +1,6 @@
 <div align="center">
 
-# Modern Spawns 🗺️
+# WoobleSpawns 🗺️
 
 *A modern Pokédex in the wild. Every route, cave and lake in Kanto, Johto and Hoenn
 gets fresh Pokémon from Generations 1 to 9, picked to fit the place.*
@@ -51,7 +51,7 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
 
 ## ⚙️ Options
 
-Open **OPTIONS → MODS → Modern Spawns**. Changes apply from the next encounter.
+Open **OPTIONS → MODS → WoobleSpawns**. Changes apply from the next encounter.
 
 | Option | Choices | Default | What it does |
 |---|---|---|---|
@@ -68,7 +68,7 @@ Open **OPTIONS → MODS → Modern Spawns**. Changes apply from the next encount
 1. Download the latest release from the
    [Releases](https://github.com/poooooby/g1r_modern_spawns/releases) page.
 2. Import it with the Gen1Recomp Mod Manager, or drop it in your mods folder.
-3. That's it: on its own, Modern Spawns mixes up your game's own Pokémon (Red, Blue and
+3. That's it: on its own, WoobleSpawns mixes up your game's own Pokémon (Red, Blue and
    Yellow's 151, Gold, Silver and Crystal's 251, the Gen 3 games' 386). For newer Pokémon, add
    the species mod for your game:
    - **Red, Blue, Yellow:** [National Dex](https://github.com/sanjinpepic/gen1recomp-national-dex),
@@ -102,5 +102,5 @@ Open **OPTIONS → MODS → Modern Spawns**. Changes apply from the next encount
 
 ---
 
-Release history: [CHANGELOG.md](CHANGELOG.md). Building on Modern Spawns or working on it? See
+Release history: [CHANGELOG.md](CHANGELOG.md). Building on WoobleSpawns or working on it? See
 [DEVELOPMENT.md](DEVELOPMENT.md).

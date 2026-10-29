@@ -1,4 +1,4 @@
--- Modern Spawns: dynamic Gen 1-9 wild encounter tables for Pokemon Red,
+-- WoobleSpawns (modern_spawns): dynamic Gen 1-9 wild encounter tables for Pokemon Red,
 -- Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire
 -- and Emerald.
 --
@@ -24,7 +24,7 @@
 --   src/runtime.lua       seed, cache, encounter hooks, events, seed option sync
 --   src/api.lua           mod.exports framework surface
 --
--- Settings live only in the Mod Manager (OPTIONS -> MODS -> Modern Spawns),
+-- Settings live only in the Mod Manager (OPTIONS -> MODS -> WoobleSpawns),
 -- rendered from options.lua; the top-level OPTION screen is left untouched.
 
 -- A mod's own files load as chunks through mod:read; require() cannot see

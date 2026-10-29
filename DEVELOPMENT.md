@@ -1,4 +1,4 @@
-# Modern Spawns: developer guide
+# WoobleSpawns: developer guide
 
 For mod authors and contributors. Players only need the [README](README.md).
 
@@ -57,7 +57,7 @@ exports don't bump it, so test for a newer one by presence,
 | `invalidate()` | drop cached tables |
 
 Every return value is a copy. The event `mod.modern_spawns.tables_changed` fires whenever
-tables are regenerated. Modern Spawns wraps `encounter.roll`, `encounter.fishing`,
+tables are regenerated. WoobleSpawns wraps `encounter.roll`, `encounter.fishing`,
 `encounter.table` and `encounter.species` as the innermost wrapper (priority -100), so its
 tables are what the engine rolls; outer mods can still suppress an encounter or post-process
 it through `encounter.species`.
