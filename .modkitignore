@@ -27,6 +27,8 @@ tests/forms_test.lua
 tests/variety_test.lua
 tests/variety_gen2_test.lua
 tests/complete_test.lua
+tests/preview_complete_gen3_test.lua
+tests/preview_gen2_time_test.lua
 tests/frlg_area_test.lua
 tests/chain_test.lua
 tests/placement_test.lua

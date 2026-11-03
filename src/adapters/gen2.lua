@@ -257,13 +257,15 @@ return function(reg, MapContext, mod)
     return out
   end
 
-  -- encounter.table preview (percent weights). The preview has no time of
-  -- day, so grass shows the DAY list.
-  function A.distribution(table_, kind)
+  -- encounter.table preview (percent weights), using its requested time of
+  -- day. DAY remains the default for callers without a time context.
+  function A.distribution(table_, kind, ctx)
     local dist = {}
     local slots, weights = table_.slots, WATER_WEIGHTS
     if kind == "grass" then
-      slots, weights = table_.slots.DAY or {}, GRASS_WEIGHTS
+      local time = ctx and (ctx.daytime or ctx.opts and ctx.opts.daytime) or "DAY"
+      if time == "DARK" then time = "NITE" end
+      slots, weights = table_.slots[time] or {}, GRASS_WEIGHTS
     end
     for i, slot in ipairs(slots) do
       if slot and slot.species then

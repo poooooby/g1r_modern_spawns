@@ -3,6 +3,16 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Fixed
+
+- COMPLETE encounter previews now include every species in each slot's pool and its
+  registered alternate forms, weighted by the slot's odds and both selection stages.
+  This updates the public `encounter.table` guide data without adding encounter slots,
+  changing live tables or consuming encounter randomness.
+- Gen 2 encounter previews respect the requested time of day, with DAY as the default.
+
 ## [0.13.2] - 2026-10-21
 
 ### Fixed

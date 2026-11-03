@@ -967,7 +967,38 @@ return function(deps)
       local ok, preview = pcall(function()
         local kind = kindOf(ctx and ctx.terrain)
         local def = ctx and generated(ctx.mapId, kind)
-        return def and world.distribution(world.assemble(ctx.mapId, kind, def), kind)
+        if not def then return nil end
+        if Config.spawnMode(mod) ~= "complete" then
+          return world.distribution(world.assemble(ctx.mapId, kind, def), kind, ctx)
+        end
+        -- The preview describes the whole distribution, not just each slot's
+        -- primary species. Ask the adapter for per-slot odds without changing
+        -- the live tables or invoking any random draw.
+        local labelled = { rate = def.rate, buckets = def.buckets, slots = {} }
+        for i, slot in ipairs(def.slots) do
+          local copy = {}
+          for k, v in pairs(slot) do copy[k] = v end
+          copy.species = "__preview_slot_" .. i
+          labelled.slots[i] = copy
+        end
+        local weights = world.distribution(world.assemble(ctx.mapId, kind, labelled), kind, ctx)
+        local pools, dist = poolsOf(ctx.mapId, kind) or {}, {}
+        for i, slot in ipairs(def.slots) do
+          local weight = weights["__preview_slot_" .. i] or 0
+          local list = pools[i] or { slot.species }
+          for _, id in ipairs(list) do
+            local c = pool and pool.byId[id]
+            local variants = c and c.variants or {}
+            local share = weight / #list / (#variants + 1)
+            if share > 0 then
+              dist[id] = (dist[id] or 0) + share
+              for _, variant in ipairs(variants) do
+                dist[variant] = (dist[variant] or 0) + share
+              end
+            end
+          end
+        end
+        return dist
       end)
       if ok and preview then return preview end
       return result
