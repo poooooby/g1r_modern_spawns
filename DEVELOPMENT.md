@@ -60,7 +60,25 @@ Every return value is a copy. The event `mod.modern_spawns.tables_changed` fires
 tables are regenerated. WoobleSpawns wraps `encounter.roll`, `encounter.fishing`,
 `encounter.table` and `encounter.species` as the innermost wrapper (priority -100), so its
 tables are what the engine rolls; outer mods can still suppress an encounter or post-process
-it through `encounter.species`.
+it through `encounter.species` (see "Changing species on top" below).
+
+### Changing species on top (randomizers)
+
+A mod that replaces the species WoobleSpawns chose needs no export: wrap the hooks at any
+priority above -100 and edit what `next` returns. `tests/compose_test.lua` holds this contract
+on Emerald in every SPAWN MODE.
+
+- `encounter.species(next, encounter, ctx)`: call `next(encounter, ctx)` first, then change the
+  result. On Gen 3 its `species` is the engine's numeric slot and `speciesId` the same number
+  (the engine's own unhooked result has `species` as a name, e.g. `"ZIGZAGOON"`, so read
+  `tonumber(r.speciesId) or tonumber(r.species)`); hand back a numeric `species`. `ctx` has
+  `mapId` and `terrain`.
+- `encounter.fishing(next, rod, mapId, candidates)`: `next(rod, mapId, candidates)` returns the
+  ONE rolled encounter (`{ species, speciesId, level, ... }`), not the list; change that. The
+  Old Rod passes through WoobleSpawns untouched.
+- Copy the table before changing it, and keep `level` and the other fields.
+- Visible spawns don't run these hooks: Wilds of Hoenn applies WoobleSpawns' species and then
+  its own `addSpawnFilter` filters, so register one there too.
 
 A mod that suppresses step encounters and picks species itself (visible overworld spawns)
 bypasses those hooks: it should read `drawFor`, `legendaryFor` and `chainSpeciesFor` per

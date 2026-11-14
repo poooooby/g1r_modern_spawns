@@ -1,0 +1,9 @@
+{
+  "id": "outer_randomizer",
+  "name": "Outer randomizer (test fixture)",
+  "version": "1.0.0",
+  "api": 2,
+  "entry": "main.lua",
+  "games": ["gen3"],
+  "dependencies": []
+}

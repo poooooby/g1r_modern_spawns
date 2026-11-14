@@ -30,5 +30,8 @@ tests/complete_test.lua
 tests/frlg_area_test.lua
 tests/chain_test.lua
 tests/placement_test.lua
+tests/compose_test.lua
+tests/fixtures/outer_randomizer/main.lua
+tests/fixtures/outer_randomizer/manifest.json
 CLAUDE.md
 .claude/skills/lua-developer/SKILL.md
