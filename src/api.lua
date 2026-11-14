@@ -13,8 +13,11 @@
 -- API VERSIONING: apiVersion only goes up, and only when an existing field
 -- changes meaning or disappears; check `>=`, never `==`.
 --
--- Event: mod.modern_spawns.tables_changed { maxGeneration, seed, mode } fires
--- each time tables are (re)generated (under EVERY MAP: once per map visit).
+-- Event: mod.modern_spawns.tables_changed { maxGeneration, seed, mode, timeOfDay }
+-- fires each time tables are (re)generated (under EVERY MAP: once per map visit).
+-- Event: mod.modern_spawns.period_changed { period, previous } fires when TIME OF
+-- DAY SPAWNS sees the clock turn ("day" <-> "night"); a consumer holding visible
+-- spawns can redraw them.
 
 local function deepCopy(value)
   if type(value) ~= "table" then return value end
@@ -41,6 +44,9 @@ local function describe(c)
     terrains = setToList(c.terrains), special = c.special,
     profileSource = c.source,
     form = c.form, baseSpecies = c.baseSpecies, variants = deepCopy(c.variants),
+    -- "day" | "night" | nil: when it comes out (data/time_of_day.lua); Only:
+    -- only then (TIME OF DAY SPAWNS STRICT keeps it to that time)
+    timeOfDay = c.tod, timeOfDayOnly = c.todOnly,
   }
 end
 
@@ -67,7 +73,18 @@ return function(deps)
   exports.settings = function()
     return { enabled = Config.enabled(mod), maxGeneration = Config.maxGeneration(mod),
              spawnMode = Config.spawnMode(mod), legendaries = Config.legendaries(mod),
-             shinyChain = Config.shinyChain(mod) }
+             shinyChain = Config.shinyChain(mod), timeOfDay = Runtime.timeOfDay() }
+  end
+
+  -- "day" | "night" on the clock TIME OF DAY SPAWNS follows (WoobleDex's Clock
+  -- Source; the cart's own clock on Gold/Silver/Crystal), whatever the option
+  -- is set to; nil without a clock. Since 0.14.0.
+  exports.period = function()
+    return Runtime.period()
+  end
+  -- Tests: pin the period ("day"/"night"; nil follows the clock again).
+  exports._pinPeriod = function(period)
+    Runtime.pinPeriod(period)
   end
 
   -- Where legendaries/mythicals may appear when LEGENDARIES is ON:
@@ -109,22 +126,26 @@ return function(deps)
   --   Gen 1: { rate, slots, buckets? }
   --   Gen 2 grass: { map, rates = {MORN,DAY,NITE}, slots = {MORN={7}, DAY={7}, NITE={7}} }
   --   Gen 2 water: { map, rate, slots = {3} }
-  exports.tableFor = function(mapId, terrain)
-    return deepCopy(Runtime.tableFor(mapId, terrain or "grass"))
+  -- `period` ("day"/"night", optional, since 0.14.0): with TIME OF DAY SPAWNS
+  -- on, that period's roster; by default the one in force now. While it is
+  -- OFF there is one roster and `period` changes nothing.
+  exports.tableFor = function(mapId, terrain, period)
+    return deepCopy(Runtime.tableFor(mapId, terrain or "grass", period))
   end
 
   -- For a mod that picks species itself, once per pick (visible overworld
   -- spawns): tableFor under SEEDED / EVERY MAP, a fresh one-off draw under
   -- RANDOM, so each pick sees what that mode would roll. Same shape as tableFor.
-  exports.drawFor = function(mapId, terrain)
-    return deepCopy(Runtime.drawFor(mapId, terrain or "grass"))
+  exports.drawFor = function(mapId, terrain, period)
+    return deepCopy(Runtime.drawFor(mapId, terrain or "grass", period))
   end
 
   -- COMPLETE DEX only: the species each slot of tableFor's table can turn
   -- into, { [slot] = { species ids } } (the slot's own species first); nil
-  -- in every other mode. Since 0.12.0.
-  exports.poolFor = function(mapId, terrain)
-    return deepCopy(Runtime.poolFor(mapId, terrain or "grass"))
+  -- in every other mode. Since 0.12.0. With TIME OF DAY SPAWNS on, what each
+  -- slot can turn into at `period` (default: now).
+  exports.poolFor = function(mapId, terrain, period)
+    return deepCopy(Runtime.poolFor(mapId, terrain or "grass", period))
   end
 
   -- Where a species can be met under the current settings:
@@ -151,8 +172,8 @@ return function(deps)
 
   -- Per-slot selection records: { slot, level, species, replaced, score,
   -- tier, source, reasons = {...}, penalties = {...} }.
-  exports.explain = function(mapId, terrain)
-    return deepCopy(Runtime.explain(mapId, terrain))
+  exports.explain = function(mapId, terrain, period)
+    return deepCopy(Runtime.explain(mapId, terrain, period))
   end
 
   -- Candidate pool entries. opts (all optional): maxGeneration, terrain

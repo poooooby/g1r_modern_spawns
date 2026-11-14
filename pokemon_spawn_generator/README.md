@@ -87,6 +87,46 @@ PokéAPI has no wild data for Gen 9 (Scarlet/Violet), so those species appear
 only in `generation` and `special`. The mod estimates their profiles at
 runtime.
 
+## `time_of_day.lua` (the `--time-of-day` export)
+
+Which species keep to the day or the night, for the mod's TIME OF DAY SPAWNS
+option. It is a separate file, so writing it never touches
+`spawn_profiles.lua` or reshuffles a seed.
+
+```bash
+python generate_spawn_data.py --out <a folder outside the mod> \
+  --time-of-day ../data/time_of_day.lua --tod-report <folder>/tod_report.json
+```
+
+`species[dex]` holds one of four codes:
+
+- `"N"` / `"D"`: only at night / only by day. The mod's STRICT setting keeps
+  these species to their time.
+- `"n"` / `"d"`: mostly at night / mostly by day. These are weighted, never
+  ruled out.
+
+Where the calls come from:
+
+- **Encounter data.** Only Gold/Silver/Crystal, HeartGold/SoulSilver and
+  Diamond/Pearl/Platinum record a time of day (`time-morning` / `time-day` /
+  `time-night` conditions). In those games a wild row with no time condition
+  means "any time".
+  - Headbutt, swarms, the radio, the dual slot and the Safari Zone's blocks
+    don't count.
+  - Johto decides for #1-251 and Sinnoh for the rest.
+  - A species is `"N"` (or `"D"`) when at least 90% of its encounter weight,
+    and at least 80% of the places it lives across 4 or more places, say so.
+    At 70% or more it leans (`"n"` / `"d"`).
+- **Families.** A family member with no evidence of its own leans the way its
+  family does, when the family agrees.
+- **Our own review.** Newer games record no time of day, so newer species are
+  classified in `time_of_day_overrides.py`, by reading their Pokédex entries.
+  These calls are leans only. The report lists the keyword candidates; they
+  are never applied by themselves.
+- **The reference check.** `EXPECTED` is the Gold/Silver/Crystal reference.
+  The report flags every difference from it, and every "only" that softened to
+  "mostly".
+
 ## Output
 
 ### `pokemon_encounters.json`

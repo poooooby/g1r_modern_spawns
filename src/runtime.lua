@@ -36,6 +36,10 @@ return function(deps)
   local mod, Config, Generator, SpeciesPool, MapContext, Rng =
     deps.mod, deps.Config, deps.Generator, deps.SpeciesPool, deps.MapContext, deps.Rng
   local profiles = deps.profiles
+  -- TIME OF DAY SPAWNS: data/time_of_day.lua (which species keep to the day or
+  -- the night) and src/clock.lua; without either the option acts as OFF
+  local timeData = deps.timeOfDay
+  local TOD_VERSION = timeData and timeData.version or 0
   local log = mod.log
 
   local HOOK_PRIORITY = -100
@@ -101,6 +105,7 @@ return function(deps)
   local generation = tonumber(mod.generation) or 1
   local makeAdapter = deps.adapters[generation] or deps.adapters[1]
   local world = makeAdapter({ get = registryGet, ids = registryIds }, MapContext, mod)
+  local Clock = deps.makeClock and deps.makeClock({ mod = mod, generation = generation })
 
   function world.species()
     local out = {}
@@ -151,7 +156,7 @@ return function(deps)
     local dex = nationalDexExports()
     world.evolutionOf = dex and type(dex.evolutionsOf) == "function"
       and dex.evolutionsOf or nil
-    local ok, result = pcall(SpeciesPool.build, world, profiles, Config.generationOfDex)
+    local ok, result = pcall(SpeciesPool.build, world, profiles, Config.generationOfDex, timeData)
     if not ok then
       warnOnce("pool", "candidate pool failed to build (%s) -- wild tables "
         .. "stay as the game has them", tostring(result))
@@ -251,19 +256,70 @@ return function(deps)
     return Config.spawnMode(mod)
   end
 
-  local function context(gen, seed)
+  -- ------------------------------------------------------- time of day
+
+  -- TIME OF DAY SPAWNS in force: "off" | "prefer" | "strict" ("off" without
+  -- the day/night data or the clock).
+  local function todMode()
+    if not (Clock and timeData) then return "off" end
+    return Config.timeOfDay(mod)
+  end
+  Runtime.timeOfDay = todMode
+
+  -- "day" | "night" for an encounter's ctx (nil: now), or nil while OFF. The
+  -- answer is kept per ctx, so a roll and the species hook after it agree
+  -- even when the clock turns between them.
+  local periodMemo = setmetatable({}, { __mode = "k" })
+  local function periodFor(ctx)
+    if todMode() == "off" then return nil end
+    if type(ctx) ~= "table" then return Clock.period(nil) end
+    local period = periodMemo[ctx]
+    if not period then
+      period = Clock.period(ctx)
+      periodMemo[ctx] = period
+    end
+    return period
+  end
+
+  -- A caller's period argument ("day"/"night"), else the one in force now;
+  -- nil while OFF, whatever the caller asked (there is one roster then).
+  local function periodOrNow(period)
+    if todMode() == "off" then return nil end
+    if period == "day" or period == "night" then return period end
+    return periodFor(nil)
+  end
+
+  -- The clock's period whatever the option says (exports.period).
+  function Runtime.period()
+    if not Clock then return nil end
+    local ok, period = pcall(Clock.period, nil)
+    return ok and period or nil
+  end
+
+  local function context(gen, seed, only)
+    local tod = todMode()
     return {
       world = world, pool = Runtime.pool(), seed = seed, maxGen = gen,
       config = Config.SpawnConfig, dataVersion = DATA_VERSION,
       MapContext = MapContext, Rng = Rng,
       selection = Config.SpawnConfig.selection[Config.spawnMode(mod)],
+      timeOfDay = tod ~= "off" and tod or nil, only = only,
     }
+  end
+
+  -- the cache-key part of TIME OF DAY SPAWNS: nothing while OFF, so every
+  -- key (and table) stays what it was before the option existed
+  local function todKey()
+    local tod = todMode()
+    if tod == "off" then return nil end
+    return tod .. ":" .. TOD_VERSION
   end
 
   local function announce(gen, seed)
     pcall(function()
       mod.events:emit("mod." .. mod.id .. ".tables_changed",
-        { maxGeneration = gen, seed = seed, mode = Config.spawnMode(mod) })
+        { maxGeneration = gen, seed = seed, mode = Config.spawnMode(mod),
+          timeOfDay = todMode() })
     end)
   end
 
@@ -274,7 +330,8 @@ return function(deps)
     if not gen then return nil end
     local seed = Runtime.seed()
     local complete = Config.spawnMode(mod) == "complete"
-    local key = table.concat({ seed, gen, DATA_VERSION, complete and "complete" or "seeded" }, ":")
+    local key = table.concat({ seed, gen, DATA_VERSION, complete and "complete" or "seeded",
+                               todKey() }, ":")
     if cache.key == key then return cache.tables end
     local build = complete and Generator.buildAtlas or Generator.buildAll
     local ok, result = pcall(build, context(gen, seed))
@@ -291,7 +348,7 @@ return function(deps)
   -- EVERY MAP: the map as generated for its current visit.
   local function visitEntry(mapId, gen, seed)
     local visit = visits[mapId] or 0
-    local key = table.concat({ seed, gen, DATA_VERSION, visit }, ":")
+    local key = table.concat({ seed, gen, DATA_VERSION, visit, todKey() }, ":")
     local held = visitTables[mapId]
     if held and held.key == key then return held.result end
     local ok, result = pcall(Generator.buildMap, context(gen, seed), mapId,
@@ -344,32 +401,44 @@ return function(deps)
     return def
   end
 
-  local function generated(mapId, kind)
+  -- `period` "night" reads TIME OF DAY SPAWNS' night roster when the map has
+  -- one; any other value (and every table with a time per slot: Gen 2 grass)
+  -- the day roster, which is the only one while OFF.
+  local function generated(mapId, kind, period)
     local entry = entryFor(mapId)
-    return entry and checked(entry[kind]) or nil
+    if not entry then return nil end
+    local def = period == "night" and entry.night and entry.night[kind] or entry[kind]
+    return checked(def)
   end
 
   -- The running game's own shape of a generated table (Gen 1 { rate, slots,
   -- buckets? } or a Super Rod list; Gen 2 grass { rates, slots = {MORN,
-  -- DAY, NITE} }, water { rate, slots }, fish rows).
-  function Runtime.tableFor(mapId, terrain)
+  -- DAY, NITE} }, water { rate, slots }, fish rows). With TIME OF DAY SPAWNS,
+  -- the roster for `period` ("day"/"night"), by default the one in force now.
+  function Runtime.tableFor(mapId, terrain, period)
     local kind = kindOf(terrain)
-    local def = generated(mapId, kind)
+    local def = generated(mapId, kind, periodOrNow(period))
     return def and world.assemble(mapId, kind, def) or nil
   end
 
-  function Runtime.explain(mapId, terrain)
+  function Runtime.explain(mapId, terrain, period)
     local entry = entryFor(mapId)
-    return entry and entry.explain[kindOf(terrain)] or nil
+    if not entry then return nil end
+    local kind = kindOf(terrain)
+    if periodOrNow(period) == "night" and entry.night and entry.night.explain[kind] then
+      return entry.night.explain[kind]
+    end
+    return entry.explain[kind]
   end
 
   -- RANDOM: a one-off generation of the map for this draw only; it is not
-  -- remembered as a visit, so it never shifts another map's history.
-  local function randomDraw(mapId)
+  -- remembered as a visit, so it never shifts another map's history. With TIME
+  -- OF DAY SPAWNS, a roster for `period` alone.
+  local function randomDraw(mapId, period)
     local gen = Runtime.effectiveGeneration()
     if not gen or Config.spawnMode(mod) ~= "random" then return nil end
     encounterCount = encounterCount + 1
-    local ok, result = pcall(Generator.buildMap, context(gen, Runtime.seed()),
+    local ok, result = pcall(Generator.buildMap, context(gen, Runtime.seed(), period),
                              mapId, memory, "encounter:" .. encounterCount, false)
     if ok then return result end
     warnOnce("generate", "table generation failed (%s) -- wild encounters stay "
@@ -398,7 +467,7 @@ return function(deps)
   local function randomSpecies(mapId, kind, ctx, rolled)
     local index = rolledSlot(mapId, kind, ctx, rolled)
     if not index then return nil end
-    local draw = randomDraw(mapId)
+    local draw = randomDraw(mapId, periodFor(ctx))
     local fresh = draw and checked(draw[kind])
     return fresh and fresh.slots[index] and fresh.slots[index].species or nil
   end
@@ -410,18 +479,68 @@ return function(deps)
     return entry and entry.pools and entry.pools[kind] or nil
   end
 
-  function Runtime.poolFor(mapId, terrain)
-    return poolsOf(mapId, kindOf(terrain))
+  -- TIME OF DAY SPAWNS: how likely a pool species is drawn at `period`
+  -- (SpawnConfig.time_of_day): `off_hours` when it is out at that time or
+  -- keeps no time, 1 at the other time, 0 under STRICT when it only comes out
+  -- at the other time. A look (Rotom's appliances) counts as its base species.
+  local lookBase
+  local function todWeight(id, period)
+    local rules = Config.SpawnConfig.time_of_day
+    if not lookBase then
+      lookBase = {}
+      for _, c in ipairs(pool and pool.list or {}) do
+        for _, v in ipairs(c.variants or {}) do lookBase[v] = c.id end
+      end
+    end
+    local c = pool and (pool.byId[id] or pool.byId[lookBase[id]])
+    if not (c and c.tod) or c.tod == period then return rules.off_hours end
+    if c.todOnly and todMode() == "strict" then return 0 end
+    return 1
   end
 
-  -- COMPLETE DEX: one species out of a slot's pool, each equally likely; a
-  -- species with looks (Rotom's appliances, ...) shows as itself or one of
-  -- them. Only registered species are ever answered.
+  -- COMPLETE DEX's pools for a terrain: { [slot] = { species ids } }. With TIME
+  -- OF DAY SPAWNS, what each slot can turn into at `period` (default: now),
+  -- that period's primary first.
+  function Runtime.poolFor(mapId, terrain, period)
+    local kind = kindOf(terrain)
+    local pools = poolsOf(mapId, kind)
+    if not pools or todMode() == "off" then return pools end
+    period = periodOrNow(period)
+    local def = generated(mapId, kind, period)
+    local out = {}
+    for index, list in pairs(pools) do
+      local primary = def and def.slots[index] and def.slots[index].species
+      local filtered = {}
+      for _, id in ipairs(list) do
+        if todWeight(id, period) > 0 then
+          if id == primary then table.insert(filtered, 1, id) else filtered[#filtered + 1] = id end
+        end
+      end
+      out[index] = filtered
+    end
+    return out
+  end
+
+  -- COMPLETE DEX: one species out of a slot's pool, each equally likely (TIME
+  -- OF DAY SPAWNS: weighted by todWeight at `period`; nil when nothing in the
+  -- pool may come out now); a species with looks (Rotom's appliances, ...)
+  -- shows as itself or one of them. Only registered species are ever answered.
   local completeCount = 0
-  local function poolPick(mapId, kind, index, list)
+  local function poolPick(mapId, kind, index, list, period)
     completeCount = completeCount + 1
     local rng = Rng.new(Rng.hash(Runtime.seed(), "complete", mapId, kind, index, completeCount))
-    local id = list[rng:int(1, #list)]
+    local id
+    if period == nil then
+      id = list[rng:int(1, #list)]
+    else
+      local weights, any = {}, false
+      for i, sid in ipairs(list) do
+        weights[i] = todWeight(sid, period)
+        if weights[i] > 0 then any = true end
+      end
+      if not any then return nil end
+      id = list[rng:weighted(weights) or 1]
+    end
     local c = pool and pool.byId[id]
     if c and c.variants then
       local options = { id }
@@ -437,11 +556,12 @@ return function(deps)
   local function completeSpecies(mapId, kind, ctx, rolled)
     local pools = poolsOf(mapId, kind)
     if not pools then return nil end
+    local period = periodFor(ctx)
     local index
     if world.substituteAfterRoll then
       index = rolledSlot(mapId, kind, ctx, rolled)
     else
-      local def = generated(mapId, kind)
+      local def = generated(mapId, kind, period)
       for i, slot in ipairs(def and def.slots or {}) do
         if slot.species == rolled.species and slot.level == rolled.level then
           index = i
@@ -450,7 +570,7 @@ return function(deps)
       end
     end
     local list = index and pools[index]
-    return list and #list > 0 and poolPick(mapId, kind, index, list) or nil
+    return list and #list > 0 and poolPick(mapId, kind, index, list, period) or nil
   end
 
   -- For consumers that pick species themselves, one pick per call (visible
@@ -459,10 +579,13 @@ return function(deps)
   -- each slot drawn from its pool. Same shape as tableFor.
   local drawForImpl
   local drawLogged = {}
+  local checkPeriod -- below, with live sync
   -- The first request per map and terrain is logged with what it answered, so a report of
   -- "the visible spawns ignore Modern Spawns" can tell whether the spawning mod asked at all.
-  function Runtime.drawFor(mapId, terrain)
-    local result = drawForImpl(mapId, terrain)
+  -- With TIME OF DAY SPAWNS, a draw for `period` (default: now).
+  function Runtime.drawFor(mapId, terrain, period)
+    if checkPeriod then checkPeriod(periodFor(nil)) end
+    local result = drawForImpl(mapId, terrain, period)
     local key = tostring(mapId) .. ":" .. tostring(terrain)
     if not drawLogged[key] then
       drawLogged[key] = true
@@ -476,24 +599,25 @@ return function(deps)
     return result
   end
 
-  drawForImpl = function(mapId, terrain)
+  drawForImpl = function(mapId, terrain, period)
+    period = periodOrNow(period)
     if Config.spawnMode(mod) == "complete" then
       local kind = kindOf(terrain)
-      local def = generated(mapId, kind)
+      local def = generated(mapId, kind, period)
       local pools = poolsOf(mapId, kind)
-      if not (def and pools) then return Runtime.tableFor(mapId, terrain) end
+      if not (def and pools) then return Runtime.tableFor(mapId, terrain, period) end
       local copy = { rate = def.rate, buckets = def.buckets, slots = {} }
       for i, slot in ipairs(def.slots) do
         local s = { level = slot.level, maxLevel = slot.maxLevel, species = slot.species }
         local list = pools[i]
-        if list and #list > 0 then s.species = poolPick(mapId, kind, i, list) or s.species end
+        if list and #list > 0 then s.species = poolPick(mapId, kind, i, list, period) or s.species end
         copy.slots[i] = s
       end
       return world.assemble(mapId, kind, copy)
     end
-    if Config.spawnMode(mod) ~= "random" then return Runtime.tableFor(mapId, terrain) end
+    if Config.spawnMode(mod) ~= "random" then return Runtime.tableFor(mapId, terrain, period) end
     local kind = kindOf(terrain)
-    local draw = type(mapId) == "string" and randomDraw(mapId) or nil
+    local draw = type(mapId) == "string" and randomDraw(mapId, period) or nil
     local def = draw and checked(draw[kind])
     return def and world.assemble(mapId, kind, def) or nil
   end
@@ -508,6 +632,9 @@ return function(deps)
   -- RANDOM, one fresh draw, with the same caveat drawFor's own callers get:
   -- it reflects that one draw, not the full distribution.
   local syncedOnce = {}
+  -- TIME OF DAY SPAWNS: the period live sync last wrote, the period last seen,
+  -- and the map the player is on (EVERY MAP / RANDOM re-sync only that one)
+  local syncedPeriod, seenPeriod, currentMap
   local function liveSyncMap(mapId)
     if not (LiveSync and Runtime.isActive() and type(mapId) == "string") then return end
     if not syncedOnce[mapId] then
@@ -517,24 +644,27 @@ return function(deps)
       log:info("live sync: first write for %s (live table found: %s)", mapId,
         tostring(arrays ~= nil and #arrays or "no"))
     end
+    -- the roster in force now (one roster while OFF: period nil)
+    local period = periodFor(nil)
+    syncedPeriod = period
     -- COMPLETE DEX writes each slot's primary species (one per slot)
     local drawFor = Config.spawnMode(mod) == "complete" and Runtime.tableFor or Runtime.drawFor
     if world.generation == 2 then
-      local grass = drawFor(mapId, "grass")
+      local grass = drawFor(mapId, "grass", period)
       if grass and type(grass.slots) == "table" then
         for _, time in ipairs({ "MORN", "DAY", "NITE" }) do
           local list = grass.slots[time]
           if list then LiveSync.apply(mapId, "grass", time, list) end
         end
       end
-      local water = drawFor(mapId, "water")
+      local water = drawFor(mapId, "water", period)
       if water and water.slots then LiveSync.apply(mapId, "water", nil, water.slots) end
       return
     end
     local terrains = world.generation == 3 and { "land", "water" }
       or { "grass", "water", "superRod" }
     for _, terrain in ipairs(terrains) do
-      local t = drawFor(mapId, terrain)
+      local t = drawFor(mapId, terrain, period)
       -- Gen 1's Super Rod assembles to a bare list, not { slots = ... }.
       local slots = t and (t.slots or t)
       if type(slots) == "table" then LiveSync.apply(mapId, terrain, nil, slots) end
@@ -569,6 +699,39 @@ return function(deps)
     end
     log:info("live sync: %d maps written (game.data is the engine's own table: %s)",
       maps, tostring(engineTable))
+  end
+
+  -- TIME OF DAY SPAWNS: the clock turned (or the clock source changed). Tells
+  -- other mods (mod.modern_spawns.period_changed { period, previous }) and
+  -- re-writes live sync's tables for the new period. Gen 3 re-reads its live
+  -- tables on every roll, so this runs in the roll hook before the engine
+  -- rolls. A no-op while OFF (period nil).
+  checkPeriod = function(period)
+    if not period then return end
+    local previous = seenPeriod
+    seenPeriod = period
+    if previous and previous ~= period then
+      pcall(function()
+        mod.events:emit("mod." .. mod.id .. ".period_changed",
+          { period = period, previous = previous })
+      end)
+    end
+    if LiveSync and syncedPeriod and syncedPeriod ~= period then
+      syncedPeriod = period -- before re-syncing: the writes below ask drawFor, which checks again
+      LiveSync.restore()
+      local mode = Config.spawnMode(mod)
+      if mode == "seeded" or mode == "complete" then
+        liveSyncAll()
+      elseif currentMap then
+        liveSyncMap(currentMap)
+      end
+    end
+  end
+
+  -- Tests (and exports._pinPeriod) pin the clock's period; nil follows it again.
+  function Runtime.pinPeriod(period)
+    if Clock then Clock.pin(period) end
+    checkPeriod(periodFor(nil))
   end
 
   -- -------------------------------------------------------- legendaries
@@ -638,7 +801,14 @@ return function(deps)
     end
     for mapId, entry in pairs(entries) do
       for kind, def in pairs(entry) do
-        if kind ~= "explain" and kind ~= "pools" and type(def) == "table" then
+        if kind ~= "explain" and kind ~= "pools" and kind ~= "night" and type(def) == "table" then
+          for _, slot in ipairs(def.slots or {}) do mark(slot.species, mapId, kind) end
+        end
+      end
+      -- TIME OF DAY SPAWNS: the night roster's places count too (AREA lists a
+      -- species wherever it can be met, by day or at night)
+      for kind, def in pairs(entry.night or {}) do
+        if kind ~= "explain" and type(def) == "table" then
           for _, slot in ipairs(def.slots or {}) do mark(slot.species, mapId, kind) end
         end
       end
@@ -784,7 +954,13 @@ return function(deps)
     return chain ~= nil and Config.shinyChain(mod) and Runtime.isActive()
   end
 
-  local function canMeet(mapId, kind, species)
+  -- `period`: under STRICT, a species that only comes out at the other time
+  -- cannot be met now
+  local function canMeet(mapId, kind, species, period)
+    if period and todMode() == "strict" then
+      local c = Runtime.pool() and pool.byId[species]
+      if c and c.todOnly and c.tod ~= period then return false end
+    end
     local maps = Runtime.mapsWithSpecies(species)
     return maps ~= nil and maps[mapId] ~= nil and maps[mapId][kind] == true
   end
@@ -799,7 +975,8 @@ return function(deps)
   function Runtime.chainSpeciesFor(mapId, terrain)
     if not (chainOn() and type(mapId) == "string") then return nil end
     local kind = kindOf(terrain)
-    return chain:forced(chain.species and canMeet(mapId, kind, chain.species), chainDraw)
+    return chain:forced(chain.species and canMeet(mapId, kind, chain.species, periodFor(nil)),
+                        chainDraw)
   end
 
   --- { shiny = chance, perfectIvs = n } for an encounter of `species` (this
@@ -843,9 +1020,12 @@ return function(deps)
     -- knows what the engine pipes here (Gen 1 a per-map def, Gen 2 the whole
     -- kind-first table) and which rolls are this mod's to change.
     mod.hooks:wrap("encounter.roll", function(nextFn, value, ctx)
+      -- TIME OF DAY SPAWNS: a turned clock re-syncs the live tables BEFORE the
+      -- engine rolls (Gen 3 rolls on them, then the species hook maps the slot)
+      pcall(function() checkPeriod(periodFor(ctx)) end)
       local ok, replaced = pcall(function()
         local kind = world.rollKind(ctx)
-        local def = kind and generated(ctx.mapId, kind)
+        local def = kind and generated(ctx.mapId, kind, periodFor(ctx))
         return def and world.rollValue(value, ctx, kind,
                                        world.assemble(ctx.mapId, kind, def))
       end)
@@ -886,7 +1066,7 @@ return function(deps)
       end
       -- the chained species, when the chain makes it so
       if chainOn() and chain.species then
-        local forced = chain:forced(canMeet(ctx.mapId, kind, chain.species),
+        local forced = chain:forced(canMeet(ctx.mapId, kind, chain.species, periodFor(ctx)),
           function() return (rollInt(ctx, 1, 10000) - 1) / 10000 end)
         local swapped = forced and withSpecies(out, forced)
         if swapped then return decided(ctx, swapped) end
@@ -911,7 +1091,7 @@ return function(deps)
       if world.substituteAfterRoll then
         local ok, species = pcall(function()
           local index = rolledSlot(ctx.mapId, kind, ctx, out)
-          local def = index and generated(ctx.mapId, kind)
+          local def = index and generated(ctx.mapId, kind, periodFor(ctx))
           return def and def.slots[index] and def.slots[index].species
         end)
         if ok and species then
@@ -930,15 +1110,18 @@ return function(deps)
     -- the only rods with pools), as a walking slot is drawn after its roll.
     mod.hooks:wrap("encounter.fishing", function(nextFn, rod, mapId, candidates, ...)
       local extra = select(1, ...)
+      -- Gen 2 hands its time of day (extra.tod / daytime); Gen 1 and 3 read the clock
+      local period = periodFor(type(extra) == "table" and extra or nil)
+      pcall(function() checkPeriod(period) end)
       local ok, replaced = pcall(function()
         local kind = world.fishingKind(rod, mapId, candidates, extra)
         if not kind then return nil end
         local def
         if Config.spawnMode(mod) == "random" then
-          local draw = randomDraw(mapId)
+          local draw = randomDraw(mapId, period)
           def = draw and checked(draw[kind])
         else
-          def = generated(mapId, kind)
+          def = generated(mapId, kind, period)
         end
         local pools = def and poolsOf(mapId, kind)
         if pools then
@@ -947,7 +1130,7 @@ return function(deps)
             local copy = {}
             for k, v in pairs(slot) do copy[k] = v end
             local list = pools[i]
-            local pick = list and #list > 0 and poolPick(mapId, kind, i, list)
+            local pick = list and #list > 0 and poolPick(mapId, kind, i, list, period)
             if pick then copy.species = pick end
             drawn.slots[i] = copy
           end
@@ -966,8 +1149,9 @@ return function(deps)
       local result = nextFn(dist, ctx)
       local ok, preview = pcall(function()
         local kind = kindOf(ctx and ctx.terrain)
-        local def = ctx and generated(ctx.mapId, kind)
-        return def and world.distribution(world.assemble(ctx.mapId, kind, def), kind)
+        local period = periodFor(ctx)
+        local def = ctx and generated(ctx.mapId, kind, period)
+        return def and world.distribution(world.assemble(ctx.mapId, kind, def), kind, period)
       end)
       if ok and preview then return preview end
       return result
@@ -981,8 +1165,17 @@ return function(deps)
       if type(mapId) == "string" then
         visits[mapId] = (visits[mapId] or 0) + 1
         visitTables[mapId] = nil
+        currentMap = mapId
+        pcall(function() checkPeriod(periodFor(nil)) end)
         liveSyncMap(mapId)
       end
+    end)
+
+    -- TIME OF DAY SPAWNS: Gold/Silver/Crystal (and a Red/Blue/Yellow world.tod
+    -- mod) announce the clock turning; Gen 3 has no such event, so the roll
+    -- hook and map.entered above check instead
+    mod.events:on("world.tod_changed", function()
+      pcall(function() checkPeriod(periodFor(nil)) end)
     end)
 
     -- A seed typed or rerolled in the Mod Manager applies to the loaded save
@@ -1043,7 +1236,14 @@ return function(deps)
     end)
 
     mod.events:on("mod.options_changed", function(ev)
-      if type(ev) ~= "table" or ev.mod ~= mod.id then return end
+      if type(ev) ~= "table" then return end
+      -- WoobleDex's CLOCK SOURCE moves the clock TIME OF DAY SPAWNS follows;
+      -- the tables hold both periods, so only the period in force changes
+      if ev.mod == "national_dex_gen3" and ev.key == "clock_source" then
+        pcall(function() checkPeriod(periodFor(nil)) end)
+        return
+      end
+      if ev.mod ~= mod.id then return end
       Runtime.invalidate()
       if LiveSync then LiveSync.restore() end
       if ev.key == "seed" then

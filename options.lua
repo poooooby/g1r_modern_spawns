@@ -37,6 +37,14 @@ return {
     description = "LIMITED: each map keeps one roster for the whole playthrough. EVERY MAP: a map's roster is drawn again each time you enter it. RANDOM: every encounter draws a new species (still suited to the level and terrain). COMPLETE: every species GENERATIONS allows lives somewhere, so the whole dex can be caught; each slot holds a few species that share its odds. All four use the save's seed, which only changes when you reroll it or type one below.",
   },
   {
+    key = "time_of_day",
+    label = "TIME OF DAY SPAWNS",
+    type = "choice",
+    default = "off",
+    choices = { { "OFF", "off" }, { "PREFER", "prefer" }, { "STRICT", "strict" } },
+    description = "OFF: the same Pokemon day and night. PREFER: every map has a day and a night roster; night Pokemon (Hoothoot, Gastly, Murkrow...) are more common at night and rarer by day, day Pokemon (Pidgey, Ledyba, Sunkern...) the other way round, and nothing is ruled out. STRICT: like Gold/Silver/Crystal, Pokemon that only come out at night appear only at night and day-only ones only by day; COMPLETE still lets you catch every Pokemon at some time. Night is 8 PM to 4 AM on WoobleDex's Clock Source (In-game or Device); FireRed, LeafGreen, Red, Blue and Yellow use the device clock, Gold, Silver and Crystal their own clock (night from 6 PM).",
+  },
+  {
     key = "legendaries",
     label = "LEGENDARIES",
     type = "choice",

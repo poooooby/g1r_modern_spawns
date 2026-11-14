@@ -308,6 +308,13 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--lua", type=Path, default=None,
                    help="Also write the compact dex-keyed Lua profiles the "
                         "modern_spawns mod loads (e.g. ../data/spawn_profiles.lua).")
+    p.add_argument("--time-of-day", type=Path, default=None,
+                   help="Also write which species keep to the day or the night "
+                        "(e.g. ../data/time_of_day.lua). Leaves spawn_profiles.lua alone.")
+    p.add_argument("--tod-report", type=Path, default=None,
+                   help="Write the day/night review report: the evidence behind every "
+                        "call, Pokédex-text candidates for unclassified species, and "
+                        "differences from the expected Gold/Silver/Crystal list.")
     return p.parse_args()
 
 
@@ -787,6 +794,272 @@ def write_lua_profiles(path: Path, data: dict[str, Any]):
     path.write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 
+# ------------------------------------------------------------- time of day
+
+# The only games PokéAPI records a time of day for (encounter conditions
+# time-morning / time-day / time-night). In them a wild row WITHOUT a time
+# condition means "any time", so it is evidence too.
+TIME_VERSIONS = {"gold", "silver", "crystal", "heartgold", "soulsilver",
+                 "diamond", "pearl", "platinum"}
+JOHTO_VERSIONS = {"gold", "silver", "crystal", "heartgold", "soulsilver"}
+# Shaking a tree or a swarm, the radio, a GBA cart in slot 2 or the Safari
+# Zone's blocks are special circumstances, not where a species lives by habit.
+TIME_SKIP_METHODS = {"headbutt", "headbutt-high", "headbutt-low", "headbutt-normal"}
+TIME_SKIP_CONDITIONS = ("swarm-yes", "radio-hoenn", "radio-sinnoh", "johto-safari")
+TIME_BUCKETS = {
+    "time-morning": ("morning",), "time-day": ("day",), "time-night": ("night",),
+    "time-04-00-to-19-59": ("morning", "day"),
+    "time-20-00-to-21-59": ("night",), "time-21-00-to-03-59": ("night",),
+}
+TIME_OF_DAY_VERSION = 1
+# A species is "only" by night (or day) when nearly all of its encounter weight
+# and most of the places it lives say so (one any-time place in a remake does
+# not undo Gold/Silver/Crystal's night-only Hoothoot), across at least
+# TIME_ONLY_MIN_AREAS places; otherwise a share decides a lean.
+TIME_ONLY_MIN_AREAS = 4
+TIME_ONLY_SHARE = 0.90
+TIME_ONLY_PLACES = 0.80
+TIME_LEAN_SHARE = 0.70
+# Gold/Silver/Crystal and the remakes decide for their own species (#1-251);
+# Diamond/Pearl/Platinum, where later species actually live, for the rest.
+JOHTO_LAST_DEX = 251
+
+NIGHT_WORDS = re.compile(r"\b(nocturnal|at night|after dark|night ?time|by night|"
+                         r"moonlight|moonlit|full moon|darkness falls|dusk|nightfall)\b", re.I)
+DAY_WORDS = re.compile(r"\b(diurnal|during the day|daytime|day ?time|sunlight|sunny|"
+                       r"sunshine|bask(s|ing)? in the sun|by day)\b", re.I)
+
+
+def time_skipped(row: dict[str, Any]) -> bool:
+    if row["method"] in TIME_SKIP_METHODS:
+        return True
+    for cond in row["conditions"]:
+        if cond.startswith(TIME_SKIP_CONDITIONS):
+            return True
+        if cond.startswith("slot2-") and cond != "slot2-none":
+            return True
+    return False
+
+
+def time_evidence(rows: list[dict[str, Any]]) -> dict[str, Any]:
+    """Day and night rates of one species over its places (version, area, method).
+
+    A row with a time condition counts in its period(s), one without in all of them;
+    the day rate is the mean of morning and day."""
+    places: dict[tuple, dict[str, float]] = defaultdict(lambda: {"morning": 0.0, "day": 0.0, "night": 0.0})
+    for r in rows:
+        chance = float(r["chance"] or 1)
+        times = [c for c in r["conditions"] if c.startswith("time-")]
+        buckets = set()
+        for c in times:
+            buckets.update(TIME_BUCKETS.get(c, ("morning", "day", "night")))
+        if not buckets:
+            buckets = {"morning", "day", "night"}
+        place = places[(r["version"], r["location_area"], r["method"])]
+        for b in buckets:
+            place[b] += chance
+    day = night = 0.0
+    day_only = night_only = 0
+    for rates in places.values():
+        d = (rates["morning"] + rates["day"]) / 2
+        n = rates["night"]
+        day, night = day + d, night + n
+        if d > 0 and n == 0:
+            day_only += 1
+        elif n > 0 and d == 0:
+            night_only += 1
+    return {"places": len(places), "day": day, "night": night,
+            "day_only": day_only, "night_only": night_only}
+
+
+def classify_time(ev: dict[str, Any]) -> str | None:
+    if ev["places"] == 0 or ev["day"] + ev["night"] <= 0:
+        return None
+    share = ev["night"] / (ev["day"] + ev["night"])
+    if ev["places"] >= TIME_ONLY_MIN_AREAS:
+        if share >= TIME_ONLY_SHARE and ev["night_only"] >= TIME_ONLY_PLACES * ev["places"]:
+            return "N"
+        if share <= 1 - TIME_ONLY_SHARE and ev["day_only"] >= TIME_ONLY_PLACES * ev["places"]:
+            return "D"
+    if share >= TIME_LEAN_SHARE:
+        return "n"
+    if share <= 1 - TIME_LEAN_SHARE:
+        return "d"
+    return None
+
+
+def dex_of_url(url: str) -> int | None:
+    m = re.search(r"/pokemon-species/(\d+)/?$", url or "")
+    return int(m.group(1)) if m else None
+
+
+def evolution_families(api: API, species_metadata: dict[str, dict[str, Any]]) -> dict[int, int]:
+    """dex -> family id (the chain's first species), from PokéAPI's evolution chains."""
+    family: dict[int, int] = {}
+    chains = sorted({meta["evolution_chain"]["url"] for meta in species_metadata.values()
+                     if (meta.get("evolution_chain") or {}).get("url")})
+    for url in chains:
+        chain = api.get(url).get("chain") or {}
+        members: list[int] = []
+        stack = [chain]
+        while stack:
+            link = stack.pop()
+            dex = dex_of_url((link.get("species") or {}).get("url", ""))
+            if dex:
+                members.append(dex)
+            stack.extend(link.get("evolves_to") or [])
+        if members:
+            root = min(members)
+            for dex in members:
+                family[dex] = root
+    return family
+
+
+def dex_text_hits(meta: dict[str, Any]) -> tuple[list[str], list[str]]:
+    """English Pokédex sentences that mention the night or the day."""
+    night, day, seen = [], [], set()
+    for entry in meta.get("flavor_text_entries", []):
+        if entry.get("language", {}).get("name") != "en":
+            continue
+        text = " ".join(entry.get("flavor_text", "").split())
+        if text in seen:
+            continue
+        seen.add(text)
+        if NIGHT_WORDS.search(text):
+            night.append(text)
+        if DAY_WORDS.search(text):
+            day.append(text)
+    return night, day
+
+
+def build_time_of_day(api: API, raw: list[dict[str, Any]],
+                      species_metadata: dict[str, dict[str, Any]],
+                      default_by_dex: dict[int, str]) -> tuple[dict[str, Any], dict[str, Any]]:
+    """Which species keep to the day or the night: (lua data, review report).
+
+    #1-493 come from the encounter conditions of the games with a clock: for #1-251
+    Gold/Silver/Crystal and HeartGold/SoulSilver decide (Diamond/Pearl/Platinum only
+    without Johto evidence), for the rest the other way round. A family member with no
+    evidence of its own leans the way its family does (Gengar after Gastly and
+    Haunter), when the family agrees. Later games record no time of day, so newer
+    species are only classified by time_of_day_overrides.OVERRIDES, our own reviewed
+    calls; their Pokédex text is listed in the report as candidates, never applied
+    by itself.
+    """
+    # no __pycache__ beside it: .modkitignore matches exact paths, so one would ship
+    sys.dont_write_bytecode = True
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from time_of_day_overrides import OVERRIDES, EXPECTED
+
+    by_pokemon: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    for r in raw:
+        if r["terrain"] is not None and r["version"] in TIME_VERSIONS and not time_skipped(r):
+            by_pokemon[r["pokemon"]].append(r)
+
+    species: dict[int, str] = {}
+    special: set[int] = set()
+    report: dict[str, Any] = {"classified": {}, "family": {}, "overrides": {},
+                              "candidates": {}, "expected_mismatches": {}}
+    for dex in sorted(default_by_dex):
+        name = default_by_dex[dex]
+        meta = species_metadata.get(name, {})
+        if meta.get("is_legendary") or meta.get("is_mythical"):
+            special.add(dex)
+            continue
+        rows = by_pokemon.get(name, [])
+        johto = [r for r in rows if r["version"] in JOHTO_VERSIONS]
+        sinnoh = [r for r in rows if r["version"] not in JOHTO_VERSIONS]
+        first, second = (johto, sinnoh) if dex <= JOHTO_LAST_DEX else (sinnoh, johto)
+        used = first or second
+        ev = time_evidence(used)
+        code = classify_time(ev)
+        if code:
+            species[dex] = code
+            report["classified"][dex] = {
+                "name": name, "code": code,
+                "source": "johto" if used is johto else "sinnoh", **ev}
+
+    # our own reviewed calls win over the data (and carry to the family below)
+    for dex, (code, reason) in sorted(OVERRIDES.items()):
+        report["overrides"][dex] = {"name": default_by_dex.get(dex), "from": species.get(dex),
+                                    "to": code, "reason": reason}
+        if code is None:
+            species.pop(dex, None)
+        else:
+            species[dex] = code
+
+    # a family member without evidence leans the family's way, when every member
+    # with a call agrees on night or day
+    family = evolution_families(api, species_metadata)
+    members: dict[int, list[int]] = defaultdict(list)
+    for dex, root in family.items():
+        members[root].append(dex)
+    for root, dexes in members.items():
+        ways = {species[d].lower() for d in dexes if d in species}
+        if len(ways) != 1:
+            continue
+        lean = ways.pop()
+        for d in dexes:
+            if d not in species and d not in special and d not in OVERRIDES and d in default_by_dex:
+                species[d] = lean
+                report["family"][d] = {"name": default_by_dex[d], "code": lean,
+                                       "from": [default_by_dex.get(x) for x in sorted(dexes)
+                                                if x in species and x not in report["family"]]}
+
+    for dex in sorted(default_by_dex):
+        if dex in species or dex in special or dex in OVERRIDES:
+            continue
+        name = default_by_dex[dex]
+        night, day = dex_text_hits(species_metadata.get(name, {}))
+        if night or day:
+            report["candidates"][dex] = {"name": name, "night": night, "day": day}
+
+    # the reference: a different side (or no call) is a mismatch; "only" -> "mostly"
+    # (a remake shows the species at the other time too) is reported as softened
+    report["expected_softened"] = {}
+    for dex, want in sorted(EXPECTED.items()):
+        got = species.get(dex)
+        if got is None or got.lower() != want.lower():
+            report["expected_mismatches"][dex] = {"name": default_by_dex.get(dex),
+                                                  "expected": want, "got": got}
+        elif got != want:
+            report["expected_softened"][dex] = {"name": default_by_dex.get(dex),
+                                                "expected": want, "got": got}
+
+    data = {"version": TIME_OF_DAY_VERSION, "species": species, "forms": {}}
+    return data, report
+
+
+def write_time_of_day_lua(path: Path, data: dict[str, Any]):
+    lines = [
+        "-- Generated by pokemon_spawn_generator/generate_spawn_data.py --time-of-day.",
+        "-- Which Pokemon keep to the day or the night, by national dex number, for",
+        "-- TIME OF DAY SPAWNS:",
+        '--   "N" / "D"  only at night / only by day (STRICT keeps them to it)',
+        '--   "n" / "d"  mostly at night / mostly by day (weighted, never ruled out)',
+        "-- #1-493: PokéAPI encounter conditions of the games with a clock (Gold/Silver/",
+        "-- Crystal and HeartGold/SoulSilver, Diamond/Pearl/Platinum). Newer games record",
+        "-- no time of day; those species come from our own review of their Pokédex",
+        "-- entries (pokemon_spawn_generator/time_of_day_overrides.py). A family member",
+        "-- with no evidence of its own leans its family's way. Forms use their base",
+        "-- species' entry unless `forms` (engine ids) says otherwise.",
+        "-- Do not edit by hand; regenerate instead.",
+        "return {",
+        f"  version = {data['version']},",
+        "  species = {",
+    ]
+    for dex, code in sorted(data["species"].items()):
+        lines.append(f'    [{dex}] = "{code}",')
+    lines.append("  },")
+    lines.append("  forms = {")
+    for form, code in sorted(data["forms"].items()):
+        lines.append(f'    ["{form}"] = "{code}",')
+    lines.append("  },")
+    lines.append("}")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text("\n".join(lines) + "\n", encoding="utf-8")
+
+
 def write_json(path: Path, obj: Any):
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(
@@ -870,6 +1143,19 @@ def main():
         print(f"Lua profiles: {args.lua.resolve()} "
               f"({len(lua['species'])} with wild data, "
               f"{len(lua['generation'])} species, {len(lua['special'])} special)")
+
+    if args.time_of_day or args.tod_report:
+        tod, tod_report = build_time_of_day(api, raw, species_metadata, default_by_dex)
+        codes = Counter(tod["species"].values())
+        if args.time_of_day:
+            write_time_of_day_lua(args.time_of_day, tod)
+            print(f"Time of day: {args.time_of_day.resolve()} "
+                  f"({len(tod['species'])} species: {dict(sorted(codes.items()))})")
+        if args.tod_report:
+            write_json(args.tod_report, tod_report)
+            print(f"Time-of-day report: {args.tod_report.resolve()} "
+                  f"({len(tod_report['candidates'])} Pokédex-text candidates, "
+                  f"{len(tod_report['expected_mismatches'])} differences from the expected list)")
 
     print()
     print("Done.")

@@ -31,6 +31,11 @@ tests/frlg_area_test.lua
 tests/chain_test.lua
 tests/placement_test.lua
 tests/compose_test.lua
+tests/time_of_day_test.lua
+tests/time_of_day_gen3_test.lua
+tests/time_of_day_red_test.lua
+tests/time_of_day_gen2_test.lua
+pokemon_spawn_generator/time_of_day_overrides.py
 tests/fixtures/outer_randomizer/main.lua
 tests/fixtures/outer_randomizer/manifest.json
 CLAUDE.md

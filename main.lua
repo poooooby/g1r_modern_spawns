@@ -5,9 +5,10 @@
 -- The game's own encounter tables are the skeleton (rate, slot levels, odds
 -- ladder, Super Rod groups); only species are redistributed, from the
 -- species the running game actually has registered (national_dex supplies
--- #152-1025). The one appended payload is data/spawn_profiles.lua
--- -- PokéAPI-derived wild levels, habitats and rarity -- built by
--- pokemon_spawn_generator/generate_spawn_data.py --lua.
+-- #152-1025). The appended payload is data/spawn_profiles.lua -- PokéAPI-
+-- derived wild levels, habitats and rarity -- and data/time_of_day.lua, which
+-- species keep to the day or the night, both built by
+-- pokemon_spawn_generator/generate_spawn_data.py (--lua, --time-of-day).
 --
 -- Module map:
 --   src/config.lua        options, SpawnConfig tuning, option-bucket writer
@@ -19,6 +20,7 @@
 --   src/adapters/gen2.lua Gold/Silver/Crystal data + hook shapes
 --   src/adapters/gen3.lua every Gen 3 game's data + hook shapes
 --   src/chain.lua         shiny chains (one species beaten in a row)
+--   src/clock.lua         day or night now, on WoobleDex's clock (TIME OF DAY SPAWNS)
 --   src/live_sync.lua     writes generated species into the live game data,
 --                         restorable, for mods that read it directly
 --   src/runtime.lua       seed, cache, encounter hooks, events, seed option sync
@@ -88,10 +90,21 @@ return function(mod)
     profiles = nil
   end
 
+  -- TIME OF DAY SPAWNS: which species keep to the day or the night, and the
+  -- clock (WoobleDex's). Either missing, the option acts as OFF.
+  local timeOfDay = loadSibling(mod, "data/time_of_day.lua", true)
+  if type(timeOfDay) ~= "table" or type(timeOfDay.species) ~= "table" then
+    mod.log:warn("data/time_of_day.lua is missing -- TIME OF DAY SPAWNS stays off; "
+      .. "reinstall the mod")
+    timeOfDay = nil
+  end
+  local makeClock = loadSibling(mod, "src/clock.lua", true)
+
   local Runtime = makeRuntime({
     mod = mod, Config = Config, Generator = Generator, SpeciesPool = SpeciesPool,
     MapContext = MapContext, Rng = Rng, profiles = profiles, adapters = adapters,
     makeLiveSync = makeLiveSync, Chain = Chain,
+    timeOfDay = timeOfDay, makeClock = makeClock,
   })
   Runtime.install()
 

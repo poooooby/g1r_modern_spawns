@@ -17,6 +17,7 @@ return {
       "Gen 3 Pokedex AREA page shows where this mod puts each species; with national_dex_gen3 0.7.0+ an undiscovered species can be opened (name, picture and cry hidden) to see where it lives",
       "SEED (type a code) and REROLL SEED, also in the MODS menu",
       "LEGENDARIES: rare legendary (1/1024) and mythical (1/2048) encounters on fitting home maps, until owned",
+      "TIME OF DAY SPAWNS (OFF / PREFER / STRICT): a day and a night roster per map on WoobleDex's clock (the device's on FireRed/LeafGreen and Red/Blue/Yellow, the cart's on Gold/Silver/Crystal); PREFER weights night and day Pokemon toward their time, STRICT keeps night-only and day-only ones to it",
       "exports apiVersion / isActive / maxGeneration / tableFor / drawFor / legendaryFor / superRodFor / explain / candidates / profileOf",
       "Wilds of Kanto Revival's visible overworld Pokemon follow the generated tables",
       "the generated species are also written into the game's own encounter data, restorable, for Kanto Gear's wild-encounter guide and anything else that reads it directly",

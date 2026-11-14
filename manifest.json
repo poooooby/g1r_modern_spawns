@@ -1,7 +1,7 @@
 {
   "id": "modern_spawns",
   "name": "WoobleSpawns",
-  "version": "0.13.2",
+  "version": "0.14.0",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -25,7 +25,7 @@
     "wildfollowers"
   ],
   "options_schema": "options.lua",
-  "description": "Redistributes every wild encounter table across Gen 1-9 species, dynamically, in Red, Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald: each map keeps the game's own rates, slot levels, odds, and only the species are re-picked by level, terrain, habitat, type and rarity. Settings in OPTIONS > MODS > WoobleSpawns: on/off, a generation cap, SEEDED / EVERY MAP / RANDOM rosters, rare legendaries, and a per-save seed. Published through mod.exports as a framework other mods can build on. Works on the game's own Pokemon alone; a species mod widens the pool: national_dex (NATIONAL DEX option ON) on Red/Blue/Yellow, national_dex_gen3 on FireRed to Emerald. COMPLETE mode (the default) makes every species catchable.",
+  "description": "Redistributes every wild encounter table across Gen 1-9 species, dynamically, in Red, Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald: each map keeps the game's own rates, slot levels, odds, and only the species are re-picked by level, terrain, habitat, type and rarity. Settings in OPTIONS > MODS > WoobleSpawns: on/off, a generation cap, LIMITED / EVERY MAP / RANDOM / COMPLETE rosters, day and night rosters on WoobleDex's clock (TIME OF DAY SPAWNS), rare legendaries, and a per-save seed. Published through mod.exports as a framework other mods can build on. Works on the game's own Pokemon alone; a species mod widens the pool: national_dex (NATIONAL DEX option ON) on Red/Blue/Yellow, national_dex_gen3 on FireRed to Emerald. COMPLETE mode (the default) makes every species catchable.",
   "permissions": [
     "engine_internals"
   ],

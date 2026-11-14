@@ -182,10 +182,12 @@ local schema, byKey = H.schema()
 local keys = {}
 for i, row in ipairs(schema) do keys[i] = row.key end
 T.eq(table.concat(keys, ","),
-     "enabled,max_generation,spawn_mode,legendaries,shiny_chain,seed,reroll_seed",
+     "enabled,max_generation,spawn_mode,time_of_day,legendaries,shiny_chain,seed,reroll_seed",
      "the Mod Manager schema carries every setting, in menu order")
 T.eq(byKey.enabled.label, "MODERN SPAWNS", "MODERN SPAWNS row")
 T.eq(byKey.max_generation.label, "GENERATIONS", "GENERATIONS row")
+T.eq(byKey.time_of_day.label, "TIME OF DAY SPAWNS", "TIME OF DAY SPAWNS row")
+T.eq(byKey.time_of_day.default, "off", "TIME OF DAY SPAWNS is off by default")
 T.eq(byKey.seed.type, "text", "SEED is a text row")
 T.eq(byKey.seed.maxLen, 10, "with room for a 10-character seed")
 

@@ -302,13 +302,38 @@ local function regionGeneration(record)
   return nil
 end
 
+-- -------------------------------------------------------------- time of day
+
+local TIME_CODES = { N = { "night", true }, D = { "day", true },
+                     n = { "night", false }, d = { "day", false } }
+
+-- When a species comes out (data/time_of_day.lua): "day" | "night" | nil, and
+-- whether only then. A form reads its own entry, else its base's dex number. On
+-- Gold/Silver/Crystal a species the data has no call for keeps the cart's own
+-- habit (world.timeOf: never at night, or only then) as a lean.
+local function timeOfDay(timeData, record, world)
+  if type(timeData) ~= "table" then return nil, nil end
+  local code = type(timeData.forms) == "table" and timeData.forms[record.id] or nil
+  if code == nil and type(timeData.species) == "table" then code = timeData.species[record.dex] end
+  local entry = TIME_CODES[code]
+  if entry then return entry[1], entry[2] end
+  if world.generation == 2 and world.timeOf then
+    local ok, habit = pcall(world.timeOf, record.id)
+    if ok and (habit == "day" or habit == "night") then return habit, false end
+  end
+  return nil, nil
+end
+
 -- ------------------------------------------------------------------ build
 
 -- world.species()      -> list of runtime pokemon records
 -- world.evolutionOf    -> optional function(id) -> national_dex evolution record
 -- profiles             -> the loaded spawn_profiles.lua table, or nil
 -- generationOfDex      -> function(dex) -> 1..9
-function SpeciesPool.build(world, profiles, generationOfDex)
+-- timeData             -> the loaded time_of_day.lua table, or nil: sets c.tod
+--                         ("day" | "night" | nil) and c.todOnly (only then, not
+--                         just mostly), read by TIME OF DAY SPAWNS alone
+function SpeciesPool.build(world, profiles, generationOfDex, timeData)
   local records, byId, looks = {}, {}, {}
   -- only Gen 3 has the forms this file knows (national_dex on Gen 1/2 registers forms
   -- under some of the same ids; those stay out as before)
@@ -397,6 +422,7 @@ function SpeciesPool.build(world, profiles, generationOfDex)
       c.terrains = estimateTerrains(types)
       c.source = "estimate"
     end
+    if not c.special then c.tod, c.todOnly = timeOfDay(timeData, record, world) end
     list[#list + 1] = c
     byIdOut[c.id] = c
   end

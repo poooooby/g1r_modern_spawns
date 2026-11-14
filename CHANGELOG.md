@@ -3,6 +3,50 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.14.0] - 2026-11-13
+
+### Added
+
+- **TIME OF DAY SPAWNS** (OFF / PREFER / STRICT, default OFF). Every map gets a day roster and a
+  night roster:
+  - Hoothoot, Gastly, Murkrow and the other night species come out after dark.
+  - Pidgey, Ledyba, Sunkern and the other day species keep to the daytime.
+  - **PREFER** weights them toward their own time: about 4x as common in their own roster in
+    LIMITED, and about 2x as likely in a COMPLETE draw. Nothing is ruled out.
+  - **STRICT** keeps the species that only come out at night (or by day) to that time, like
+    Gold/Silver/Crystal. COMPLETE still makes every species catchable at some hour.
+  - The night roster keeps a slot's day species out after dark unless it is a day species, so a
+    route reads as the same place at night.
+- **The clock.** Night is 8 PM to 4 AM, the same clock WoobleDex uses:
+  - **Ruby, Sapphire and Emerald** follow WoobleDex's Clock Source: In-game (the cart's clock)
+    or Device.
+  - **FireRed, LeafGreen, Red, Blue and Yellow** use the device clock.
+  - **Gold, Silver and Crystal** use their own clock, whose night starts at 6 PM, matching the
+    game's own night slots.
+  - When the clock turns, the tables the game and other mods read (live sync) switch roster.
+- **`data/time_of_day.lua`**, which says which species keep to the day or the night:
+  - **#1-493:** PokéAPI's encounter conditions from the games with a clock (Gold/Silver/Crystal,
+    HeartGold/SoulSilver, Diamond/Pearl/Platinum). 26 species are night-only or day-only, and
+    about 160 lean one way.
+  - **Newer species** lean the way their own Pokédex entries describe, after our own review
+    (`pokemon_spawn_generator/time_of_day_overrides.py`).
+  - **A family member** with no evidence of its own follows its family (Gengar after Gastly and
+    Haunter).
+  - **The pipeline** writes it with `generate_spawn_data.py --time-of-day`; `spawn_profiles.lua`
+    is untouched.
+- **API (additive; `apiVersion` stays 2):**
+  - `settings().timeOfDay` and `period()` ("day"/"night" on the clock);
+  - an optional `period` argument on `tableFor`, `drawFor`, `poolFor` and `explain`;
+  - `timeOfDay` / `timeOfDayOnly` on `candidates()` and `profileOf()`;
+  - the event `mod.modern_spawns.period_changed { period, previous }`.
+
+### Unchanged
+
+- **OFF, the default, leaves every table, pool, draw and seed exactly as in 0.13.x.** This was
+  checked against digests recorded before the change, on Red, Crystal, FireRed and Emerald in
+  LIMITED, COMPLETE and RANDOM.
+- Existing saves only see new rosters once TIME OF DAY SPAWNS is turned on.
+
 ## [0.13.2] - 2026-10-21
 
 ### Fixed

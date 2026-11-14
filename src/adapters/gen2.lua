@@ -259,11 +259,14 @@ return function(reg, MapContext, mod)
 
   -- encounter.table preview (percent weights). The preview has no time of
   -- day, so grass shows the DAY list.
-  function A.distribution(table_, kind)
+  -- `period` (TIME OF DAY SPAWNS): "night" previews the grass's NITE list;
+  -- otherwise (and while OFF) the DAY list.
+  function A.distribution(table_, kind, period)
     local dist = {}
     local slots, weights = table_.slots, WATER_WEIGHTS
     if kind == "grass" then
-      slots, weights = table_.slots.DAY or {}, GRASS_WEIGHTS
+      local list = period == "night" and table_.slots.NITE or table_.slots.DAY
+      slots, weights = list or {}, GRASS_WEIGHTS
     end
     for i, slot in ipairs(slots) do
       if slot and slot.species then

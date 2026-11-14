@@ -1,9 +1,9 @@
 -- Option access and generator tuning.
 --
--- Two player-facing options (options.lua is the schema):
---   enabled         "on" | "off"       MODERN SPAWNS
+-- Player-facing options (options.lua is the schema; one reader each below):
+--   enabled         "on" | "off"       MODERN SPAWNS ("off": the game's own tables)
 --   max_generation  "1" .. "9"         GENERATIONS (Gen 1 only .. Gen 1-9)
--- "off" and Gen 1 both leave the runtime tables exactly as the game has them.
+--   spawn_mode, time_of_day, legendaries, shiny_chain, seed, reroll_seed
 --
 -- SpawnConfig holds every tuning number the generator uses, so balancing is
 -- one table rather than magic numbers spread through generator.lua. These are
@@ -109,6 +109,13 @@ Config.SpawnConfig = {
     -- day (or the reverse), and a night role given a night species
     time_mismatch = -30,
     time_match = 12,
+    -- TIME OF DAY SPAWNS (PREFER / STRICT; never read while OFF): a day or night
+    -- roster given a species that keeps to that time, or to the other one, and
+    -- the night roster keeping the day roster's species for a role when that
+    -- species is not a day one (Rattata stays out, Pidgey goes to bed)
+    tod_match = 6,
+    tod_mismatch = -8,
+    tod_keep = 15,
 
     same_species_current = -80,
     same_family_current = -40,
@@ -117,6 +124,11 @@ Config.SpawnConfig = {
     same_family_recent = -45,
     generation_overrepresented = -10,
   },
+  -- TIME OF DAY SPAWNS: COMPLETE draws a slot's species from its pool with
+  -- weight `off_hours` for a species of the current time (or of none) and 1
+  -- for one of the other time; STRICT gives a species that only comes out at
+  -- the other time 0.
+  time_of_day = { off_hours = 3 },
 }
 
 -- ------------------------------------------------------------- option reads
@@ -182,6 +194,19 @@ end
 function Config.legendaries(mod)
   local value = get(mod, "legendaries", "off")
   return value == "on" or value == true
+end
+
+-- TIME OF DAY SPAWNS (default OFF), following WoobleDex's clock (src/clock.lua):
+--   "off"     the same Pokemon day and night (every table exactly as before)
+--   "prefer"  a day and a night roster; day and night Pokemon weighted
+--   "strict"  species that only come out by day or at night keep to it
+Config.TIME_OF_DAY_MODES = { off = true, prefer = true, strict = true }
+Config.DEFAULT_TIME_OF_DAY = "off"
+
+function Config.timeOfDay(mod)
+  local value = get(mod, "time_of_day", Config.DEFAULT_TIME_OF_DAY)
+  if Config.TIME_OF_DAY_MODES[value] then return value end
+  return Config.DEFAULT_TIME_OF_DAY
 end
 
 -- SHINY CHAINS (src/chain.lua): on by default.

@@ -6,5 +6,8 @@ CLAUDE.md
 
 # PokéAPI response cache and Python build junk
 /tools/.cache/
+/pokemon_spawn_generator/pokemon_spawn_data/
 __pycache__/
 *.pyc
+# Claude Code skills and settings (local only)
+/.claude/

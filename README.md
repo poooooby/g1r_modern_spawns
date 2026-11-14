@@ -34,6 +34,22 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
 - 🌱 **Seeds you can share:** Each save has its own seed. Type in a friend's seed for the same
   wild Pokémon.
 
+### Day and Night
+
+- 🌙 **Time of day spawns** (optional): every map gets a day roster and a night roster.
+  Hoothoot, Gastly, Murkrow and the other night owls come out after dark; Pidgey, Ledyba and
+  Sunkern keep to the daytime.
+  - **PREFER:** Pokémon are more common at their own time and rarer at the other, but you can
+    still meet any of them at any hour.
+  - **STRICT:** like Gold, Silver and Crystal. Pokémon that only come out at night appear only
+    at night, and day-only ones only by day. COMPLETE still lets you catch every species at
+    some hour.
+- 🕗 **Your clock:** night runs from 8 PM to 4 AM.
+  - **Ruby, Sapphire and Emerald:** they follow [WoobleDex](https://github.com/poooooby/national_dex_gen3)'s
+    Clock Source, either the game's own clock or your device's.
+  - **FireRed, LeafGreen, Red, Blue and Yellow:** your device's clock.
+  - **Gold, Silver and Crystal:** their own clock, where night starts at 6 PM.
+
 ### Rare Finds
 
 - 👑 **Legendaries in the wild** (optional): Once you've entered the Hall of Fame, legendary
@@ -58,6 +74,7 @@ Open **OPTIONS → MODS → WoobleSpawns**. Changes apply from the next encounte
 | **MODERN SPAWNS** | ON / OFF | ON | OFF keeps the game's original tables. |
 | **GENERATIONS** | GEN 1 … GEN 1-9 | GEN 1-9 | Which generations can appear (up to what's installed). GEN 1 shuffles the Gen 1 Pokémon. |
 | **SPAWN MODE** | LIMITED / EVERY MAP / RANDOM / COMPLETE | COMPLETE | How rosters are drawn (see above). |
+| **TIME OF DAY SPAWNS** | OFF / PREFER / STRICT | OFF | Day and night rosters. PREFER makes Pokémon more common at their own time; STRICT keeps night-only and day-only Pokémon to their time. |
 | **LEGENDARIES** | OFF / ON | OFF | Rare legendaries and mythicals on their home maps, after the League. |
 | **SHINY CHAINS** | ON / OFF | ON | Build chains by beating one species in a row. OFF pauses it; your chain is kept. |
 | **SEED** | up to 10 letters | your save's | Type a seed to share or replay a world. |
@@ -92,12 +109,18 @@ Open **OPTIONS → MODS → WoobleSpawns**. Changes apply from the next encounte
   Gold, Silver and Crystal also keep swarms, the Bug-Catching Contest, Headbutt and the roaming
   beasts.
 - Early routes have the fewest suitable species, so variety grows as you go.
+- 🌙 With TIME OF DAY SPAWNS on, the Pokédex AREA page lists every place a species lives, by day
+  or at night.
+- 🌙 Which Pokémon keep to the day or the night comes from the games with a clock (Gold, Silver,
+  Crystal, Diamond, Pearl, Platinum, HeartGold and SoulSilver). Newer Pokémon lean the way their
+  Pokédex entries describe; STRICT only rules out what those games did.
 - On Gen 3, forms that are wild in the real games appear (Galarian and Hisuian forms, Flabébé's
   colours, Pumpkaboo's sizes and more); megas and item forms never do.
 
 ## 🪪 Credits
 
-- Wild level, habitat and rarity data: [PokéAPI](https://pokeapi.co/).
+- Wild level, habitat and rarity data, and which Pokémon come out by day or at night:
+  [PokéAPI](https://pokeapi.co/).
 - Shiny chains: inspired by **TTiN** and **Untamed Tohjo**, used with permission.
 
 ---
