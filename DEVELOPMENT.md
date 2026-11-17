@@ -186,7 +186,10 @@ identical with it ON or OFF.
   family, drawn with `Rng.hash(seed, cap, "trainers", identity, root)`; the shown stage follows
   the level (non-level evolutions at Lv 25 / 35) and is never below the original's. Gym
   Leaders and the Elite Four are typed (`GYM_TYPES` per adapter); a gym may keep an original
-  family at a penalty when the cart has too few of its type.
+  family at a penalty when the cart has too few of its type. Scoring: shared types
+  (`type_weight`) plus `bst_per_point` per point of base stat total away from the original,
+  where a typed boss measures from the original + `gym_bst_lift` (60), so it favours the
+  stronger families of its type (`TrainerConfig`, `src/config.lua`).
 - **Moves.** A Pokémon the game gave custom moves gets a built set (`buildSet`): the best
   same-type attack of each of its types, one coverage attack, one listed status move, then the
   rest, all from its own level-up moves at that level.

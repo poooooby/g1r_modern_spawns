@@ -185,7 +185,11 @@ function Trainers.planIdentity(ctx, ix, identity, appearances, gymType)
           local c = ix.byId[id]
           for t in pairs(c.types) do shownTypes[t] = true end
           if gymType and not c.types[gymType] then gymOk = false end
-          bstGap = bstGap + math.abs((c.bst or 0) - (ix.byId[a.species].bst or 0))
+          -- near the original's base stat total; a gym leader or Elite Four
+          -- member (a typed boss) aims gym_bst_lift above it, so it leans
+          -- toward the stronger families of its type without jumping a tier
+          local target = (ix.byId[a.species].bst or 0) + (gymType and config.gym_bst_lift or 0)
+          bstGap = bstGap + math.abs((c.bst or 0) - target)
         end
         if ok then
           local shared = sharedTypes(shownTypes, originalTypes)

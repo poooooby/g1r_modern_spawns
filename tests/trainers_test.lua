@@ -98,6 +98,29 @@ for _, id in ipairs(Trainers.team(ctx, ix, gym, brock)) do
   T.check(ctx.pool.byId[id].types.ROCK, "Brock's " .. id .. " is a Rock type")
 end
 
+-- a gym leans toward stronger Pokemon than an ordinary trainer with the same
+-- team: it aims gym_bst_lift above each Pokemon's base stat total. Boldore
+-- (390, Rock) at Lv 26, every option sharing one type: Carkol 410,
+-- Graveler 390, Onix 385, Naclstack 355
+local boldore = { { species = "BOLDORE", level = 26 } }
+local function favourite(gymType)
+  local count, sum = {}, 0
+  for s = 1, 400 do
+    local c = ctxFor("BST" .. s, 9)
+    local id = Trainers.team(c, ix, Trainers.planIdentity(c, ix, "OPP_BROCK", boldore, gymType), boldore)[1]
+    count[id] = (count[id] or 0) + 1
+    sum = sum + ix.byId[id].bst
+  end
+  local best
+  for id, n in pairs(count) do if not best or n > count[best] then best = id end end
+  return best, sum / 400
+end
+local gymFav, gymBst = favourite("ROCK")
+local plainFav, plainBst = favourite(nil)
+T.eq(gymFav, "CARKOL", "a gym's most likely pick is the strongest fit")
+T.eq(plainFav, "GRAVELER", "an ordinary trainer's is the closest in strength")
+T.check(gymBst > plainBst, string.format("a gym's Pokemon are stronger on average (%.0f vs %.0f)", gymBst, plainBst))
+
 -- ------- GENERATIONS and legendaries
 
 local capped = ctxFor("RIVAL", 1)

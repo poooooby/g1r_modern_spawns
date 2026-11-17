@@ -13,6 +13,11 @@ All notable changes to this mod are documented here, in
   - **Gyms and the Elite Four keep their type.** Brock, Falkner and Roxanne stay Rock, Flying
     and Rock; Phoebe and Agatha stay Ghost. Where a cart has too few lines of a type (Karen
     with Crystal's own 251), one may keep its original Pokémon.
+  - **Gyms and the Elite Four lean stronger.** Their picks aim a little above each original
+    Pokémon's base stat total, so they favour the stronger lines of their type without
+    jumping a tier (Brock's Lv 12 Pokémon stay unevolved). Over 20 seeds on Red, their
+    Pokémon average 488 against the originals' 444. Other trainers stay close to their
+    originals' strength.
   - **One line per Pokémon, per trainer.** Each original evolution line maps to one new line
     for every fight of that trainer. The rival's lines carry across every fight, including
     FireRed's champion battle, and evolve as their levels rise (non-level evolutions at

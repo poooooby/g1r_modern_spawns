@@ -54,7 +54,8 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
 
 - 🥊 **Modern trainer teams** (optional): trainers, Gym Leaders, the Elite Four and your rival
   field Pokémon from the generations you allow, picked to fit their original teams. Every Gym
-  and Elite Four member keeps their type, so Brock still throws Rock types and Phoebe Ghosts.
+  and Elite Four member keeps their type, so Brock still throws Rock types and Phoebe Ghosts,
+  and they favour the stronger Pokémon of that type for their level.
   Levels and team sizes stay the game's own, and legendaries never join a trainer's team.
 - 🧬 **A rival who grows with you:** each of your rival's Pokémon becomes a new evolution line
   that stays the same in every fight and evolves as its level rises. Rematches and repeat

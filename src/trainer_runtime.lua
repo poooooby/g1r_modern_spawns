@@ -14,7 +14,7 @@ return function(deps)
   local facilities = deps.facilities
   local log = mod.log
   local HOOK_PRIORITY = -100
-  local ALGO = 1 -- bump when a change would hand existing saves different teams
+  local ALGO = 2 -- bump when a change would hand existing saves different teams
 
   local TR = {}
   local unwrap

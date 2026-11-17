@@ -141,6 +141,9 @@ Config.TrainerConfig = {
   -- stat total apart (mean over the trainer's appearances), and a starter
   -- line replacing a starter line
   type_weight = 10, bst_per_point = -0.1, starter = 15,
+  -- gym leaders and the Elite Four (a typed boss) aim this many points of
+  -- base stat total above each Pokemon they replace: stronger, same tier
+  gym_bst_lift = 60,
   -- a gym keeping one of its own families (only when too few others have its
   -- type): far behind any real replacement
   keep_penalty = -40,
