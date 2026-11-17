@@ -386,6 +386,8 @@ function SpeciesPool.build(world, profiles, generationOfDex, timeData)
       family = evo.family(record.id),
       stage = evo.stage(record.id),
       evolveLevel = parent and parent.level or nil,
+      -- the species it evolves from (TRAINER TEAMS walks families with it)
+      parent = parent and parent.parent or nil,
       evolves = evo.into[record.id] == true,
       special = profileSpecial[record.dex],
     }

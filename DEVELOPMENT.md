@@ -37,7 +37,7 @@ exports don't bump it, so test for a newer one by presence,
 | `isActive()` | whether generated tables are in use: MODERN SPAWNS ON and at least one species registered (the cart's own count) |
 | `generation()` | `1` (Red/Blue/Yellow), `2` (Gold/Silver/Crystal) or `3` (FireRed/LeafGreen/Ruby/Sapphire/Emerald): which shapes the table functions return |
 | `maxGeneration()` | the generation cap in force, or nil |
-| `settings()` | `{ enabled, maxGeneration, spawnMode, legendaries, shinyChain, timeOfDay }` as the player set them (`timeOfDay`: `"off"`, `"prefer"` or `"strict"`) |
+| `settings()` | `{ enabled, maxGeneration, spawnMode, legendaries, shinyChain, timeOfDay, trainerTeams }` as the player set them (`timeOfDay`: `"off"`, `"prefer"` or `"strict"`; `trainerTeams`: `"off"`, `"on"` or `"items"`) |
 | `period()` | `"day"` or `"night"` on the clock TIME OF DAY SPAWNS follows (WoobleDex's Clock Source on Ruby/Sapphire/Emerald, the device's on FireRed/LeafGreen and Red/Blue/Yellow, the cart's on Gold/Silver/Crystal), whatever the option is set to; nil without a clock |
 | `spawnMode()` | `"seeded"` (LIMITED), `"map"`, `"random"` or `"complete"`; under RANDOM there is no fixed table, so `tableFor` / `superRodFor` / `explain` return nil |
 | `seed()` / `setSeed(text)` / `rerollSeed()` | read or change the loaded save's seed |
@@ -56,6 +56,10 @@ exports don't bump it, so test for a newer one by presence,
 | `candidates(opts)` | the candidate pool, filterable by generation, terrain, level range and habitat |
 | `profileOf(speciesId)` | one species' spawn profile (with `candidates`: `timeOfDay` `"day"`/`"night"`/nil, and `timeOfDayOnly` when it only comes out then) |
 | `invalidate()` | drop cached tables |
+| `trainerTeams()` | TRAINER TEAMS: `{ mode, maxGeneration, active }`; `active` while it is not OFF and species are registered (independent of MODERN SPAWNS) |
+| `trainerTeamFor(class, id, party)` | with the `trainer.party` hook's own arguments for the running game: a copy of the team that battle fields, or nil when TRAINER TEAMS leaves it alone |
+| `trainerIdentity(class, id, party)` | who that battle's trainer is (`"rival"`, `"LEADER:ROXANNE"`, `"FALKNER:FALKNER"`, ...): rematches and rounds share one identity and so one family map; nil when left alone |
+| `facilitySpecies(name)` | a battle facility's one-to-one species map for this save, `{ [original id] = new id }`, or nil (OFF, or no such facility on this cart). Names: `crystal_battle_tower`, `emerald_frontier` (every Frontier facility, the Battle Tents, Pyramid and Pike wild Pokémon), `trainer_hill`, `rs_battle_tower`, `frlg_trainer_tower` |
 
 Every return value is a copy. The event `mod.modern_spawns.tables_changed` fires whenever
 tables are regenerated, and `mod.modern_spawns.period_changed { period, previous }` when TIME OF
@@ -162,6 +166,48 @@ MORN/DAY/NITE slots.
 
 Tuning numbers live in `SpawnConfig`
 ([src/config.lua](src/config.lua)); shiny chains are [src/chain.lua](src/chain.lua).
+
+## Trainer teams
+
+TRAINER TEAMS (OFF / ON / ON + ITEMS, default OFF) lives apart from the wild tables:
+[src/trainers.lua](src/trainers.lua) (pure planner), [src/trainer_items.lua](src/trainer_items.lua)
+(item catalog), [src/trainer_runtime.lua](src/trainer_runtime.lua) (option, cache, hook),
+`src/adapters/trainers_gen<N>.lua` (each game's trainer data and party shape) and
+`src/facilities_gen<N>.lua` (battle facilities). It follows GENERATIONS and the save's seed,
+not MODERN SPAWNS, and never touches the wild generator's RNG keys or memory: wild output is
+identical with it ON or OFF.
+
+- **The hook.** `trainer.party` is wrapped at priority -100 only while the option is not OFF,
+  and unwrapped when it goes OFF (on Gen 3 any wrapper reroutes every battle through the
+  engine's mod path). Story trainers only: Gen 2's Battle Tower call (member id 1), link
+  battles, Gen 3's trainer ids 0, 1024 and nil pass through.
+- **Identity and families.** A trainer's rematches share an identity (the rival is one across
+  every class it fights under). Each original evolution family of an identity maps to one new
+  family, drawn with `Rng.hash(seed, cap, "trainers", identity, root)`; the shown stage follows
+  the level (non-level evolutions at Lv 25 / 35) and is never below the original's. Gym
+  Leaders and the Elite Four are typed (`GYM_TYPES` per adapter); a gym may keep an original
+  family at a penalty when the cart has too few of its type.
+- **Moves.** A Pokémon the game gave custom moves gets a built set (`buildSet`): the best
+  same-type attack of each of its types, one coverage attack, one listed status move, then the
+  rest, all from its own level-up moves at that level.
+- **Items** (ON + ITEMS): an item is offered only when its generation is at most
+  `max(cap, the cart's generation)`, it exists, and its held effect runs (the cart's own, or
+  WoobleDex's `_held` / `_heldModern`). Bosses: the highest-level Pokémon gets an ace item,
+  the rest alternate type item / Berry; other trainers a 20% chance. The game's own held items
+  are kept.
+- **Facilities.** Each facility gets one one-to-one species map per save
+  (`Planner.facilityMap`: replacements come only from species outside the facility's own, so
+  two sets never collapse into one species). The facilities' own "no repeated species / item"
+  draws therefore pick the same sets ON as OFF, and cannot hang. Wrapped engine functions,
+  installed once and re-pointed on reload, answering the engine's own result on OFF or any
+  error: Crystal `BattleTower.roster`; Emerald `D.pack` (`mons`, `brains`, `tents`),
+  `Pyramid.generateWildMon`, `Pike.tryGenerateWildMon` and `Hill.trainer`; Ruby/Sapphire's
+  tower `T.pack`; FireRed/LeafGreen `Tower.buildEnemyParty`. Unown stays itself in the Frontier
+  (the Factory's draws skip it by species). `tests/facilities_gen3_test.lua` and
+  `tests/trainers_gen2_test.lua` pin the same-draws property.
+
+Bump `ALGO` in `src/trainer_runtime.lua` when a change would hand existing saves different
+teams, and say so in the CHANGELOG.
 
 ## Regenerating the profile data
 

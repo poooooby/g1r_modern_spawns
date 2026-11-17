@@ -231,6 +231,8 @@ Rtc.setFixed("2026-01-01T22:00")
 em.loader.modOptions.national_dex_gen3 = { clock_source = "game" }
 T.eq(api.period(), "day", "Clock Source In-game: the cart's clock (noon)")
 em.loader.events:emit("map.entered", { mapId = em.maps[1] })
+-- count turns from here: the steps above may have seen the real clock's period
+for k in pairs(changes) do changes[k] = nil end
 
 local probe -- a map whose day and night land rosters differ
 for _, m in ipairs(em.maps) do

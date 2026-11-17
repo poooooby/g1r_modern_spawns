@@ -3,6 +3,63 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.15.0] - 2026-11-17
+
+### Added
+
+- **TRAINER TEAMS** (OFF / ON / ON + ITEMS, default OFF). Trainers, Gym Leaders, the Elite
+  Four, champions and the rival field Pokémon from the generations GENERATIONS allows, chosen
+  to fit their original teams:
+  - **Gyms and the Elite Four keep their type.** Brock, Falkner and Roxanne stay Rock, Flying
+    and Rock; Phoebe and Agatha stay Ghost. Where a cart has too few lines of a type (Karen
+    with Crystal's own 251), one may keep its original Pokémon.
+  - **One line per Pokémon, per trainer.** Each original evolution line maps to one new line
+    for every fight of that trainer. The rival's lines carry across every fight, including
+    FireRed's champion battle, and evolve as their levels rise (non-level evolutions at
+    Lv 25 / 35, never below the original's stage).
+  - **Levels and team sizes are the game's own.** Legendary and mythical Pokémon never join a
+    team.
+  - **Movesets.** A Pokémon the game gave custom moves gets a set built from its new species'
+    level-up moves: its best same-type attacks, one coverage move and one status move.
+  - **Battle facilities.** Each facility uses one one-to-one species map per save, so its own
+    draws pick the same sets as before and stay consistent (the Dome's brackets, the
+    Factory's rentals, hints and swaps). Each set keeps its item, nature, EVs and IVs and gets
+    a built moveset. Covered:
+    - Crystal's Battle Tower;
+    - Emerald's Battle Frontier (all seven facilities), the Battle Tents, and the Pyramid's
+      and Pike's wild Pokémon (which keep up to two of their status moves);
+    - Trainer Hill;
+    - Ruby and Sapphire's Battle Tower;
+    - FireRed and LeafGreen's Trainer Tower.
+  - **Left alone:** other players' teams (record mixing, secret bases), e-Reader trainers and
+    link battles.
+- **ON + ITEMS: held items.**
+  - **Bosses** (Gym Leaders, the Elite Four, champions, the rival, team leaders): the
+    highest-level Pokémon gets an ace item (Leftovers, or a newer one that suits it better),
+    the rest a type booster or a Berry.
+  - **Other trainers:** about a 1 in 5 chance of a Berry or type booster.
+  - **Kept:** the game's own held items.
+  - **Gated by generation:** an item is handed out only when it exists in the running game,
+    has a working held effect (the cart's own, or WoobleDex's newer items) and its generation
+    is within GENERATIONS (the cart's own items always are). Life Orb, Choice Specs and Scarf,
+    Focus Sash and Black Sludge need GEN 4, Eviolite GEN 5, Assault Vest GEN 6. Each goes to a
+    Pokémon it suits: Black Sludge only to Poison types, Eviolite only to one that can still
+    evolve within the range.
+  - **Red, Blue and Yellow** have no trainer items, so ON + ITEMS plays like ON there.
+- **API (additive; `apiVersion` stays 2):**
+  - `settings().trainerTeams`;
+  - `trainerTeams()` → `{ mode, maxGeneration, active }`;
+  - `trainerTeamFor(class, id, party)` and `trainerIdentity(class, id, party)`;
+  - `facilitySpecies(name)`.
+
+### Unchanged
+
+- **Wild Pokémon.** TRAINER TEAMS never touches the wild tables' RNG or memory; every wild
+  table, pool and draw is identical with it OFF, ON or ON + ITEMS. This was checked against
+  the recorded 0.14.0 digests.
+- **OFF, the default,** leaves every battle and facility exactly as the game builds it. On
+  Gen 3 no `trainer.party` wrapper is installed at all.
+
 ## [0.14.0] - 2026-11-13
 
 ### Added

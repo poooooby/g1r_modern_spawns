@@ -131,6 +131,37 @@ Config.SpawnConfig = {
   time_of_day = { off_hours = 3 },
 }
 
+-- TRAINER TEAMS (src/trainers.lua): how a trainer's families are re-picked
+-- and when a replacement evolves. Never read by the wild generator.
+Config.TrainerConfig = {
+  -- a trainer's replacement family is drawn among the best `top` scorers,
+  -- weighted exp((score - best) / temperature)
+  top = 8, temperature = 6,
+  -- score: per type shared with the family it replaces, per point of base
+  -- stat total apart (mean over the trainer's appearances), and a starter
+  -- line replacing a starter line
+  type_weight = 10, bst_per_point = -0.1, starter = 15,
+  -- a gym keeping one of its own families (only when too few others have its
+  -- type): far behind any real replacement
+  keep_penalty = -40,
+  -- an evolution not by level (stone, trade, friendship) happens from this
+  -- level for a second stage and a third
+  stage2_level = 25, stage3_level = 35,
+  -- facilities (one-to-one species maps): type, base stats, and a fully
+  -- evolved species replacing a fully evolved one
+  facility = { top = 8, temperature = 6, type_weight = 10, bst_per_point = -0.2, final = 10 },
+  -- ON + ITEMS: an ordinary trainer's Pokemon holds something this often
+  ordinary_item_chance = 0.2,
+}
+
+-- TRAINER TEAMS (default OFF): trainers, gym leaders, the Elite Four, the
+-- rival and the end-game facilities field themed Gen 1-9 teams.
+--   "off"    the game's own teams
+--   "on"     themed replacements, the game's own held items kept
+--   "items"  the same, plus fitting held items (Gen 2 and 3)
+Config.TRAINER_TEAM_MODES = { off = true, on = true, items = true }
+Config.DEFAULT_TRAINER_TEAMS = "off"
+
 -- ------------------------------------------------------------- option reads
 
 local function get(mod, key, default)
@@ -207,6 +238,13 @@ function Config.timeOfDay(mod)
   local value = get(mod, "time_of_day", Config.DEFAULT_TIME_OF_DAY)
   if Config.TIME_OF_DAY_MODES[value] then return value end
   return Config.DEFAULT_TIME_OF_DAY
+end
+
+-- TRAINER TEAMS: "off" | "on" | "items" (Config.TRAINER_TEAM_MODES above).
+function Config.trainerTeams(mod)
+  local value = get(mod, "trainer_teams", Config.DEFAULT_TRAINER_TEAMS)
+  if Config.TRAINER_TEAM_MODES[value] then return value end
+  return Config.DEFAULT_TRAINER_TEAMS
 end
 
 -- SHINY CHAINS (src/chain.lua): on by default.

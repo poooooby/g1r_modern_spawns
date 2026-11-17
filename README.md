@@ -50,6 +50,28 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
   - **FireRed, LeafGreen, Red, Blue and Yellow:** your device's clock.
   - **Gold, Silver and Crystal:** their own clock, where night starts at 6 PM.
 
+### Trainer Battles
+
+- 🥊 **Modern trainer teams** (optional): trainers, Gym Leaders, the Elite Four and your rival
+  field Pokémon from the generations you allow, picked to fit their original teams. Every Gym
+  and Elite Four member keeps their type, so Brock still throws Rock types and Phoebe Ghosts.
+  Levels and team sizes stay the game's own, and legendaries never join a trainer's team.
+- 🧬 **A rival who grows with you:** each of your rival's Pokémon becomes a new evolution line
+  that stays the same in every fight and evolves as its level rises. Rematches and repeat
+  trainers keep their lines too.
+- 🏟️ **The end game too:** Crystal's Battle Tower, Emerald's Battle Frontier (all seven
+  facilities, the Battle Tents and the wild Pokémon of the Battle Pyramid and Battle Pike),
+  Trainer Hill, Ruby and Sapphire's Battle Tower and FireRed and LeafGreen's Trainer Tower.
+  Each Pokémon keeps its set's item, nature and training and gets moves of its own species.
+  The Battle Factory's rentals turn modern too.
+- 🎒 **Held items** (ON + ITEMS): Gym Leaders, the Elite Four, champions and your rival hand
+  their Pokémon fitting items, their strongest one a standout like Leftovers. Other trainers' Pokémon sometimes carry a Berry or a type
+  booster. Newer items such as Life Orb, Choice Specs, Focus Sash, Black Sludge, Eviolite and
+  Assault Vest turn up once GENERATIONS reaches them, with
+  [WoobleDex](https://github.com/poooooby/national_dex_gen3) installed to make them work. Each
+  goes to a Pokémon it suits: Black Sludge to Poison types, Eviolite to one that can still
+  evolve.
+
 ### Rare Finds
 
 - 👑 **Legendaries in the wild** (optional): Once you've entered the Hall of Fame, legendary
@@ -67,7 +89,7 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
 
 ## ⚙️ Options
 
-Open **OPTIONS → MODS → WoobleSpawns**. Changes apply from the next encounter.
+Open **OPTIONS → MODS → WoobleSpawns**. Changes apply from the next encounter or battle.
 
 | Option | Choices | Default | What it does |
 |---|---|---|---|
@@ -77,6 +99,7 @@ Open **OPTIONS → MODS → WoobleSpawns**. Changes apply from the next encounte
 | **TIME OF DAY SPAWNS** | OFF / PREFER / STRICT | OFF | Day and night rosters. PREFER makes Pokémon more common at their own time; STRICT keeps night-only and day-only Pokémon to their time. |
 | **LEGENDARIES** | OFF / ON | OFF | Rare legendaries and mythicals on their home maps, after the League. |
 | **SHINY CHAINS** | ON / OFF | ON | Build chains by beating one species in a row. OFF pauses it; your chain is kept. |
+| **TRAINER TEAMS** | OFF / ON / ON + ITEMS | OFF | Modern Pokémon for trainers, Gyms, the Elite Four, your rival and the battle facilities. ON + ITEMS also gives them held items. |
 | **SEED** | up to 10 letters | your save's | Type a seed to share or replay a world. |
 | **REROLL SEED** | - / REROLL | - | Draw a new random seed for this save. |
 
@@ -100,6 +123,8 @@ Open **OPTIONS → MODS → WoobleSpawns**. Changes apply from the next encounte
   [Wilds of Kanto Revival](https://github.com/poooooby/wilds-of-kanto-gen-3): their visible
   overworld Pokémon use these tables, legendaries and shiny chains too.
 - Wild-encounter guides such as Kanto Gear's show the new species.
+- [WoobleDex](https://github.com/poooooby/national_dex_gen3) makes the newer held items work
+  for TRAINER TEAMS.
 
 ## 📌 Good to Know
 
@@ -114,6 +139,17 @@ Open **OPTIONS → MODS → WoobleSpawns**. Changes apply from the next encounte
 - 🌙 Which Pokémon keep to the day or the night comes from the games with a clock (Gold, Silver,
   Crystal, Diamond, Pearl, Platinum, HeartGold and SoulSilver). Newer Pokémon lean the way their
   Pokédex entries describe; STRICT only rules out what those games did.
+- 🥊 TRAINER TEAMS works whether MODERN SPAWNS is on or off, and follows your save's seed: the
+  same seed gives the same teams.
+  - Red, Blue and Yellow's trainers can't hold items, so ON + ITEMS plays like ON there.
+  - Pokémon that already held an item in the original game keep it. Your game's own items are
+    always in play; newer ones wait until GENERATIONS reaches their generation.
+  - Teams from other players (record mixing, secret bases), e-Reader trainers and link battles
+    stay as they are.
+  - Switching TRAINER TEAMS in the middle of a facility challenge changes the opponents still
+    to come.
+  - With a narrow GENERATIONS range there are fewer species to swap in, so the facilities
+    change less.
 - On Gen 3, forms that are wild in the real games appear (Galarian and Hisuian forms, Flabébé's
   colours, Pumpkaboo's sizes and more); megas and item forms never do.
 

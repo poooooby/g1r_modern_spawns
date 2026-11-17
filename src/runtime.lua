@@ -148,6 +148,8 @@ return function(deps)
   end
 
   Runtime.world = world
+  -- the merged registries, for TRAINER TEAMS' adapters (src/adapters/trainers_gen*.lua)
+  Runtime.registry = { get = registryGet, ids = registryIds }
 
   -- -------------------------------------------------------------- pool
 
@@ -182,12 +184,20 @@ return function(deps)
   -- draws from the current seed/settings. The seed itself is untouched.
   local homesCache = { key = nil, homes = nil }   -- legendary homes
 
+  local invalidateListeners = {}
   function Runtime.invalidate()
     cache.key, cache.tables = nil, nil
     visitTables = {}
     memory = Generator.newMemory()
     homesCache.key, homesCache.homes = nil, nil
     speciesIndex = nil
+    for _, fn in ipairs(invalidateListeners) do pcall(fn) end
+  end
+
+  -- TRAINER TEAMS drops its plans whenever the wild tables are dropped (seed
+  -- change, save loaded/created, checkpoint restored, an option changed).
+  function Runtime.onInvalidate(fn)
+    invalidateListeners[#invalidateListeners + 1] = fn
   end
 
   -- The Mod Manager's SEED row shows the `seed` OPTION, which is global,
@@ -250,6 +260,17 @@ return function(deps)
 
   function Runtime.isActive()
     return Runtime.effectiveGeneration() ~= nil
+  end
+
+  -- The highest generation among the registered species (whatever MODERN
+  -- SPAWNS says), and the profile data version: TRAINER TEAMS' cap and key.
+  function Runtime.poolMaxGeneration()
+    if not Runtime.pool() then return nil end
+    return poolMaxGen
+  end
+
+  function Runtime.dataVersion()
+    return DATA_VERSION
   end
 
   function Runtime.spawnMode()
@@ -1244,6 +1265,9 @@ return function(deps)
         return
       end
       if ev.mod ~= mod.id then return end
+      -- TRAINER TEAMS never touches the wild tables (src/trainer_runtime.lua
+      -- handles its own change)
+      if ev.key == "trainer_teams" then return end
       Runtime.invalidate()
       if LiveSync then LiveSync.restore() end
       if ev.key == "seed" then

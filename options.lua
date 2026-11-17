@@ -61,6 +61,14 @@ return {
     description = "ON: win or catch the same species again and again to build a chain. The longer it gets, the more often that species appears (every encounter from 9 in a row), the likelier it is to be shiny, and from 10 / 25 / 40 it has 1 / 2 / 3 perfect stats. Running from it or blacking out ends the chain. Shinies and stats need a mod that applies them (Wilds of Hoenn). OFF: nothing is counted or changed; a chain you had is kept for later.",
   },
   {
+    key = "trainer_teams",
+    label = "TRAINER TEAMS",
+    type = "choice",
+    default = "off",
+    choices = { { "OFF", "off" }, { "ON", "on" }, { "ON + ITEMS", "items" } },
+    description = "ON: trainers, gym leaders, the Elite Four, the rival and the end-game facilities field Pokemon from the generations GENERATIONS allows, chosen to fit their original teams. A gym keeps its type, and the rival's Pokemon stay the same lines from fight to fight, evolving as they level up. Levels and team sizes are the game's own. ON + ITEMS: they also hold fitting items (Gold/Silver/Crystal and the Gen 3 games; newer items like Life Orb or Eviolite need WoobleDex and a GENERATIONS range that includes them). Works whether MODERN SPAWNS is on or off, from the save's seed. OFF: the game's own teams.",
+  },
+  {
     -- Mirrors the loaded save's seed (src/runtime.lua keeps it in sync);
     -- typing one here sets that save's seed, or the next NEW GAME's when
     -- typed from the title screen. Empty never clears a seed.

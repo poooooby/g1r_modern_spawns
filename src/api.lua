@@ -73,7 +73,44 @@ return function(deps)
   exports.settings = function()
     return { enabled = Config.enabled(mod), maxGeneration = Config.maxGeneration(mod),
              spawnMode = Config.spawnMode(mod), legendaries = Config.legendaries(mod),
-             shinyChain = Config.shinyChain(mod), timeOfDay = Runtime.timeOfDay() }
+             shinyChain = Config.shinyChain(mod), timeOfDay = Runtime.timeOfDay(),
+             trainerTeams = Config.trainerTeams(mod) }
+  end
+
+  -- TRAINER TEAMS (since 0.15.0): { mode = "off"|"on"|"items", maxGeneration,
+  -- active } -- active while ON with species to draw from (independent of
+  -- MODERN SPAWNS).
+  local Trainers = deps.Trainers
+  exports.trainerTeams = function()
+    local cap = Trainers and Trainers.cap() or nil
+    return { mode = Config.trainerTeams(mod), maxGeneration = cap, active = cap ~= nil }
+  end
+  -- The team a battle would field: trainerTeamFor(class, id, party) with the
+  -- trainer.party hook's own arguments for the running game; a copy of the
+  -- new party, or nil when TRAINER TEAMS leaves it alone.
+  exports.trainerTeamFor = function(class, id, party)
+    if not Trainers then return nil end
+    local ok, out = pcall(Trainers.party, class, id, party)
+    return ok and deepCopy(out) or nil
+  end
+  -- Who a battle's trainer is, with the same arguments: rematches, the rival's
+  -- fights and a gym leader's rounds share one identity (one family map), or
+  -- nil for a battle TRAINER TEAMS leaves alone.
+  exports.trainerIdentity = function(class, id, party)
+    if not Trainers then return nil end
+    local ok, out = pcall(Trainers.identity, class, id, party)
+    return ok and out or nil
+  end
+  -- A battle facility's species map for this save, { [original id] = new id }
+  -- (one-to-one), or nil while TRAINER TEAMS is OFF or the cart has no such
+  -- facility. Names: "crystal_battle_tower" (Crystal), "emerald_frontier"
+  -- (every Frontier facility, the Battle Tents and the Pyramid / Pike wild
+  -- Pokemon), "trainer_hill" (Emerald), "rs_battle_tower" (Ruby/Sapphire),
+  -- "frlg_trainer_tower" (FireRed/LeafGreen).
+  exports.facilitySpecies = function(name)
+    if not Trainers then return nil end
+    local ok, out = pcall(Trainers.facilitySpecies, name)
+    return ok and deepCopy(out) or nil
   end
 
   -- "day" | "night" on the clock TIME OF DAY SPAWNS follows (WoobleDex's Clock

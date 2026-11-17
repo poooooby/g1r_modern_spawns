@@ -108,7 +108,32 @@ return function(mod)
   })
   Runtime.install()
 
-  makeApi({ mod = mod, Runtime = Runtime, Config = Config })
+  -- TRAINER TEAMS (optional: missing or broken, wild spawns still work)
+  local Trainers
+  local Planner = loadSibling(mod, "src/trainers.lua", true)
+  local Items = loadSibling(mod, "src/trainer_items.lua", true)
+  local makeTrainerRuntime = loadSibling(mod, "src/trainer_runtime.lua", true)
+  local generation = tonumber(mod.generation) or 1
+  local makeTrainerAdapter = loadSibling(mod, "src/adapters/trainers_gen" .. generation .. ".lua", true)
+  local makeFacilities = loadSibling(mod, "src/facilities_gen" .. generation .. ".lua", true)
+  if Planner and Items and makeTrainerRuntime and makeTrainerAdapter then
+    local ok, err = pcall(function()
+      local adapter = makeTrainerAdapter(Runtime.registry, mod, Runtime.world)
+      adapter.Planner = Planner -- built movesets (src/trainers.lua buildSet)
+      local facilities = makeFacilities and makeFacilities({ mod = mod, Planner = Planner,
+        adapter = adapter, Runtime = Runtime, Rng = Rng, Config = Config }) or nil
+      Trainers = makeTrainerRuntime({ mod = mod, Config = Config, Rng = Rng, Runtime = Runtime,
+        Planner = Planner, Items = Items, adapter = adapter, facilities = facilities })
+      if facilities and facilities.bind then facilities.bind(Trainers) end
+      Trainers.install()
+    end)
+    if not ok then
+      mod.log:warn("TRAINER TEAMS is off: %s", tostring(err))
+      Trainers = nil
+    end
+  end
+
+  makeApi({ mod = mod, Runtime = Runtime, Config = Config, Trainers = Trainers })
   -- Gen 3's Pokedex AREA page reads the generated tables (src/dex_area.lua)
   if makeDexArea then makeDexArea({ mod = mod, Runtime = Runtime })() end
 end

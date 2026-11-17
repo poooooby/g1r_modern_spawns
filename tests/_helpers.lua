@@ -63,6 +63,10 @@ function H.gen2Data(version)
     type_chart = load("type_chart"),
     gen2Encounters = load("encounters"), gen2Maps = load("maps"),
     gen2Constants = load("constants"), gen2Landmarks = load("landmarks"),
+    -- the engine's mod load registers the phone book from the event tables
+    -- (src/core/gen2/Phone.lua registerInto, since gen1recomp 2026-11-16)
+    gen2EventTables = load("events"),
+    gen2Trainers = load("trainers"),
   }
 end
 
@@ -73,6 +77,39 @@ end
 -- game: "firered" (default, matching every existing call site), "leafgreen",
 -- "emerald", "ruby" or "sapphire" -- any imported <game>/ cart. All five
 -- share one game3 engine and schema, so nothing else here is game-specific.
+-- Mount an imported Gen 3 cart's cache (the dev checkout's own <game>/...
+-- import) so engine modules that read it -- the trainers pack, items, the
+-- Battle Frontier data -- load headlessly. tests/game3_cache.lua only looks in
+-- LOVE's save folders, so the steps are taken here directly.
+function H.mountGen3(game)
+  local GC = require("tests.game3_cache")
+  GC.use(game)
+  local root = game .. "/data/generated/gba"
+  require("src.core.GameVersion").set(game)
+  require("src.import.gba.versions").selectCache(game, GC.cache(root))
+  require("src.core.game3.profile").reset()
+  local Dataset = require("src.core.game3.dataset")
+  Dataset.cacheRootOverride = root
+  Dataset.mountExtractRoots()
+  pcall(function() require("src.core.game3.items_data").install(nil) end)
+  -- the species pack (battle moves, learnsets) of this cart, which the
+  -- facilities' Pokemon are built from
+  -- (installed from disk: its paths are the versioned cache root's)
+  local disk = { read = function(_, rel)
+    local f = io.open(rel, "rb")
+    if not f then return Dataset.cache():read(rel) end
+    local s = f:read("*a")
+    f:close()
+    return s
+  end }
+  pcall(function() require("src.core.game3.pokemon").install(disk) end)
+  pcall(function() require("src.core.game3.battle.moves").loadRomPack(disk) end)
+  H._mountedGen3 = game
+  -- packs an earlier cart in the same process cached
+  require("src.core.game3.scripting.trainers")._pack = nil
+  return root
+end
+
 function H.gen3Data(game)
   local root = (game or "firered") .. "/data/generated/gba/"
   local function load(path) return dofile(root .. path) end
@@ -104,7 +141,10 @@ function H.gen3Data(game)
   P._byName = {}
   return {
     maps = maps, tilesets = {}, gen3Pokemon = P,
-    gen3Moves = { _rom = load("pokemon/battle_moves.lua").moves },
+    -- a mounted cart (H.mountGen3) gets the engine's own move module, as in
+    -- the game, so moves another mod registers land where battles read them
+    gen3Moves = H._mountedGen3 == (game or "firered") and require("src.core.game3.battle.moves")
+      or { _rom = load("pokemon/battle_moves.lua").moves },
     gen3Items = { _byId = load("items/pack.lua").items },
     gen3Encounters = load("encounters.lua"),
   }
