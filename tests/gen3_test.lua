@@ -229,27 +229,26 @@ for _, mapId in ipairs(runtimeMaps) do
 end
 T.check(allRegistered, "every rod slot is a registered species")
 
--- COMPLETE: a rod slot is drawn from its pool, which keeps the game's own fish
+-- COMPLETE: a rod slot is drawn from its pool, as big as keeps each species
+-- at 5% of casts or more (a 1% slot holds its primary alone)
 set("spawn_mode", "complete")
 local pools = api.poolFor(FISH_MAP, "fish.super")
 T.check(pools ~= nil and #pools == 5, "COMPLETE gives the Super Rod's slots pools")
-local ownKept = true
-for i = 6, 10 do
-  local own = P.keyName(live[FISH_MAP].fishing.slots[i].species)
-  local found = false
-  for _, id in ipairs(pools and pools[i - 5] or {}) do
-    if loader.content.pokemon:get(id).index == live[FISH_MAP].fishing.slots[i].species then found = true end
-  end
-  if not found then ownKept = false end
+local inPools = {}
+for _, list in ipairs(pools or {}) do
+  for _, id in ipairs(list) do inPools[loader.content.pokemon:get(id).index] = true end
 end
-T.check(ownKept, "each Super Rod pool keeps the game's own fish for that slot")
-local seen = {}
+local seen, outside = {}, 0
 for _ = 1, 200 do
-  for _, entry in ipairs(cast(FISH_MAP, "SUPER_ROD")) do seen[entry.species] = true end
+  for _, entry in ipairs(cast(FISH_MAP, "SUPER_ROD")) do
+    seen[entry.species] = true
+    if not inPools[entry.species] then outside = outside + 1 end
+  end
 end
 local distinct = 0
 for _ in pairs(seen) do distinct = distinct + 1 end
-T.check(distinct > 5, "COMPLETE casts draw across the pools (" .. distinct .. " species)")
+T.eq(outside, 0, "COMPLETE casts come from the rod's pools")
+T.check(distinct >= 3, "COMPLETE casts draw across the pools (" .. distinct .. " species)")
 set("spawn_mode", "seeded")
 
 -- ------- legendaries: rare, hosted, stop once owned

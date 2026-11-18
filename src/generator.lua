@@ -105,7 +105,9 @@ local function buildRoles(slots, weights, times)
     end
   end
   for _, role in ipairs(roles) do
-    role.rarity = rarityForShare(total > 0 and role.weight / total or 0)
+    -- the role's share of the table's odds (COMPLETE sizes its pool by it)
+    role.share = total > 0 and role.weight / total or 0
+    role.rarity = rarityForShare(role.share)
     if role.times then
       role.nightOnly = role.times.NITE and not (role.times.MORN or role.times.DAY)
       role.dayOnly = not role.times.NITE
@@ -215,6 +217,14 @@ end
 local function eligible(c, env, role, tier, pooled)
   if c.special then return false end
   if c.gen > env.maxGen then return false end
+  -- COMPLETE (selection.small_role_first_stage): a role too small to give
+  -- anyone `complete.min_share` (a 1% slot) holds a first stage, which also
+  -- gets a bigger seat elsewhere; an evolved species there would be seen that
+  -- rarely and nowhere else
+  if not pooled and (c.stage or 1) > 1 and env.selection and env.selection.small_role_first_stage then
+    local minShare = env.config.complete and env.config.complete.min_share
+    if minShare and (role.share or 1) * 100 < minShare then return false end
+  end
   if not strictOk(c, env, role, pooled) then return false end
   if tier >= 3 then return true end
   if not terrainOk(c, env.terrain, tier >= 2) then return false end
@@ -359,6 +369,26 @@ local function score(c, role, env, labelled, pooled)
     add((genCount - 1) * W.generation_overrepresented, "generation_overrepresented")
   end
 
+  -- COMPLETE (SpawnConfig.selection.complete): a primary leans toward first
+  -- stages (the rest come from evolving them) and toward species with no
+  -- seat elsewhere yet, so more species get a seat of their own
+  local selection = env.selection
+  if selection and not pooled then
+    if selection.stage_penalty and (c.stage or 1) > 1 then
+      add((c.stage - 1) * selection.stage_penalty, "evolved_form")
+      -- a middle stage (Ivysaur, Pidgeotto) gives way to a final one
+      -- (Raichu, Persian): both come from evolving, the final one is the
+      -- rarer sight
+      if c.evolves and selection.mid_stage_penalty then
+        add(selection.mid_stage_penalty, "middle_stage")
+      end
+    end
+    local seated = env.seatCount and env.seatCount[c.id]
+    if selection.repeat_penalty and seated and seated > 0 then
+      add(seated * selection.repeat_penalty, "seated_elsewhere")
+    end
+  end
+
   return total, reasons, penalties
 end
 
@@ -469,6 +499,7 @@ local function redistribute(def, env, rng, weights)
         local seat = { mapId = env.mapId, kind = env.kind, role = role,
                        env = env, base = species, pool = { shown } }
         env.seats[#env.seats + 1] = seat
+        if env.seatCount then env.seatCount[species] = (env.seatCount[species] or 0) + 1 end
         if env.record then env.record.seats[role.first] = seat end
       end
     end
@@ -569,7 +600,7 @@ local function mapPass(ctx, mapId, entries, info, area, memory, nonce, remember,
         areaSpecies = areaSpecies[area],
         selection = ctx.selection,
         slotTimes = entry.times, timeOf = ctx.world.timeOf,
-        mapId = mapId, kind = kind, seats = ctx.seats,
+        mapId = mapId, kind = kind, seats = ctx.seats, seatCount = ctx.seatCount,
       }
       env.themed = themed(env)
       if ctx.timeOfDay then
@@ -688,7 +719,7 @@ local COVERAGE_PASSES = {
 
 function Generator.buildAtlas(ctx)
   local seats = {}
-  local actx = setmetatable({ seats = seats }, { __index = ctx })
+  local actx = setmetatable({ seats = seats, seatCount = {} }, { __index = ctx })
   local memory = Generator.newMemory()
   local out = {}
   for _, mapId in ipairs(ctx.world.mapOrder()) do
@@ -703,16 +734,39 @@ function Generator.buildAtlas(ctx)
   -- night primary); pools are drawn from by day and at night alike, so the
   -- coverage below is period-neutral (`pooled`) and STRICT only asks that a
   -- species can come out at some time its seat is rolled
+  local rules = ctx.config.complete
+  -- How many species a seat holds while each keeps `min_share` percent of
+  -- the table's encounters (a 40% role holds 8 at 5%, a 1% role its primary
+  -- alone), never more than `max_pool`.
+  local minShare = (rules.min_share or 0) / 100
+  local function room(seat)
+    if minShare <= 0 then return rules.max_pool end
+    return math.max(1, math.min(rules.max_pool,
+      math.floor((seat.role.share or 0) / minShare + 1e-9)))
+  end
+  -- a species counts as placed where it keeps that share; a primary in a 1%
+  -- slot alone still gets a seat of its own below
   local placed = {}
   for _, seat in ipairs(seats) do
-    for _, id in ipairs(seat.pool) do placed[id] = true end
-    placed[seat.base] = true
-    if seat.nightBase then placed[seat.nightBase] = true end
+    local good = (seat.role.share or 0) / #seat.pool >= minShare
+    if good then
+      for _, id in ipairs(seat.pool) do placed[id] = true end
+      placed[seat.base] = true
+      if seat.nightBase then placed[seat.nightBase] = true end
+    end
+  end
+  -- A species that evolves from one the player can catch needs no seat of
+  -- its own (`evolved_by_evolving`): every first stage is placed below, so
+  -- a chain of non-special species under the cap is all reachable.
+  local function needsSeat(c)
+    if not rules.evolved_by_evolving then return true end
+    local parent = c.parent and ctx.pool.byId[c.parent]
+    return not (parent and not parent.special and parent.gen <= ctx.maxGen)
   end
 
   local missing = {}
   for _, c in ipairs(ctx.pool.list) do
-    if not c.special and c.gen <= ctx.maxGen and not placed[c.id] then
+    if not c.special and c.gen <= ctx.maxGen and not placed[c.id] and needsSeat(c) then
       local strict = 0
       for _, seat in ipairs(seats) do
         if eligible(c, seat.env, seat.role, 1, true) then strict = strict + 1 end
@@ -725,21 +779,24 @@ function Generator.buildAtlas(ctx)
     return a.c.id < b.c.id
   end)
 
-  local rules = ctx.config.complete
   for _, m in ipairs(missing) do
     local c, scored = m.c, {}
-    -- a full role (`max_pool`) is skipped while any tier has room elsewhere,
+    -- a full role (`room`) is skipped while any tier has room elsewhere,
     -- and a species that misses a themed map's theme tries the roles it fits
     -- and the unthemed ones first, so it lands on a plain route rather than in
-    -- a tower; only when every role is full does the last pass ignore the cap
+    -- a tower; only when every role is full does the last pass ignore the cap,
+    -- and then it takes the role where it keeps the biggest share
     for _, pass in ipairs(COVERAGE_PASSES) do
       for i, seat in ipairs(seats) do
         if eligible(c, seat.env, seat.role, pass.tier, true)
-          and (not pass.capped or #seat.pool < rules.max_pool)
+          and (not pass.capped or #seat.pool < room(seat))
           and (not pass.onTheme or not seat.env.themed or fitsTheme(c, seat.env)) then
-          scored[#scored + 1] = { seat = seat, order = i,
-            score = score(c, seat.role, seat.env, false, true)
-              + (#seat.pool - 1) * rules.pool_penalty }
+          local value = score(c, seat.role, seat.env, false, true)
+            + (#seat.pool - 1) * rules.pool_penalty
+          if not pass.capped then
+            value = (seat.role.share or 0) / (#seat.pool + 1) * 10000 + value / 1000
+          end
+          scored[#scored + 1] = { seat = seat, order = i, score = value }
         end
       end
       if #scored > 0 then break end
@@ -762,18 +819,47 @@ function Generator.buildAtlas(ctx)
     end
   end
 
-  -- The cart's own species stay catchable where the cart put them: each
-  -- seat's pool also holds the species its role replaced (Viridian Forest's
-  -- Pikachu, Route 119's Feebas), when it is under the cap. Added last, so it
-  -- never takes a `max_pool` place from coverage, and never as the primary.
-  for _, seat in ipairs(seats) do
+  -- The cart's own species stay catchable where the cart put them: a seat's
+  -- pool also holds the species its role replaced (Viridian Forest's Pikachu,
+  -- Route 119's Feebas), when it is under the cap. Added last, so it never
+  -- takes a `room` place from coverage, and never as the primary. With
+  -- `original_homes`, a species the cart put everywhere (Tentacool on every
+  -- sea route) keeps only that many homes, its biggest slots first, and one
+  -- that evolves from a catchable species is left to evolving.
+  local homes = {}
+  for i, seat in ipairs(seats) do
     local original = ctx.pool.byId[seat.role.species]
-    if original and not original.special and original.gen <= ctx.maxGen then
+    if original and not original.special and original.gen <= ctx.maxGen
+        and (not rules.original_homes or needsSeat(original)) then
       local present = false
       for _, id in ipairs(seat.pool) do
         if id == original.id then present = true break end
       end
-      if not present then seat.pool[#seat.pool + 1] = original.id end
+      if not present then
+        homes[original.id] = homes[original.id] or {}
+        table.insert(homes[original.id], { seat = seat, order = i })
+      end
+    end
+  end
+  local originals = {}
+  for id in pairs(homes) do originals[#originals + 1] = id end
+  table.sort(originals)
+  for _, id in ipairs(originals) do
+    local list = homes[id]
+    if rules.original_homes then
+      table.sort(list, function(a, b)
+        local sa, sb = a.seat.role.share or 0, b.seat.role.share or 0
+        if sa ~= sb then return sa > sb end
+        return a.order < b.order
+      end)
+    end
+    local added = 0
+    for _, home in ipairs(list) do
+      if rules.original_homes and added >= rules.original_homes then break end
+      if #home.seat.pool < room(home.seat) then
+        home.seat.pool[#home.seat.pool + 1] = id
+        added = added + 1
+      end
     end
   end
 

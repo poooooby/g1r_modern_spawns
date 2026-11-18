@@ -40,11 +40,13 @@ for mapId in pairs(Data.encounters) do
     end
   end
 end
+-- caught in the wild, or evolved from a species that is
+local obtainable = H.obtainable(seen, api, 1)
 local missing = {}
 for _, c in ipairs(api.candidates({ maxGeneration = 1 })) do
-  if not seen[c.id] then missing[#missing + 1] = c.id end
+  if not obtainable(c.id) then missing[#missing + 1] = c.id end
 end
-T.eq(#missing, 0, "COMPLETE: every Gen 1 species is catchable (" .. table.concat(missing, ", ", 1, math.min(#missing, 8)) .. ")")
+T.eq(#missing, 0, "COMPLETE: every Gen 1 species is catchable or evolves from one (" .. table.concat(missing, ", ", 1, math.min(#missing, 8)) .. ")")
 
 run.release()
 T.finish("modern_spawns integration (no modern species)")

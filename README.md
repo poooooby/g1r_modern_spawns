@@ -28,9 +28,11 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
     replace, so each route and cave keeps its character.
   - **EVERY MAP:** a fresh roster each time you enter a map.
   - **RANDOM:** a new species every encounter.
-  - **COMPLETE:** catch them all. Every species in your range lives somewhere, so you can catch
-    the whole Pokédex in one run. The game's own Pokémon stay where they always were too (Pikachu in
-    Viridian Forest, Zigzagoon on Route 101), alongside the newcomers.
+  - **COMPLETE:** catch them all. Every first-stage Pokémon in your range lives in the wild,
+    and every one you can find has at least a 5% chance per encounter somewhere, so nothing is
+    buried behind odds of 1 in 500. Evolved Pokémon are mostly left for you to evolve. The
+    game's own Pokémon keep a few of their old homes too (Pikachu in Viridian Forest,
+    Zigzagoon on Route 101), without crowding every route.
 - 🌱 **Seeds you can share:** Each save has its own seed. Type in a friend's seed for the same
   wild Pokémon.
 
@@ -42,8 +44,8 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
   - **PREFER:** Pokémon are more common at their own time and rarer at the other, but you can
     still meet any of them at any hour.
   - **STRICT:** like Gold, Silver and Crystal. Pokémon that only come out at night appear only
-    at night, and day-only ones only by day. COMPLETE still lets you catch every species at
-    some hour.
+    at night, and day-only ones only by day. COMPLETE still lets you catch every first stage
+    at some hour.
 - 🕗 **Your clock:** night runs from 8 PM to 4 AM.
   - **Ruby, Sapphire and Emerald:** they follow [WoobleDex](https://github.com/poooooby/national_dex_gen3)'s
     Clock Source, either the game's own clock or your device's.

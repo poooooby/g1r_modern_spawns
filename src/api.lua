@@ -39,6 +39,8 @@ local function describe(c)
     id = c.id, dex = c.dex, generation = c.gen, types = deepCopy(c.typeList),
     bst = c.bst, family = c.family, stage = c.stage,
     evolveLevel = c.evolveLevel, evolves = c.evolves,
+    -- the species it evolves from (nil for a first stage)
+    evolvesFrom = c.parent,
     minLevel = c.lo, maxLevel = c.hi, typicalLevel = c.typ,
     rarity = c.rarity, habitats = setToList(c.habitats),
     terrains = setToList(c.terrains), special = c.special,

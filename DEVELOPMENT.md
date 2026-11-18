@@ -44,7 +44,7 @@ exports don't bump it, so test for a newer one by presence,
 | `legendaryHomes()` | `{ [mapId] = { grass = { {id, score, category} }, water = … } }`: where legendaries would appear |
 | `tableFor(mapId, terrain, period?)` | the generated grass / indoor / water table (copy) in the running game's own shape, or nil. Gen 1: `{ rate, slots, buckets? }`. Gen 2 grass: `{ map, rates, slots = { MORN, DAY, NITE } }`; Gen 2 water: `{ map, rate, slots }`. With TIME OF DAY SPAWNS on, `period` (`"day"`/`"night"`) picks that roster, by default the one in force now; OFF has one roster and ignores it |
 | `superRodFor(mapId)` | the Super Rod catches (copy): Gen 1 `{ { species, level } }`, Gen 2 fish rows `{ { chance, species, level } }`, Gen 3 `{ rate, slots = { { species, minLevel, maxLevel } } }`; or nil |
-| `poolFor(mapId, terrain, period?)` | COMPLETE only (terrain `land`/`grass`, `water`, and on Gen 3 `fish.good`/`fish.super`): `{ [slot] = { species ids } }`, what each slot can turn into (its main species first, the cart's own species for the slot last); nil in other modes. With TIME OF DAY SPAWNS on, what it can turn into at `period` (STRICT leaves out species that only come out at the other time), that period's main species first |
+| `poolFor(mapId, terrain, period?)` | COMPLETE only (terrain `land`/`grass`, `water`, and on Gen 3 `fish.good`/`fish.super`): `{ [slot] = { species ids } }`, what each slot can turn into (its main species first, the cart's own species for the slot last where it keeps one of its homes); nil in other modes. With TIME OF DAY SPAWNS on, what it can turn into at `period` (STRICT leaves out species that only come out at the other time), that period's main species first |
 | `locate(speciesId)` | `{ [mapId] = { land/grass/water = true } }`: where a species can be met under the current settings (empty under RANDOM, nil while inactive). What the Gen 3 Pokédex AREA page shows |
 | `drawFor(mapId, terrain, period?)` | for a mod that picks species itself, once per pick (visible overworld spawns): `tableFor` under LIMITED / EVERY MAP, a fresh one-off draw under RANDOM; `period` as for `tableFor` |
 | `legendaryFor(mapId, terrain)` | the LEGENDARIES roll for such a pick: a hosted, not-yet-owned legendary (1/1024) or mythical (1/2048) id once the League is beaten, or nil |
@@ -54,7 +54,7 @@ exports don't bump it, so test for a newer one by presence,
 | `chainRecord(species, result)` | count a fight that wasn't a real battle (an overworld companion's): `"win"` / `"catch"` extend the chain, `"run"` ends it |
 | `explain(mapId, terrain, period?)` | per-slot records: species, replaced, score, reasons, penalties (`period` as for `tableFor`) |
 | `candidates(opts)` | the candidate pool, filterable by generation, terrain, level range and habitat |
-| `profileOf(speciesId)` | one species' spawn profile (with `candidates`: `timeOfDay` `"day"`/`"night"`/nil, and `timeOfDayOnly` when it only comes out then) |
+| `profileOf(speciesId)` | one species' spawn profile (with `candidates`: `timeOfDay` `"day"`/`"night"`/nil, `timeOfDayOnly` when it only comes out then, and `evolvesFrom`, the species it evolves from) |
 | `invalidate()` | drop cached tables |
 | `trainerTeams()` | TRAINER TEAMS: `{ mode, maxGeneration, active }`; `active` while it is not OFF and species are registered (independent of MODERN SPAWNS) |
 | `trainerTeamFor(class, id, party)` | with the `trainer.party` hook's own arguments for the running game: a copy of the team that battle fields, or nil when TRAINER TEAMS leaves it alone |
@@ -125,9 +125,18 @@ and 2, `FLAG_SYS_GAME_CLEAR` on Gen 3). How wide each mode draws is
 `SpawnConfig.selection[mode]`: LIMITED (`seeded`) is the classic mode, the tightest draw plus a
 `resemble` bonus per type a replacement shares with the species it replaces; COMPLETE draws
 wider, so the two differ on one seed. COMPLETE gives each slot a small pool (its main species
-first, up to 6 extras from coverage, plus the cart's own species for that slot) so every
-species under the cap lives somewhere and the game's own Pokémon stay where they were; an extra
-that misses a themed map's theme tries the maps it fits and plain routes before any other. Gen 2 replaces a species across morning, day and night at once, keeping night-only
+first, then extras from coverage, then the cart's own species for that slot), as big as keeps
+every member at `SpawnConfig.complete.min_share` (5%) of the table's encounters or more (a 40%
+role holds 8, a 1% role its main species alone; at most `max_pool`). Coverage seats only species
+the player cannot evolve into (`evolved_by_evolving`: no non-special parent under the cap), so
+every first stage lives somewhere and the rest come from evolving; a main species in a role
+under 5% doesn't count as placed. The cart's own species go back into at most `original_homes`
+(3) of their roles, the biggest first, and an evolved one not at all. COMPLETE's primaries take
+`selection.complete.stage_penalty` per stage past the first, `mid_stage_penalty` more for one
+that evolves further (a final second stage wins over a middle one), and `repeat_penalty` per seat
+the species already holds; a role under 5% takes a first stage only (`small_role_first_stage`, a
+filter in `eligible`). An extra that misses a
+themed map's theme tries the maps it fits and plain routes before any other. Gen 2 replaces a species across morning, day and night at once, keeping night-only
 roles nocturnal. On Gen 3 the engine rolls its own table regardless, so the species is swapped
 right after the roll, at the rolled level.
 

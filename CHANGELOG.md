@@ -3,6 +3,28 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.16.0] - 2026-11-18
+
+### Changed
+
+- **COMPLETE: no wild Pokémon is buried under 1-in-500 odds.** Every species you can find in
+  the wild has at least a 5% chance per encounter somewhere (Emerald at GEN 1-9: 0 species under
+  5%, down from 447; 76 were under 1%). Measured on Emerald (two seeds), FireRed and Red.
+  - **A slot's pool is sized by its odds.** A 40% slot shares among up to 8 species, a 1% slot
+    holds just its main species.
+  - **Evolved Pokémon are left to evolving.** Every first-stage Pokémon still lives in the wild;
+    a species that evolves from one you can catch gets no home of its own, and the main species
+    lean toward first stages. Of the evolved ones left, final forms (Raichu, Persian) come before
+    middle stages (Ivysaur, Pidgeotto), and a slot too rare to give anyone 5% always holds a
+    first stage. Emerald at GEN 1-9: 81 evolved species in the wild, down from 493 (middle
+    stages: 17, down from 116).
+  - **Fewer repeats.** The game's own Pokémon keep up to 3 of their old homes instead of every
+    one (Tentacool was in 80 tables, now 10), and a main species already placed elsewhere is
+    picked less often.
+  - **Reshuffles existing COMPLETE saves' wild Pokémon once** (same seed, new rosters). LIMITED,
+    EVERY MAP and RANDOM are unchanged, byte for byte.
+- **API:** `profileOf` / `candidates` entries carry `evolvesFrom`, the species one evolves from.
+
 ## [0.15.1] - 2026-11-17
 
 ### Added

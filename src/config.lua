@@ -74,13 +74,27 @@ Config.SpawnConfig = {
     seeded = { top = 12, window = 20, temperature = 10, resemble = 8 },
     map = { top = 32, window = 40, temperature = 14 },
     random = { top = 48, window = 50, temperature = 16 },
-    complete = { top = 24, window = 30, temperature = 12 },
+    -- COMPLETE: `stage_penalty` per evolution stage past the first (plus
+    -- `mid_stage_penalty` for one that evolves further, so a final second
+    -- stage wins over a middle one) and
+    -- `repeat_penalty` per seat a species already holds elsewhere, so the
+    -- primaries are mostly first stages and spread over more species; a role
+    -- under `complete.min_share` takes a first stage only
+    -- (`small_role_first_stage`)
+    complete = { top = 24, window = 30, temperature = 12, stage_penalty = -15, mid_stage_penalty = -15,
+                 small_role_first_stage = true, repeat_penalty = -10 },
   },
   -- COMPLETE DEX's coverage pass (generator.lua buildAtlas): each species
   -- not already a primary goes to one role, drawn like `selection` among the
   -- best `top` within `window`; `pool_penalty` per species a role already
   -- holds spreads the extras across the game instead of piling them up.
-  complete = { top = 16, window = 25, temperature = 8, pool_penalty = -12, max_pool = 6 },
+  -- A role holds as many species as keep `min_share` percent of the table's
+  -- encounters each (at most `max_pool`), and with `evolved_by_evolving` a
+  -- species that evolves from a catchable one gets no seat of its own. The
+  -- cart's own species go back into at most `original_homes` of the roles
+  -- they held (their biggest), so none ends up on every route.
+  complete = { top = 16, window = 25, temperature = 8, pool_penalty = -12, max_pool = 8,
+               min_share = 5, evolved_by_evolving = true, original_homes = 3 },
   -- a slot this many levels below a species' evolve level is implausible
   evolve_tolerance = 3,
 

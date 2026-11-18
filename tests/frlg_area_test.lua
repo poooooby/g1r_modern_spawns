@@ -3,7 +3,8 @@
 -- mods/national_dex_gen3).
 --
 -- The FireRed/LeafGreen Pokedex AREA page (src/dex_area.lua) marks named
--- areas. Under COMPLETE every placed species must come out with at least one
+-- areas. Under COMPLETE every placed species (every first stage; evolved ones
+-- are left to evolving) must come out with at least one
 -- area that has a marker: Kanto's on the Kanto map, the Sevii Islands' on
 -- their island maps (national_dex_gen3 draws those), and a Sevii map with no
 -- marker of its own (Six Island's Green Path) borrows its island's. Measured
@@ -41,9 +42,12 @@ local PD = require("src.core.game3.pokedex_data")
 PD._entries = {}
 PD._areaData = readLua(root .. "/pokemon/pokedex/area_markers.lua")
 
-local located, noMarker, sevii = 0, {}, 0
+local located, noMarker, sevii, unplaced = 0, {}, 0, {}
 for _, c in ipairs(ms.candidates({ maxGeneration = 9, includeSpecial = true })) do
-  if next(ms.locate(c.id) or {}) then
+  local here = next(ms.locate(c.id) or {}) ~= nil
+  -- an evolved species is left to evolving (no home of its own)
+  if not here and not c.evolvesFrom then unplaced[#unplaced + 1] = c.id end
+  if here then
     located = located + 1
     local marked, kanto = 0, 0
     for _, area in ipairs(PD.getWildAreasForSpecies(tonumber(loader.content.pokemon:get(c.id).index))) do
@@ -56,7 +60,8 @@ for _, c in ipairs(ms.candidates({ maxGeneration = 9, includeSpecial = true })) 
     if marked > 0 and kanto == 0 then sevii = sevii + 1 end
   end
 end
-T.check(located > 900, "COMPLETE places the whole dex (" .. located .. ")")
+T.eq(#unplaced, 0, "COMPLETE places every species that is not evolved (" .. located .. " placed; "
+  .. table.concat(unplaced, ", ", 1, math.min(#unplaced, 8)) .. ")")
 T.eq(#noMarker, 0, "every placed species has an area with a marker ("
   .. table.concat(noMarker, ", ", 1, math.min(#noMarker, 8)) .. ")")
 T.check(sevii > 0, "some live only on the Sevii Islands (" .. sevii .. "), so the island maps matter")

@@ -14,7 +14,7 @@ return {
       "a WOOBLESPAWNS row on the game's own OPTION screen opens the settings page",
       "settings in OPTIONS -> MODS -> WoobleSpawns: MODERN SPAWNS (ON/OFF) and GENERATIONS (GEN 1 .. GEN 1-9); works on the game's own Pokemon alone, a species mod adds more",
       "SPAWN MODE: LIMITED, EVERY MAP, RANDOM or COMPLETE, all drawn from the save's seed",
-      "COMPLETE: every species in the GENERATIONS range is catchable somewhere; each slot holds a small pool sharing its odds",
+      "COMPLETE: every first-stage species in the GENERATIONS range lives in the wild with a 5% chance or more somewhere (evolved ones come from evolving); each slot holds a pool sized by its odds",
       "Gen 3 Pokedex AREA page shows where this mod puts each species; with national_dex_gen3 0.7.0+ an undiscovered species can be opened (name, picture and cry hidden) to see where it lives",
       "SEED (type a code) and REROLL SEED, also in the MODS menu",
       "LEGENDARIES: rare legendary (1/1024) and mythical (1/2048) encounters on fitting home maps, until owned",

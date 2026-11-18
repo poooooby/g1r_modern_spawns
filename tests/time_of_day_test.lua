@@ -47,7 +47,9 @@ end
 
 -- ------- OFF: exactly 0.13.x (digests recorded on 0.13.3 before this option existed)
 
-for mode, want in pairs({ seeded = "4d2e4e40", complete = "4e12442f" }) do
+-- COMPLETE re-pinned at 0.16.0 (pools sized for a 5% share, evolved species
+-- left to evolving); 0.13.x's was 4e12442f
+for mode, want in pairs({ seeded = "4d2e4e40", complete = "5e880f5a" }) do
   local plain, withData = {}, {}
   for seed = 1, 10 do
     plain[#plain + 1] = H.serialize(build(seed, mode, nil, nil))
@@ -126,7 +128,8 @@ T.check((night.HOOTHOOT or 0) > (day.HOOTHOOT or 0),
 T.check((day.PIDGEY or 0) > (night.PIDGEY or 0),
         ("PREFER: Pidgey more by day (%d) than at night (%d)"):format(day.PIDGEY or 0, night.PIDGEY or 0))
 
--- ------- COMPLETE still places every species (at some time)
+-- ------- COMPLETE still places every species (at some time), or its first
+-- stage, which the player evolves
 
 for _, tod in ipairs({ "prefer", "strict" }) do
   local placed = {}
@@ -138,11 +141,16 @@ for _, tod in ipairs({ "prefer", "strict" }) do
       end
     end
   end
+  local function obtainable(c, depth)
+    if placed[c.id] then return true end
+    local parent = c.parent and pool.byId[c.parent]
+    return parent ~= nil and not parent.special and depth < 6 and obtainable(parent, depth + 1)
+  end
   local missing = {}
   for _, c in ipairs(pool.list) do
-    if not c.special and not placed[c.id] then missing[#missing + 1] = c.id end
+    if not c.special and not obtainable(c, 0) then missing[#missing + 1] = c.id end
   end
-  T.eq(table.concat(missing, " "), "", "COMPLETE " .. tod .. ": every species has a pool")
+  T.eq(table.concat(missing, " "), "", "COMPLETE " .. tod .. ": every species has a pool or evolves from one")
 end
 
 -- ------- the clock

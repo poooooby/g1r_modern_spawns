@@ -40,6 +40,25 @@ end
 -- mod.options_changed exactly as MODS -> Modern Spawns does. Also injects a
 -- stub game as the loader's live game, so mod.game resolves headlessly.
 -- Returns set(key, value) and the stub game.
+-- COMPLETE's bar: a species is obtainable when it is caught somewhere
+-- (`seen[id]`) or evolves from an obtainable, non-special species under the
+-- cap (api profileOf's `evolvesFrom`). Returns a function(id) -> boolean.
+function H.obtainable(seen, ms, cap)
+  local memo = {}
+  local function ok(id, depth)
+    if seen[id] then return true end
+    if memo[id] ~= nil then return memo[id] end
+    memo[id] = false
+    local p = ms.profileOf(id)
+    local parent = p and p.evolvesFrom and ms.profileOf(p.evolvesFrom)
+    local result = parent ~= nil and not parent.special and parent.generation <= cap
+      and (depth or 0) < 6 and ok(parent.id, (depth or 0) + 1)
+    memo[id] = result and true or false
+    return memo[id]
+  end
+  return function(id) return ok(id, 0) end
+end
+
 function H.manager(loader, save)
   local ManagerState = require("src.mods.ManagerState")
   local game = { mods = loader, save = save or { options = {} },

@@ -75,15 +75,24 @@ for _, cap in ipairs({ "3", "5", "9" }) do
   T.check(took < 3, "GEN 1-" .. cap .. " atlas builds in under 3 s (" .. string.format("%.2f", took) .. " s)")
   local seen, absent, forms = covered(), {}, 0
   local expected = ms.candidates({ maxGeneration = tonumber(cap) })
+  local obtainable = H.obtainable(seen, ms, tonumber(cap))
+  local wildEvolved, firstMissing = 0, {}
   for _, c in ipairs(expected) do
-    if not seen[c.id] then absent[#absent + 1] = c.id end
+    if not obtainable(c.id) then absent[#absent + 1] = c.id end
+    if not c.evolvesFrom and not seen[c.id] then firstMissing[#firstMissing + 1] = c.id end
+    if seen[c.id] and c.evolvesFrom then wildEvolved = wildEvolved + 1 end
     if c.baseSpecies then forms = forms + 1 end
   end
   if cap == "9" then
     T.check(forms >= 40, "GEN 1-9 counts the regional forms one by one (" .. forms .. ")")
   end
-  T.eq(#absent, 0, "GEN 1-" .. cap .. ": all " .. #expected .. " species are catchable ("
+  -- an evolved species needs no home of its own: the player evolves it
+  T.eq(#absent, 0, "GEN 1-" .. cap .. ": all " .. #expected .. " species are catchable or evolve from one ("
     .. table.concat(absent, ", ", 1, math.min(#absent, 8)) .. ")")
+  T.eq(#firstMissing, 0, "GEN 1-" .. cap .. ": every first-stage species is in the wild ("
+    .. table.concat(firstMissing, ", ", 1, math.min(#firstMissing, 8)) .. ")")
+  T.check(wildEvolved < #expected * 0.3, "GEN 1-" .. cap .. ": few evolved species in the wild ("
+    .. wildEvolved .. " of " .. #expected .. ")")
   local special, over = 0, 0
   for id in pairs(seen) do
     local p = ms.profileOf(id)
@@ -193,33 +202,41 @@ for _ in pairs(poolSpecies) do nPool = nPool + 1 end
 T.check(nPool > nPrimary and distinct > nPrimary, "Route 101 shows more than its primaries ("
   .. nPrimary .. " primaries, " .. nPool .. " in pools, " .. distinct .. " drawn)")
 
--- the cart's own species stay catchable where the cart put them: every
--- walking and surfing slot's pool holds the species the slot had
-local kept, missed, firstMiss = 0, 0, nil
+-- the cart's own species: each one the player cannot evolve into is still
+-- caught somewhere, and none is on every route (at most `original_homes`
+-- extra homes, so a species is in a handful of tables, not dozens)
+local seenAll = covered()
+local tables = {}
+for _, mapId in ipairs(maps) do
+  if mapId:match("^EM_") then
+    for _, terrain in ipairs({ "land", "water", "fish.good", "fish.super" }) do
+      local inTable = {}
+      for _, list in pairs(ms.poolFor(mapId, terrain) or {}) do
+        for _, id in ipairs(list) do inTable[id] = true end
+      end
+      for id in pairs(inTable) do tables[id] = (tables[id] or 0) + 1 end
+    end
+  end
+end
+local cartMissing, most, mostId = {}, 0, nil
 for _, mapId in ipairs(maps) do
   if mapId:match("^EM_") then
     for _, terrain in ipairs({ "land", "water" }) do
-      local pools = ms.poolFor(mapId, terrain) or {}
       local area = live[mapId] and live[mapId][terrain]
-      for i, slot in ipairs(area and area.slots or {}) do
-        -- the live slot holds the numeric species slot: compare by index
-        if pools[i] then
-          local found = false
-          for _, id in ipairs(pools[i]) do
-            local rec = loader.content.pokemon:get(id)
-            if rec and tonumber(rec.index) == tonumber(slot.species) then found = true end
-          end
-          if found then kept = kept + 1 else
-            missed = missed + 1
-            firstMiss = firstMiss or (mapId .. " " .. terrain .. " " .. i .. " " .. slot.species)
-          end
-        end
+      for _, slot in ipairs(area and area.slots or {}) do
+        local id = P.keyName(slot.species)
+        local p = id and ms.profileOf(id)
+        if p and not p.evolvesFrom and not seenAll[id] then cartMissing[id] = true end
       end
     end
   end
 end
-T.check(kept > 500, "the cart's own species stay in their slots' pools (" .. kept .. ")")
-T.eq(missed, 0, "no original species is missing from its slot (" .. tostring(firstMiss) .. ")")
+for id, n in pairs(tables) do if n > most then most, mostId = n, id end end
+local missingList = {}
+for id in pairs(cartMissing) do missingList[#missingList + 1] = id end
+T.eq(table.concat(missingList, " "), "", "every first-stage species the cart puts in the wild is still caught")
+T.check(most <= 15, "no species is in more than 15 tables (" .. tostring(mostId) .. ": " .. most .. ")")
+
 set("max_generation", "2")
 local hoenn = false
 for _, list in pairs(ms.poolFor("EM_ROUTE101", "land") or {}) do
@@ -246,8 +263,34 @@ for _, mapId in ipairs(maps) do
   end
 end
 print(string.format("pools: %d roles (aliases counted), avg %.2f, largest %d", roles, total / roles, largest))
--- max_pool (6) plus the cart's own species for the role
-T.check(largest <= 7, "no role's pool holds more than 7 species (" .. largest .. ")")
+-- max_pool (8), the cart's own species included
+T.check(largest <= 8, "no role's pool holds more than 8 species (" .. largest .. ")")
+
+-- every species in the wild has a 5% chance or more per encounter on some
+-- table (the slot odds a Gen 3 cart rolls, shared by its pool)
+local ODDS = { land = { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 }, water = { 60, 30, 5, 4, 1 },
+               ["fish.good"] = { 60, 20, 20 }, ["fish.super"] = { 40, 40, 15, 4, 1 } }
+local bestChance = {}
+for _, mapId in ipairs(maps) do
+  for terrain, odds in pairs(ODDS) do
+    local chance = {}
+    for i, list in pairs(ms.poolFor(mapId, terrain) or {}) do
+      for _, id in ipairs(list) do
+        id = lookOf[id] or id
+        chance[id] = (chance[id] or 0) + (odds[i] or 0) / #list
+      end
+    end
+    for id, c in pairs(chance) do
+      if c > (bestChance[id] or 0) then bestChance[id] = c end
+    end
+  end
+end
+local rare, rareList = 0, {}
+for id, c in pairs(bestChance) do
+  if c < 5 - 1e-6 then rare = rare + 1 rareList[#rareList + 1] = id .. string.format("=%.1f%%", c) end
+end
+T.eq(rare, 0, "every species in the wild has a 5% chance or more somewhere ("
+  .. table.concat(rareList, " ", 1, math.min(#rareList, 6)) .. ")")
 
 -- ------- LEGENDARIES ON: every legendary and mythical has a home
 
