@@ -3,6 +3,15 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.15.1] - 2026-11-17
+
+### Added
+
+- **A WOOBLESPAWNS shortcut on the OPTION screen.** One row at the bottom of the game's own
+  option list (Red/Blue/Yellow, Gold/Silver/Crystal, FireRed/LeafGreen, Ruby/Sapphire/Emerald)
+  opens WoobleSpawns' settings page in the Mod Manager; B returns to OPTION. The settings
+  themselves still live on that page.
+
 ## [0.15.0] - 2026-11-17
 
 ### Added

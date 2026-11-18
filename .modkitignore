@@ -45,3 +45,4 @@ tests/fixtures/outer_randomizer/main.lua
 tests/fixtures/outer_randomizer/manifest.json
 CLAUDE.md
 .claude/skills/lua-developer/SKILL.md
+tests/options_shortcut_test.lua

@@ -90,7 +90,8 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
 
 ## ⚙️ Options
 
-Open **OPTIONS → MODS → WoobleSpawns**. Changes apply from the next encounter or battle.
+Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own option list (or
+**OPTIONS → MODS → WoobleSpawns**). Changes apply from the next encounter or battle.
 
 | Option | Choices | Default | What it does |
 |---|---|---|---|

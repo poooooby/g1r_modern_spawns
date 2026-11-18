@@ -134,6 +134,13 @@ return function(mod)
   end
 
   makeApi({ mod = mod, Runtime = Runtime, Config = Config, Trainers = Trainers })
+  -- a WOOBLESPAWNS row on the game's OPTION screen that opens this mod's
+  -- settings page (optional: missing or broken, the Mod Manager still has it)
+  local makeShortcut = loadSibling(mod, "src/options_shortcut.lua", true)
+  if makeShortcut then
+    local ok, err = pcall(function() makeShortcut({ mod = mod }).install() end)
+    if not ok then mod.log:warn("OPTION shortcut is off: %s", tostring(err)) end
+  end
   -- Gen 3's Pokedex AREA page reads the generated tables (src/dex_area.lua)
   if makeDexArea then makeDexArea({ mod = mod, Runtime = Runtime })() end
 end

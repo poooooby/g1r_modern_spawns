@@ -171,12 +171,14 @@ end
 T.check(gen1Only, "and it holds Gen 1 species only")
 setOption(run, "max_generation", "9")
 
--- ------- settings live only in MODS -> Modern Spawns
+-- ------- settings live in MODS -> WoobleSpawns; the OPTION screen gets only
+-- the WOOBLESPAWNS shortcut that opens that page (options_shortcut_test.lua)
 
 local topLevel = { { id = "text_speed" } }
 local rows = Runtime.call("ui.options.rows", function(_, r) return r end,
                           { data = Data }, topLevel)
-T.eq(#rows, 1, "nothing is added to the top-level OPTION screen")
+T.eq(#rows, 2, "one row is added to the top-level OPTION screen")
+T.eq(rows[2] and rows[2].id, "modern_spawns:settings", "and it is the WOOBLESPAWNS shortcut, no setting")
 
 local schema, byKey = H.schema()
 local keys = {}
