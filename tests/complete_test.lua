@@ -292,6 +292,33 @@ end
 T.eq(rare, 0, "every species in the wild has a 5% chance or more somewhere ("
   .. table.concat(rareList, " ", 1, math.min(#rareList, 6)) .. ")")
 
+-- regional forms (Alolan, Galarian, Hisuian, Paldean): each one that evolves
+-- from no other form lives in the wild at 5% or more, and every evolved one
+-- (and every species only a regional form evolves into: Perrserker from
+-- Galarian Meowth) evolves from a regional form that does
+local formCount, formBad = 0, {}
+local regional = {}
+for _, c in ipairs(ms.candidates({ maxGeneration = 9 })) do
+  if c.baseSpecies or c.form then regional[c.id] = true end
+end
+for _, c in ipairs(ms.candidates({ maxGeneration = 9 })) do
+  local parent = c.evolvesFrom
+  if regional[c.id] or (parent and regional[parent]) then
+    formCount = formCount + 1
+    local root = c.id
+    local guard = 0
+    while ms.profileOf(root).evolvesFrom and guard < 4 do
+      root, guard = ms.profileOf(root).evolvesFrom, guard + 1
+    end
+    if not ((bestChance[root] or 0) >= 5 - 1e-6) then
+      formBad[#formBad + 1] = c.id .. "<-" .. root .. string.format("=%.1f%%", bestChance[root] or 0)
+    end
+  end
+end
+T.check(formCount >= 60, "regional forms and their evolutions checked (" .. formCount .. ")")
+T.eq(table.concat(formBad, " ", 1, math.min(#formBad, 6)), "",
+     "every regional form is in the wild at 5% or more, or evolves from one that is")
+
 -- ------- LEGENDARIES ON: every legendary and mythical has a home
 
 set("legendaries", "on")
