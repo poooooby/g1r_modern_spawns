@@ -21,6 +21,9 @@ All notable changes to this mod are documented here, in
   - **Fewer repeats.** The game's own Pokémon keep up to 3 of their old homes instead of every
     one (Tentacool was in 80 tables, now 10), and a main species already placed elsewhere is
     picked less often.
+  - **With TIME OF DAY SPAWNS,** a slot with room for one species keeps the same one day and
+    night (a day-only one under STRICT still gets a night partner), so the 5% holds at every
+    hour: measured with PREFER and STRICT on Red, Crystal, FireRed and Emerald.
   - **Reshuffles existing COMPLETE saves' wild Pokémon once** (same seed, new rosters). LIMITED,
     EVERY MAP and RANDOM are unchanged, byte for byte.
 - **API:** `profileOf` / `candidates` entries carry `evolvesFrom`, the species one evolves from.

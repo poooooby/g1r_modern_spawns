@@ -165,6 +165,48 @@ table.sort(missing)
 T.eq(table.concat(missing, " ", 1, math.min(#missing, 8)), "",
      "COMPLETE STRICT: every species can be caught at some time, or evolves from one (" .. #missing .. " missing)")
 
+-- and each wild species has a 5% chance or more at its best time somewhere:
+-- a pool draws a species of its own time (or of none) 3 to 1 over one of the
+-- other time, and STRICT never draws an "only" species at the other time; a
+-- role with room for one species keeps its day pick at night
+local ODDS = { land = { 20, 20, 10, 10, 10, 10, 5, 5, 4, 4, 1, 1 }, water = { 60, 30, 5, 4, 1 },
+               ["fish.good"] = { 60, 20, 20 }, ["fish.super"] = { 40, 40, 15, 4, 1 } }
+-- a look (SINISTEA_ANTIQUE) counts toward its species
+local lookOf = {}
+for id, c in pairs(em.profile) do
+  for _, v in ipairs(c.variants or {}) do lookOf[v] = id end
+end
+local bestChance = {}
+for _, period in ipairs({ "day", "night" }) do
+  for _, m in ipairs(em.maps) do
+    for t, odds in pairs(ODDS) do
+      local chance = {}
+      for i, list in pairs(api.poolFor(m, t, period) or {}) do
+        local w, total = {}, 0
+        for k, id in ipairs(list) do
+          local c = em.profile[id]
+          w[k] = (not (c and c.timeOfDay) or c.timeOfDay == period) and 3 or 1
+          total = total + w[k]
+        end
+        for k, id in ipairs(list) do
+          local base = lookOf[id] or id
+          chance[base] = (chance[base] or 0) + (odds[i] or 0) * w[k] / total
+        end
+      end
+      for id, c in pairs(chance) do
+        if c > (bestChance[id] or 0) then bestChance[id] = c end
+      end
+    end
+  end
+end
+local rare = {}
+for id, c in pairs(bestChance) do
+  if c < 5 - 1e-6 then rare[#rare + 1] = id .. string.format("=%.1f%%", c) end
+end
+table.sort(rare)
+T.eq(table.concat(rare, " ", 1, math.min(#rare, 6)), "",
+     "COMPLETE STRICT: every wild species has a 5% chance or more at its time somewhere")
+
 -- ------- PREFER: day species by day, night species at night
 
 em.set("time_of_day", "prefer")

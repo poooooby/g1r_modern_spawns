@@ -135,7 +135,9 @@ under 5% doesn't count as placed. The cart's own species go back into at most `o
 `selection.complete.stage_penalty` per stage past the first, `mid_stage_penalty` more for one
 that evolves further (a final second stage wins over a middle one), and `repeat_penalty` per seat
 the species already holds; a role under 5% takes a first stage only (`small_role_first_stage`, a
-filter in `eligible`). An extra that misses a
+filter in `eligible`). With TIME OF DAY SPAWNS, a role with room for one species (under twice
+`min_share`) keeps its day pick at night (`keptByNight`), unless that pick is day-only under
+STRICT. An extra that misses a
 themed map's theme tries the maps it fits and plain routes before any other. Gen 2 replaces a species across morning, day and night at once, keeping night-only
 roles nocturnal. On Gen 3 the engine rolls its own table regardless, so the species is swapped
 right after the roll, at the rolled level.

@@ -440,6 +440,20 @@ local function choose(role, env, rng)
   return nil
 end
 
+-- COMPLETE with TIME OF DAY SPAWNS: a role with room for one species
+-- (under twice `complete.min_share`) keeps its day pick at night, so day and
+-- night don't split a 5% slot into two 2.5% species. Not a day-only species
+-- under STRICT, which cannot come out at night: that role gets a night pick.
+local function keptByNight(role, env)
+  local seat = env.daySeats and env.daySeats[role.first]
+  local minShare = env.config.complete and env.config.complete.min_share
+  if not (seat and minShare and (role.share or 0) * 100 < 2 * minShare) then return nil end
+  local c = env.pool.byId[seat.base]
+  if not c then return nil end
+  if env.tod == "strict" and c.todOnly and c.tod == "day" then return nil end
+  return { c = c, shown = seat.pool[1], reasons = { "kept_day_and_night" }, penalties = {} }
+end
+
 -- `weights[i]` is slot i's odds as the running game rolls them (the
 -- adapter's business: Gen 1 ladders, Gen 2 percents, fish chances).
 local function redistribute(def, env, rng, weights)
@@ -452,12 +466,15 @@ local function redistribute(def, env, rng, weights)
 
   local explain = {}
   for _, role in ipairs(buildRoles(def.slots, weights, env.slotTimes)) do
-    local pick = choose(role, env, rng)
+    local kept = keptByNight(role, env)
+    local pick = kept or choose(role, env, rng)
     local species = pick and pick.c.id or role.species
     -- a species with looks (Rotom's appliances, Flabebe's colours, ...) is shown as itself
     -- or one of them, equally likely; a species without any draws nothing
     local shown = species
-    if pick and pick.c.variants then
+    if kept then
+      shown = kept.shown
+    elseif pick and pick.c.variants then
       local options = { species }
       for _, id in ipairs(pick.c.variants) do options[#options + 1] = id end
       shown = options[rng:int(1, #options)]
