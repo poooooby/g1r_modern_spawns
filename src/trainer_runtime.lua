@@ -14,7 +14,7 @@ return function(deps)
   local facilities = deps.facilities
   local log = mod.log
   local HOOK_PRIORITY = -100
-  local ALGO = 2 -- bump when a change would hand existing saves different teams
+  local ALGO = 3 -- bump when a change would hand existing saves different teams
 
   local TR = {}
   local unwrap
@@ -60,7 +60,8 @@ return function(deps)
     local plan = st.plans[identity]
     if plan then return plan end
     local info = identityInfo(identity) or fallback
-    plan = Planner.planIdentity(st.ctx, st.ix, identity, info.appearances, info.gymType)
+    plan = Planner.planIdentity(st.ctx, st.ix, identity, info.appearances, info.gymType,
+                                identity == "rival" or info.rival == true)
     st.plans[identity] = plan
     return plan
   end
@@ -113,7 +114,7 @@ return function(deps)
     local battle = adapter.read(class, id, party)
     if not battle then return nil end
     local plan = planFor(st, battle.identity,
-      { appearances = battle.rows, gymType = battle.gymType })
+      { appearances = battle.rows, gymType = battle.gymType, rival = battle.rival })
     local species = Planner.team(st.ctx, st.ix, plan, battle.rows)
     -- a two-opponent battle: a row of the other trainer follows that trainer's plan
     for i, row in ipairs(battle.rows) do

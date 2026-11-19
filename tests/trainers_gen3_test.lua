@@ -104,6 +104,7 @@ checkTyped(em, "Wallace", em.find("CHAMPION", "WALLACE")[1], "WATER")
 -- May and Brendan: one family per line across every fight
 for _, name in ipairs({ "MAY", "BRENDAN", "WALLY" }) do
   local familyOf, consistent, n = {}, true, 0
+  local starters, badStarters = 0, {}
   for _, id in ipairs(em.find("POKéMON TRAINER", name)) do
     local new, vanilla = checkTyped(em, name, id)
     for i, row in ipairs(new) do
@@ -113,10 +114,19 @@ for _, name in ipairs({ "MAY", "BRENDAN", "WALLY" }) do
         if familyOf[from.family] and familyOf[from.family] ~= to.family then consistent = false end
         familyOf[from.family] = to.family
         n = n + 1
+        local ok, why = H.rivalStarterOk(from, to)
+        if ok ~= nil then
+          starters = starters + 1
+          if not ok then badStarters[#badStarters + 1] = tostring(id) .. ": " .. why end
+        end
       end
     end
   end
   T.check(consistent and n > 0, name .. " keeps one family per line across fights (" .. n .. " Pokemon)")
+  if name ~= "WALLY" then
+    T.check(starters >= 6, name .. "'s starter in every fight (" .. starters .. ")")
+    T.eq(table.concat(badStarters, "; "), "", name .. "'s starter loses to yours and evolves with the original")
+  end
 end
 
 T.check(builtSets > 0, "custom-move Pokemon get built sets (" .. builtSets .. ")")
@@ -157,6 +167,7 @@ fr.set("trainer_teams", "on")
 checkTyped(fr, "Brock", fr.find("LEADER", "BROCK")[1], "ROCK")
 checkTyped(fr, "Lorelei", fr.find("ELITE FOUR", "LORELEI")[1], "ICE")
 local familyOf, consistent, n = {}, true, 0
+local starters, badStarters = 0, {}
 for _, cn in ipairs({ "RIVAL", "CHAMPION" }) do
   for _, id in ipairs(fr.find(cn, "TERRY")) do
     local new, vanilla = checkTyped(fr, "rival " .. cn, id)
@@ -167,11 +178,18 @@ for _, cn in ipairs({ "RIVAL", "CHAMPION" }) do
         if familyOf[from.family] and familyOf[from.family] ~= to.family then consistent = false end
         familyOf[from.family] = to.family
         n = n + 1
+        local ok, why = H.rivalStarterOk(from, to)
+        if ok ~= nil then
+          starters = starters + 1
+          if not ok then badStarters[#badStarters + 1] = cn .. " " .. id .. ": " .. why end
+        end
       end
     end
   end
 end
 T.check(consistent and n > 20, "FireRed's rival keeps one family per line, champion included (" .. n .. " Pokemon)")
+T.check(starters >= 6, "FireRed's rival's starter in every fight (" .. starters .. ")")
+T.eq(table.concat(badStarters, "; "), "", "FireRed's rival's starter loses to yours and evolves with the original")
 fr.run.release()
 
 T.finish("modern_spawns trainers (Gen 3)")

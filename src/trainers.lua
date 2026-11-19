@@ -34,6 +34,28 @@ for _, dex in ipairs({ 1, 4, 7, 152, 155, 158, 252, 255, 258, 387, 390, 393, 495
   Trainers.STARTERS[dex] = true
 end
 
+-- The starter triangle: each type beats the next (FIRE beats GRASS). The
+-- rival's original starter beats yours, so its replacement is the line YOUR
+-- starter beats instead -- a fair first fight, now that a modern starter knows
+-- its own type's attack from the start. RESISTS: the types that take half
+-- damage from an attack of that type; no stage of the rival's line may have
+-- one against your starter's type (Empoleon's Steel shrugs off Grass).
+Trainers.BEATS = { FIRE = "GRASS", WATER = "FIRE", GRASS = "WATER" }
+Trainers.RESISTS = {
+  GRASS = { FIRE = true, GRASS = true, POISON = true, FLYING = true, BUG = true, DRAGON = true, STEEL = true },
+  FIRE = { FIRE = true, WATER = true, ROCK = true, DRAGON = true },
+  WATER = { WATER = true, GRASS = true, DRAGON = true },
+}
+
+-- A starter's triangle type (GRASS, FIRE or WATER), or nil.
+local function elementOf(c)
+  if not c then return nil end
+  for _, t in ipairs({ "GRASS", "FIRE", "WATER" }) do
+    if c.types[t] then return t end
+  end
+  return nil
+end
+
 -- --------------------------------------------------------------- families
 
 -- The family index over the candidate pool: each species' root, its children
@@ -86,9 +108,10 @@ end
 -- The stage a family shows at `level`, never below `minStage` (the stage of
 -- the Pokemon it replaces): evolutions by level at their level, the others
 -- at config stage2_level / stage3_level. `branch(nodeId, n)` picks among
--- several children (Eevee, Wurmple) the same way every time. nil when the
--- family has nothing allowed.
-function Trainers.stageFor(ix, config, rootId, level, minStage, branch)
+-- several children (Eevee, Wurmple) the same way every time. `maxStage`, when
+-- given, stops it there (the rival's starter shows the original's stage). nil
+-- when the family has nothing allowed.
+function Trainers.stageFor(ix, config, rootId, level, minStage, branch, maxStage)
   local byId = ix.byId
   local cur = rootId
   -- a root above the cap (Pichu under GEN 1): start at its first allowed descendant
@@ -103,6 +126,7 @@ function Trainers.stageFor(ix, config, rootId, level, minStage, branch)
   if not cur or not ix.allowed(cur) then return nil end
   minStage = minStage or 1
   for _ = 1, 4 do
+    if maxStage and (byId[cur].stage or 1) >= maxStage then break end
     local kids = {}
     for _, k in ipairs(ix.children[cur] or {}) do
       if ix.allowed(k) then kids[#kids + 1] = k end
@@ -139,7 +163,11 @@ end
 --   appearances: { { species = id, level = n }, ... } over every battle of
 --                this identity (so the map never depends on fight order)
 --   gymType:     a type every Pokemon shown must have (gym leaders, Elite Four)
-function Trainers.planIdentity(ctx, ix, identity, appearances, gymType)
+--   rival:       the player's rival: its starter line becomes a starter line
+--                your starter beats (Trainers.BEATS), shown at the original's
+--                stage in every fight; it falls back to the usual pick only
+--                when no starter line fits
+function Trainers.planIdentity(ctx, ix, identity, appearances, gymType, rival)
   local config, Rng = ctx.config, ctx.Rng
   local byRoot = {}
   for _, a in ipairs(appearances) do
@@ -164,26 +192,48 @@ function Trainers.planIdentity(ctx, ix, identity, appearances, gymType)
     return rng:int(1, n)
   end
 
-  local map, used = {}, {}
+  local function isStarter(id) return Trainers.STARTERS[ix.byId[id] and ix.byId[id].dex or -1] == true end
+  -- the rival's starter lines go first, so no other line of its takes the
+  -- starter line one of them needs
+  local order, rest = {}, {}
   for _, original in ipairs(sortedKeys(byRoot)) do
+    if rival and isStarter(original) then order[#order + 1] = original else rest[#rest + 1] = original end
+  end
+  for _, original in ipairs(rest) do order[#order + 1] = original end
+
+  local map, used, exact = {}, {}, {}
+  for _, original in ipairs(order) do
     local apps = byRoot[original]
     local originalTypes = {}
     for _, a in ipairs(apps) do
       for t in pairs(typesOf(ix.byId[a.species])) do originalTypes[t] = true end
     end
-    local starter = Trainers.STARTERS[ix.byId[original] and ix.byId[original].dex or -1]
-    local tiers = { {}, {}, {} }
+    local starter = isStarter(original)
+    -- the rival's starter: your starter's type, and the type it beats
+    local weaker, resists -- nil for anyone else
+    if rival and starter then
+      local yours = Trainers.BEATS[elementOf(ix.byId[original]) or ""]
+      weaker, resists = yours and Trainers.BEATS[yours], yours and Trainers.RESISTS[yours]
+    end
+    local maxStageOf = weaker and function(a) return a.stage end or function() return nil end
+    -- tier 1 (only the rival's starter): a starter line your starter beats
+    local tiers = { {}, {}, {}, {} }
     for _, family in ipairs(ix.roots) do
       -- a gym may keep an original family of its type when too few others
       -- have it (Kanto alone has one Ghost line); anyone else always changes
       local keep = family == original
       if (not keep or gymType) and ix.usable[family] and not used[family] then
         local ok, gymOk, bstGap, shownTypes = true, true, 0, {}
+        local weakOk = weaker ~= nil and isStarter(family)
         for _, a in ipairs(apps) do
-          local id = Trainers.stageFor(ix, config, family, a.level, a.stage, branchFor)
+          local id = Trainers.stageFor(ix, config, family, a.level, a.stage, branchFor, maxStageOf(a))
           if not id or (ctx.canShow and not ctx.canShow(id, a.level)) then ok = false break end
           local c = ix.byId[id]
-          for t in pairs(c.types) do shownTypes[t] = true end
+          for t in pairs(c.types) do
+            shownTypes[t] = true
+            if resists and resists[t] then weakOk = false end
+          end
+          if weaker and (not c.types[weaker] or (c.stage or 1) ~= a.stage) then weakOk = false end
           if gymType and not c.types[gymType] then gymOk = false end
           -- near the original's base stat total; a gym leader or Elite Four
           -- member (a typed boss) aims gym_bst_lift above it, so it leans
@@ -198,14 +248,15 @@ function Trainers.planIdentity(ctx, ix, identity, appearances, gymType)
             score = score + config.starter
           end
           local entry = { id = family, score = score + (keep and config.keep_penalty or 0) }
+          if weakOk and not keep then table.insert(tiers[1], entry) end
           if gymType then
-            if gymOk then table.insert(tiers[1], entry) end
+            if gymOk then table.insert(tiers[2], entry) end
           elseif shared > 0 then
-            table.insert(tiers[1], entry)
+            table.insert(tiers[2], entry)
           end
           if not keep then
-            if shared > 0 then table.insert(tiers[2], entry) end
-            table.insert(tiers[3], entry)
+            if shared > 0 then table.insert(tiers[3], entry) end
+            table.insert(tiers[4], entry)
           end
         end
       end
@@ -218,11 +269,13 @@ function Trainers.planIdentity(ctx, ix, identity, appearances, gymType)
         break
       end
     end
+    -- the rival's starter evolves when the original does, never earlier
+    if weaker then exact[original] = true end
     pick = pick or original
     map[original] = pick
     used[pick] = true
   end
-  return { map = map, branch = branchFor }
+  return { map = map, branch = branchFor, exact = exact }
 end
 
 -- A battle's new species for an identity's plan: rows { { species, level } }
@@ -233,9 +286,11 @@ function Trainers.team(ctx, ix, plan, rows)
     local c = ix.byId[row.species]
     local newId
     if c then
-      local family = plan.map[ix.root[c.id]]
+      local original = ix.root[c.id]
+      local family = plan.map[original]
       if family then
-        newId = Trainers.stageFor(ix, ctx.config, family, row.level, c.stage or 1, plan.branch)
+        local maxStage = plan.exact and plan.exact[original] and (c.stage or 1) or nil
+        newId = Trainers.stageFor(ix, ctx.config, family, row.level, c.stage or 1, plan.branch, maxStage)
       end
     end
     out[i] = newId or row.species

@@ -36,6 +36,7 @@ return function(reg, mod, world)
     return ok and type(p) == "table" and p or nil
   end
 
+  local RSE_RIVALS = { MAY = true, BRENDAN = true }
   local rivalNames
   local function classify(row, p)
     local className = tostring(row.className or (p.classNames and p.classNames[row.class]) or "")
@@ -52,7 +53,9 @@ return function(reg, mod, world)
     if (className == "RIVAL" or className == "CHAMPION") and rivalNames[name] then identity = "rival" end
     local gymType = TYPED[className] and A.GYM_TYPES[name] or nil
     local boss = BOSS[className] == true or className:find("TRAINER", 1, true) ~= nil and name ~= "?"
-    return identity, gymType, boss
+    -- Ruby, Sapphire and Emerald's rival is May or Brendan (POKéMON TRAINER)
+    local rival = identity == "rival" or (className:find("TRAINER", 1, true) ~= nil and RSE_RIVALS[name] == true)
+    return identity, gymType, boss, rival
   end
 
   -- the registry id for a numeric species slot (the cart's own and modded)
@@ -75,8 +78,8 @@ return function(reg, mod, world)
     local p = pack()
     local out = {}
     for _, row in pairs(p and p.trainers or {}) do
-      local identity, gymType, boss = classify(row, p)
-      local info = out[identity] or { appearances = {}, gymType = gymType, boss = boss }
+      local identity, gymType, boss, rival = classify(row, p)
+      local info = out[identity] or { appearances = {}, gymType = gymType, boss = boss, rival = rival }
       out[identity] = info
       for _, m in ipairs(row.party or {}) do
         local id = speciesIdOf(m.species)
@@ -94,7 +97,7 @@ return function(reg, mod, world)
     local p = pack()
     local own = p and p.trainers and p.trainers[trainerId]
     if not own then return nil end
-    local identity, gymType, boss = classify(own, p)
+    local identity, gymType, boss, rival = classify(own, p)
     local rows = {}
     for i, row in ipairs(party) do
       if type(row) ~= "table" then return nil end
@@ -111,7 +114,8 @@ return function(reg, mod, world)
                   customMoves = type(row.moves) == "table" and #row.moves > 0,
                   identity = rowIdentity }
     end
-    return { identity = identity, key = "trainer:" .. trainerId, gymType = gymType, boss = boss, rows = rows }
+    return { identity = identity, key = "trainer:" .. trainerId, gymType = gymType, boss = boss,
+             rival = rival, rows = rows }
   end
 
   -- ------------------------------------------------------------ moves

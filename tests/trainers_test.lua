@@ -40,6 +40,19 @@ local SPECIES = {
   { "LECHONK", 915, 9, { "NORMAL" }, 254 }, { "OINKOLOGNE", 916, 9, { "NORMAL" }, 489, "LECHONK", 18 },
   { "CHIKORITA", 152, 2, { "GRASS" }, 318 }, { "BAYLEEF", 153, 2, { "GRASS" }, 405, "CHIKORITA", 16 },
   { "MEGANIUM", 154, 2, { "GRASS" }, 525, "BAYLEEF", 32 },
+  { "CHARMANDER", 4, 1, { "FIRE" }, 309 }, { "CHARMELEON", 5, 1, { "FIRE" }, 405, "CHARMANDER", 16 },
+  { "CHARIZARD", 6, 1, { "FIRE", "FLYING" }, 534, "CHARMELEON", 36 },
+  { "SQUIRTLE", 7, 1, { "WATER" }, 314 }, { "WARTORTLE", 8, 1, { "WATER" }, 405, "SQUIRTLE", 16 },
+  { "BLASTOISE", 9, 1, { "WATER" }, 530, "WARTORTLE", 36 },
+  { "TREECKO", 252, 3, { "GRASS" }, 310 }, { "GROVYLE", 253, 3, { "GRASS" }, 405, "TREECKO", 16 },
+  { "SCEPTILE", 254, 3, { "GRASS" }, 530, "GROVYLE", 36 },
+  { "TORCHIC", 255, 3, { "FIRE" }, 310 }, { "COMBUSKEN", 256, 3, { "FIRE", "FIGHTING" }, 405, "TORCHIC", 16 },
+  { "BLAZIKEN", 257, 3, { "FIRE", "FIGHTING" }, 530, "COMBUSKEN", 36 },
+  { "MUDKIP", 258, 3, { "WATER" }, 310 }, { "MARSHTOMP", 259, 3, { "WATER", "GROUND" }, 405, "MUDKIP", 16 },
+  { "SWAMPERT", 260, 3, { "WATER", "GROUND" }, 535, "MARSHTOMP", 36 },
+  { "PIPLUP", 393, 4, { "WATER" }, 314 }, { "PRINPLUP", 394, 4, { "WATER" }, 405, "PIPLUP", 16 },
+  { "EMPOLEON", 395, 4, { "WATER", "STEEL" }, 530, "PRINPLUP", 36 },
+  { "PONYTA", 77, 1, { "FIRE" }, 410 }, { "TOTODILE", 158, 2, { "WATER" }, 314 },
   { "EEVEE", 133, 1, { "NORMAL" }, 325 }, { "VAPOREON", 134, 1, { "WATER" }, 525, "EEVEE" },
   { "JOLTEON", 135, 1, { "ELECTRIC" }, 525, "EEVEE" },
   { "MEWTWO", 150, 1, { "PSYCHIC" }, 680, nil, nil, "legendary" },
@@ -89,6 +102,68 @@ for _, id in ipairs({ early[1], early[2], early[3] }) do
   T.check(not seen[rootOf(id)], "no two of a family on one trainer")
   seen[rootOf(id)] = true
 end
+
+-- ------- the rival's starter loses to yours, and evolves when the original does
+-- Red's rival over its three starter variants: the original always beats your
+-- starter (Charmander when you pick Bulbasaur), so its replacement is the line
+-- yours beats (a Water line), with no stage resisting your type (never
+-- Piplup: Empoleon's Steel shrugs off Grass).
+
+local redRival = { { species = "PIDGEY", level = 9 }, { species = "PONYTA", level = 30 },
+  { species = "CHARMANDER", level = 5 }, { species = "CHARMANDER", level = 18 },
+  { species = "CHARMELEON", level = 25 }, { species = "CHARIZARD", level = 50 },
+  { species = "SQUIRTLE", level = 5 }, { species = "SQUIRTLE", level = 18 },
+  { species = "WARTORTLE", level = 25 }, { species = "BLASTOISE", level = 50 },
+  { species = "BULBASAUR", level = 5 }, { species = "BULBASAUR", level = 18 },
+  { species = "IVYSAUR", level = 25 }, { species = "VENUSAUR", level = 50 } }
+-- the original's type -> the type its replacement must have (the one your starter beats)
+local WEAKER = { FIRE = "WATER", WATER = "GRASS", GRASS = "FIRE" }
+local RESISTS = { FIRE = Trainers.RESISTS.GRASS, WATER = Trainers.RESISTS.FIRE, GRASS = Trainers.RESISTS.WATER }
+local function elementOfId(id)
+  for _, t in ipairs({ "GRASS", "FIRE", "WATER" }) do if ix.byId[id].types[t] then return t end end
+end
+local weakBad, stageBad, seenWater, piplup = {}, {}, {}, 0
+for s = 1, 200 do
+  local c = ctxFor("STARTER" .. s, 9)
+  local p = Trainers.planIdentity(c, ix, "rival", redRival, nil, true)
+  local team = Trainers.team(c, ix, p, redRival)
+  local roots = {}
+  for i, row in ipairs(redRival) do
+    local o = ix.byId[row.species]
+    local el = elementOfId(row.species)
+    if Trainers.STARTERS[ix.byId[ix.root[o.id]].dex] then
+      local n = ix.byId[team[i]]
+      if not n.types[WEAKER[el]] then weakBad[#weakBad + 1] = row.species .. "->" .. n.id end
+      for t in pairs(n.types) do
+        if RESISTS[el][t] then weakBad[#weakBad + 1] = row.species .. "->" .. n.id .. " resists" end
+      end
+      if n.stage ~= o.stage then stageBad[#stageBad + 1] = row.species .. "@" .. row.level .. "->" .. n.id end
+      if el == "FIRE" then seenWater[ix.root[n.id]] = true end
+      if ix.root[n.id] == "PIPLUP" then piplup = piplup + 1 end
+      roots[ix.root[n.id]] = roots[ix.root[n.id]] or row.species
+      T.check(roots[ix.root[n.id]] == ix.root[o.id] or roots[ix.root[n.id]] == row.species
+              or ix.root[roots[ix.root[n.id]]] == ix.root[o.id],
+              "seed " .. s .. ": one new line per original line (" .. n.id .. ")")
+    end
+  end
+end
+T.eq(table.concat(weakBad, " "), "", "the rival's starter is always one your starter beats, never resisting it")
+T.eq(table.concat(stageBad, " "), "", "the rival's starter shows the original's stage in every fight")
+T.eq(piplup, 0, "never Piplup's line (Empoleon resists Grass)")
+local waterLines = 0
+for _ in pairs(seenWater) do waterLines = waterLines + 1 end
+T.check(waterLines >= 2, "more than one Water line across seeds (" .. waterLines .. ")")
+
+-- GEN 1: the three Gen 1 lines trade places
+local rc = ctxFor("STARTER", 1)
+local rix = Trainers.index(rc.pool, 1)
+local rp = Trainers.planIdentity(rc, rix, "rival", redRival, nil, true)
+T.eq(rp.map.CHARMANDER .. "," .. rp.map.SQUIRTLE .. "," .. rp.map.BULBASAUR, "SQUIRTLE,BULBASAUR,CHARMANDER",
+     "GEN 1: Charmander -> Squirtle, Squirtle -> Bulbasaur, Bulbasaur -> Charmander")
+-- without the rival flag a starter line keeps its type, as before
+local plainPlan = Trainers.planIdentity(ctxFor("STARTER", 9), ix, "x", { { species = "CHARMANDER", level = 5 } })
+T.check(ix.byId[plainPlan.map.CHARMANDER].types.FIRE, "another trainer's Charmander line stays Fire ("
+        .. plainPlan.map.CHARMANDER .. ")")
 
 -- ------- a gym leader: every Pokemon has the gym's type
 

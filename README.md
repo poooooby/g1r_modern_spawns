@@ -62,6 +62,9 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
 - 🧬 **A rival who grows with you:** each of your rival's Pokémon becomes a new evolution line
   that stays the same in every fight and evolves as its level rises. Rematches and repeat
   trainers keep their lines too.
+- ⚖️ **A fair first rival battle:** your rival's starter is a modern starter that YOUR starter
+  beats (pick a Grass starter and your rival leads with a Water one), and it evolves exactly
+  when the original rival's starter would.
 - 🏟️ **The end game too:** Crystal's Battle Tower, Emerald's Battle Frontier (all seven
   facilities, the Battle Tents and the wild Pokémon of the Battle Pyramid and Battle Pike),
   Trainer Hill, Ruby and Sapphire's Battle Tower and FireRed and LeafGreen's Trainer Tower.

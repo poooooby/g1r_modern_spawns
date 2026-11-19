@@ -201,6 +201,13 @@ identical with it ON or OFF.
   (`type_weight`) plus `bst_per_point` per point of base stat total away from the original,
   where a typed boss measures from the original + `gym_bst_lift` (60), so it favours the
   stronger families of its type (`TrainerConfig`, `src/config.lua`).
+- **The rival's starter** (`planIdentity`'s `rival` flag: identity `"rival"`, or May / Brendan
+  on Ruby/Sapphire/Emerald via `info.rival`). The original rival's starter beats the player's,
+  so its line is replaced by a starter line the player's starter beats (`Trainers.BEATS`
+  twice: Fire -> Water, Water -> Grass, Grass -> Fire), with no shown type in
+  `Trainers.RESISTS` of the player's type, at exactly the original's stage in every fight
+  (`plan.exact`, `stageFor`'s `maxStage`). Its starter lines are planned before its other lines.
+  Falls back to the usual tiers (still stage-capped) when nothing fits.
 - **Moves.** A Pokémon the game gave custom moves gets a built set (`buildSet`): the best
   same-type attack of each of its types, one coverage attack, one listed status move, then the
   rest, all from its own level-up moves at that level.

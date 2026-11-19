@@ -79,6 +79,7 @@ T.check(changed > 0, "Falkner fields new Pokemon (" .. falkner[1].species .. ", 
 
 -- the rival across fights
 local familyOf, consistent, seen = {}, true, 0
+local starters, badStarters = 0, {}
 for _, class in ipairs({ "RIVAL1", "RIVAL2" }) do
   for _, m in ipairs(data.gen2Trainers.classes[class].trainers) do
     local new, vanilla = check(class, m.id)
@@ -88,10 +89,17 @@ for _, class in ipairs({ "RIVAL1", "RIVAL2" }) do
       if familyOf[from] and familyOf[from] ~= to then consistent = false end
       familyOf[from] = to
       seen = seen + 1
+      local ok, why = H.rivalStarterOk(api.profileOf(vanilla[i].species), api.profileOf(mon.species))
+      if ok ~= nil then
+        starters = starters + 1
+        if not ok then badStarters[#badStarters + 1] = class .. " " .. m.id .. ": " .. why end
+      end
     end
   end
 end
 T.check(consistent, "the rival's lines are the same new families in every fight (" .. seen .. " Pokemon)")
+T.check(starters >= 6, "the rival's starter in every fight (" .. starters .. ")")
+T.eq(table.concat(badStarters, "; "), "", "the rival's starter loses to yours and evolves with the original")
 
 -- left alone: the Battle Tower and link battles
 local tower = Trainers.party(data, { roster = member("FALKNER", "FALKNER1").party })

@@ -306,4 +306,41 @@ function H.world(opts)
   return world
 end
 
+-- TRAINER TEAMS: the rival's starter. `from` / `to` are profileOf records (the
+-- game's Pokemon and its replacement). For a starter line (one of the three
+-- first-stage starters of Gen 1-3 and its evolutions), the replacement must be
+-- of the type the player's starter beats, have no type resisting the player's
+-- starter's type, and show the original's stage. Returns nil when `from` is no
+-- starter, else ok, a description.
+local STARTER_DEX = {}
+for _, d in ipairs({ 1, 4, 7, 152, 155, 158, 252, 255, 258 }) do
+  for k = 0, 2 do STARTER_DEX[d + k] = true end
+end
+local WEAKER = { FIRE = "WATER", WATER = "GRASS", GRASS = "FIRE" } -- original -> replacement
+local PLAYER = { FIRE = "GRASS", WATER = "FIRE", GRASS = "WATER" } -- original -> player's starter
+local RESISTS = {
+  GRASS = { FIRE = true, GRASS = true, POISON = true, FLYING = true, BUG = true, DRAGON = true, STEEL = true },
+  FIRE = { FIRE = true, WATER = true, ROCK = true, DRAGON = true },
+  WATER = { WATER = true, GRASS = true, DRAGON = true },
+}
+function H.rivalStarterOk(from, to)
+  if not (from and STARTER_DEX[from.dex]) then return nil end
+  local function typeSet(p)
+    local s = {}
+    for _, t in ipairs(p and p.types or {}) do s[(tostring(t):gsub("_TYPE$", ""):gsub("^TYPE_", ""))] = true end
+    return s
+  end
+  local fromTypes, toTypes = typeSet(from), typeSet(to)
+  local el
+  for _, t in ipairs({ "GRASS", "FIRE", "WATER" }) do if fromTypes[t] then el = t break end end
+  local why = tostring(from.id) .. " -> " .. tostring(to and to.id)
+  if not (el and to) then return false, why end
+  if not toTypes[WEAKER[el]] then return false, why .. " (not " .. WEAKER[el] .. ")" end
+  for t in pairs(toTypes) do
+    if RESISTS[PLAYER[el]][t] then return false, why .. " (" .. t .. " resists " .. PLAYER[el] .. ")" end
+  end
+  if from.stage ~= to.stage then return false, why .. " (stage " .. tostring(to.stage) .. ")" end
+  return true, why
+end
+
 return H

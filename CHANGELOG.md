@@ -3,6 +3,26 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.16.1] - 2026-11-19
+
+### Changed
+
+- **TRAINER TEAMS: your rival's starter loses to yours.** In the original games the rival takes
+  the starter that beats yours, which was harsh once modern starters arrive knowing their own
+  type's attack. The rival's starter line now becomes a starter line YOUR starter beats: pick
+  Bulbasaur and the rival leads with a Water line, Charmander a Grass line, Squirtle a Fire
+  line. No stage of it resists your starter's type (Empoleon's Steel would shrug off Grass, so
+  Piplup's line is never the pick against Bulbasaur). Covers Red, Blue, Gold, Silver, Crystal,
+  FireRed and LeafGreen's rival and May and Brendan on Ruby, Sapphire and Emerald (Yellow's
+  Eevee is no starter and is left as it was). At GEN 1, Red's three starters trade places.
+- **The rival's starter evolves when the original does.** In every fight it shows the same
+  stage as the rival's original starter (a first stage while the original is still a
+  Charmander, a final stage when it is a Charizard), instead of evolving on its own line's
+  levels.
+- **Reshuffles existing saves' rival teams once** (the rival's other lines can change too:
+  its starter is now picked first). Other trainers, the facilities and every wild table are
+  unchanged.
+
 ## [0.16.0] - 2026-11-18
 
 ### Changed
