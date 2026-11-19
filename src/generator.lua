@@ -216,7 +216,7 @@ end
 -- time.
 local function eligible(c, env, role, tier, pooled)
   if c.special then return false end
-  if c.gen > env.maxGen then return false end
+  if not env.gens[c.gen] then return false end
   -- COMPLETE (selection.small_role_first_stage): a role too small to give
   -- anyone `complete.min_share` (a 1% slot) holds a first stage, which also
   -- gets a bigger seat elsewhere; an evolved species there would be seen that
@@ -565,7 +565,9 @@ end
 --             mapInfo(id), tables(id) -> { {kind, terrain, def, weights} }
 --   pool      SpeciesPool.build(...) result
 --   seed      per-save seed (any string or number; hashed)
---   maxGen    1..9
+--   maxGen    1..9, or a GENERATIONS key ("5", "1,3,6": Config.genSet), part
+--             of every RNG key
+--   gens      { [gen] = true }, the generations allowed (default: 1..maxGen)
 --   config    Config.SpawnConfig
 --   dataVersion  profile data version (part of the determinism key)
 --   MapContext, Rng  modules
@@ -576,6 +578,17 @@ end
 -- for a map with no wild data. `nonce` distinguishes repeated generations
 -- of the same map under one seed (EVERY MAP visits, RANDOM encounters);
 -- `remember` false leaves `memory` untouched (a throwaway RANDOM draw).
+-- The generations a ctx allows: ctx.gens, else Gen 1 through a numeric maxGen.
+local function gensOf(ctx)
+  if ctx.gens then return ctx.gens end
+  if not ctx._gens then
+    local set = {}
+    for g = 1, tonumber(ctx.maxGen) or 9 do set[g] = true end
+    ctx._gens = set
+  end
+  return ctx._gens
+end
+
 -- One pass over a map's tables into `result`. `period` is TIME OF DAY SPAWNS'
 -- "day"/"night" (nil while OFF), `suffix` a field appended to every RNG key
 -- (the night pass), `record` collects the day pass's picks and seats per kind,
@@ -611,7 +624,7 @@ local function mapPass(ctx, mapId, entries, info, area, memory, nonce, remember,
       end
       local env = {
         terrain = terrain, habitats = place.habitats, mapTypes = place.types,
-        maxGen = ctx.maxGen, config = config, pool = ctx.pool, state = entryState,
+        maxGen = ctx.maxGen, gens = gensOf(ctx), config = config, pool = ctx.pool, state = entryState,
         pooled = entry.pooled,
         history = historyView(history, area, config.history_window_maps),
         areaSpecies = areaSpecies[area],
@@ -752,6 +765,7 @@ function Generator.buildAtlas(ctx)
   -- coverage below is period-neutral (`pooled`) and STRICT only asks that a
   -- species can come out at some time its seat is rolled
   local rules = ctx.config.complete
+  local gens = gensOf(ctx)
   -- How many species a seat holds while each keeps `min_share` percent of
   -- the table's encounters (a 40% role holds 8 at 5%, a 1% role its primary
   -- alone), never more than `max_pool`.
@@ -778,12 +792,12 @@ function Generator.buildAtlas(ctx)
   local function needsSeat(c)
     if not rules.evolved_by_evolving then return true end
     local parent = c.parent and ctx.pool.byId[c.parent]
-    return not (parent and not parent.special and parent.gen <= ctx.maxGen)
+    return not (parent and not parent.special and gens[parent.gen])
   end
 
   local missing = {}
   for _, c in ipairs(ctx.pool.list) do
-    if not c.special and c.gen <= ctx.maxGen and not placed[c.id] and needsSeat(c) then
+    if not c.special and gens[c.gen] and not placed[c.id] and needsSeat(c) then
       local strict = 0
       for _, seat in ipairs(seats) do
         if eligible(c, seat.env, seat.role, 1, true) then strict = strict + 1 end
@@ -846,7 +860,7 @@ function Generator.buildAtlas(ctx)
   local homes = {}
   for i, seat in ipairs(seats) do
     local original = ctx.pool.byId[seat.role.species]
-    if original and not original.special and original.gen <= ctx.maxGen
+    if original and not original.special and gens[original.gen]
         and (not rules.original_homes or needsSeat(original)) then
       local present = false
       for _, id in ipairs(seat.pool) do
@@ -907,7 +921,7 @@ function Generator.legendaryHomes(ctx)
   local rules = config.legendary
   local specials = {}
   for _, c in ipairs(ctx.pool.list) do
-    if c.special and c.gen <= ctx.maxGen then specials[#specials + 1] = c end
+    if c.special and gensOf(ctx)[c.gen] then specials[#specials + 1] = c end
   end
   if #specials == 0 then return {} end
 
@@ -934,7 +948,7 @@ function Generator.legendaryHomes(ctx)
             role = { minLevel = lo, maxLevel = hi, rarity = "v" },
             env = {
               terrain = terrain, habitats = place.habitats, mapTypes = place.types,
-              maxGen = ctx.maxGen, config = config, pool = ctx.pool,
+              maxGen = ctx.maxGen, gens = gensOf(ctx), config = config, pool = ctx.pool,
               state = { species = {}, families = {}, gens = {} },
               history = emptyHistory, areaSpecies = {},
             },

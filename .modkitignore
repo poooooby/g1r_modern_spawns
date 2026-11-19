@@ -46,3 +46,6 @@ tests/fixtures/outer_randomizer/manifest.json
 CLAUDE.md
 .claude/skills/lua-developer/SKILL.md
 tests/options_shortcut_test.lua
+tests/generations_test.lua
+tests/trainers_move_split_test.lua
+tests/trainers_items_test.lua

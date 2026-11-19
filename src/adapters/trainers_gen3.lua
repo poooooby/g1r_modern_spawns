@@ -55,7 +55,9 @@ return function(reg, mod, world)
     local boss = BOSS[className] == true or className:find("TRAINER", 1, true) ~= nil and name ~= "?"
     -- Ruby, Sapphire and Emerald's rival is May or Brendan (POKéMON TRAINER)
     local rival = identity == "rival" or (className:find("TRAINER", 1, true) ~= nil and RSE_RIVALS[name] == true)
-    return identity, gymType, boss, rival
+    -- the Elite Four and the champion: every Pokemon may hold an item (ON + ITEMS)
+    local elite = className == "ELITE FOUR" or className == "CHAMPION"
+    return identity, gymType, boss, rival, elite
   end
 
   -- the registry id for a numeric species slot (the cart's own and modded)
@@ -81,9 +83,18 @@ return function(reg, mod, world)
       local identity, gymType, boss, rival = classify(row, p)
       local info = out[identity] or { appearances = {}, gymType = gymType, boss = boss, rival = rival }
       out[identity] = info
+      -- the lowest and highest of its battles' top levels: the rival's first
+      -- and final battle (ON + ITEMS)
+      local top
       for _, m in ipairs(row.party or {}) do
         local id = speciesIdOf(m.species)
-        if id then info.appearances[#info.appearances + 1] = { species = id, level = tonumber(m.level) or 5 } end
+        local level = tonumber(m.level) or 5
+        if id then info.appearances[#info.appearances + 1] = { species = id, level = level } end
+        top = math.max(top or level, level)
+      end
+      if top then
+        info.firstTop = math.min(info.firstTop or top, top)
+        info.lastTop = math.max(info.lastTop or top, top)
       end
     end
     return out
@@ -97,7 +108,7 @@ return function(reg, mod, world)
     local p = pack()
     local own = p and p.trainers and p.trainers[trainerId]
     if not own then return nil end
-    local identity, gymType, boss, rival = classify(own, p)
+    local identity, gymType, boss, rival, elite = classify(own, p)
     local rows = {}
     for i, row in ipairs(party) do
       if type(row) ~= "table" then return nil end
@@ -115,7 +126,7 @@ return function(reg, mod, world)
                   identity = rowIdentity }
     end
     return { identity = identity, key = "trainer:" .. trainerId, gymType = gymType, boss = boss,
-             rival = rival, rows = rows }
+             rival = rival, elite = elite, rows = rows }
   end
 
   -- ------------------------------------------------------------ moves
@@ -131,12 +142,24 @@ return function(reg, mod, world)
     return TYPE_NAMES[tonumber(t) or -1]
   end
 
+  -- WoobleDex's MOVE SPLIT (option, off by default): physical or special by the move itself, as
+  -- its battles then resolve every hit. Its hub (Types.__ndxSplit, installed once per engine)
+  -- answers nil while the option is off, and for a move with no class; the engine's own class,
+  -- by type, then stands. Choice Band / Choice Specs follow it (src/trainer_items.lua).
+  local function splitCategory(num)
+    local Types = engine("src.core.game3.battle.types")
+    local hub = Types and Types.__ndxSplit
+    if type(hub) ~= "table" or type(hub.categoryOf) ~= "function" then return nil end
+    local ok, c = pcall(hub.categoryOf, tonumber(num))
+    return ok and (c == "physical" or c == "special") and c or nil
+  end
+
   local function moveInfo(num)
     local Moves = engine("src.core.game3.battle.moves")
     local ok, m = pcall(function() return Moves.get(num) end)
     if not ok or type(m) ~= "table" then return nil end
     return { name = m.id, type = typeName(m.type), power = m.power, accuracy = m.accuracy,
-             category = m.category ~= "status" and m.category or nil }
+             category = splitCategory(num) or (m.category ~= "status" and m.category or nil) }
   end
 
   local function slotOf(id)

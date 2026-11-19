@@ -13,7 +13,9 @@
 -- land on exactly the same sets as the original game, only the species (and
 -- moves, buildSet) differ.
 --
--- ctx = { pool (species_pool.lua: list/byId), cap (1..9), seed, Rng,
+-- ctx = { pool (species_pool.lua: list/byId), cap (1..9, or a GENERATIONS
+--         key such as "1,3,6": part of every RNG key), gens ({ [gen] = true },
+--         default Gen 1 through a numeric cap), seed, Rng,
 --         config (Config.TrainerConfig), canShow(id, level)? }
 -- Legendary and mythical species, and forms, are never picked.
 
@@ -59,8 +61,17 @@ end
 -- --------------------------------------------------------------- families
 
 -- The family index over the candidate pool: each species' root, its children
--- (sorted), and which species may be shown under `cap`.
-function Trainers.index(pool, cap)
+-- (sorted), and which species may be shown: those of the generations in
+-- `gens` (default: Gen 1 through `cap`). `next(id)` lists the species a
+-- Pokemon evolves into that may be shown, stepping through a stage of a
+-- generation left out (GEN 2 + 4: Happiny -> (Chansey) -> Blissey); with
+-- Gen 1 through N that never happens, as a left-out stage never has an
+-- allowed one after it.
+function Trainers.index(pool, cap, gens)
+  if not gens then
+    gens = {}
+    for g = 1, tonumber(cap) or 9 do gens[g] = true end
+  end
   local byId = pool.byId
   local children, root = {}, {}
   for _, c in ipairs(pool.list) do
@@ -84,7 +95,22 @@ function Trainers.index(pool, cap)
   end
   local function allowed(id)
     local c = byId[id]
-    return c ~= nil and c.gen <= cap and not c.special and not (c.form or c.baseSpecies)
+    return c ~= nil and gens[c.gen] == true and not c.special and not (c.form or c.baseSpecies)
+  end
+  -- left out only for its generation: an evolution may pass through it
+  local function passable(id)
+    local c = byId[id]
+    return c ~= nil and not gens[c.gen] and not c.special and not (c.form or c.baseSpecies)
+  end
+  local function nextOf(id, out, depth)
+    for _, k in ipairs(children[id] or {}) do
+      if allowed(k) then
+        out[#out + 1] = k
+      elseif passable(k) and depth < 4 then
+        nextOf(k, out, depth + 1)
+      end
+    end
+    return out
   end
   -- a family is usable when any member may be shown
   local usable = {}
@@ -92,6 +118,7 @@ function Trainers.index(pool, cap)
     if allowed(c.id) then usable[root[c.id]] = true end
   end
   return { byId = byId, children = children, root = root, allowed = allowed,
+           next = function(id) return nextOf(id, {}, 0) end,
            roots = sortedKeys(roots), usable = usable }
 end
 
@@ -127,10 +154,7 @@ function Trainers.stageFor(ix, config, rootId, level, minStage, branch, maxStage
   minStage = minStage or 1
   for _ = 1, 4 do
     if maxStage and (byId[cur].stage or 1) >= maxStage then break end
-    local kids = {}
-    for _, k in ipairs(ix.children[cur] or {}) do
-      if ix.allowed(k) then kids[#kids + 1] = k end
-    end
+    local kids = ix.next(cur)
     if #kids == 0 then break end
     local child = byId[kids[#kids == 1 and 1 or branch(cur, #kids, kids)]]
     local gate = child.evolveLevel

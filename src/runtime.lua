@@ -48,7 +48,7 @@ return function(deps)
   local DATA_VERSION = profiles and profiles.version or 0
 
   local Runtime = {}
-  local pool, poolMaxGen
+  local pool, poolMaxGen, poolGens
   local cache = { key = nil, tables = nil }       -- seeded: every map
   local visits = {}                                -- map mode: entries per map
   local visitTables = {}                           -- map mode: [mapId] = { key, result }
@@ -165,9 +165,10 @@ return function(deps)
       return nil
     end
     pool = result
-    poolMaxGen = 1
+    poolMaxGen, poolGens = 1, {}
     for _, c in ipairs(pool.list) do
       if c.gen > poolMaxGen then poolMaxGen = c.gen end
+      poolGens[c.gen] = true
     end
     return pool
   end
@@ -240,22 +241,48 @@ return function(deps)
 
   -- --------------------------------------------------------- activity
 
-  -- The generation cap actually in force: nil means "leave the runtime
-  -- tables alone" (MODERN SPAWNS off, or no species registered at all).
-  function Runtime.effectiveGeneration()
-    if not Config.enabled(mod) then return nil end
-    local cap = Config.maxGeneration(mod)
+  -- The generations GENERATIONS picked that have registered species, as a
+  -- Config.genSet ({ has, list, max, key }), whatever MODERN SPAWNS says; nil
+  -- when none has (no species at all, CUSTOM with every generation OFF, or
+  -- only generations no species mod has added). Its key is "N" for Gen 1-N,
+  -- exactly the old min(cap, highest registered) -- so no existing setting's
+  -- tables or teams drift. TRAINER TEAMS uses it too.
+  function Runtime.registeredGenerations()
     local p = Runtime.pool()
     if not p or #p.list == 0 then return nil end
-    -- the cart's own species are enough (Red's 151, Emerald's 386): a species mod only widens
-    -- the pool. GEN 1 shuffles Gen 1 like any other cap; MODERN SPAWNS OFF is the way back
-    -- to the game's own tables.
-    if poolMaxGen < cap then
-      warnOnce("pool_below_cap", "GENERATIONS allows up to Gen %d but only %s species are "
-        .. "registered -- a species mod (national_dex, national_dex_gen3) adds "
-        .. "more", cap, poolMaxGen == 1 and "Gen 1" or ("Gen 1-" .. poolMaxGen))
+    local picked, set, missing = Config.generations(mod), {}, {}
+    for g in pairs(picked) do
+      if poolGens[g] then set[g] = true else missing[#missing + 1] = g end
     end
-    return math.min(cap, poolMaxGen)
+    if #missing > 0 then
+      table.sort(missing)
+      warnOnce("pool_below_cap", "GENERATIONS includes Gen %s but no species of %s registered "
+        .. "-- a species mod (national_dex, national_dex_gen3) adds more", table.concat(missing, ", "),
+        #missing == 1 and "it is" or "them are")
+    end
+    local gs = Config.genSet(set)
+    if not gs then
+      warnOnce("no_generations", "GENERATIONS leaves no generation with registered species "
+        .. "(CUSTOM with every generation OFF?) -- wild tables stay as the game has them")
+    end
+    return gs
+  end
+
+  -- The generation set in force for wild spawns: nil means "leave the
+  -- runtime tables alone" (MODERN SPAWNS off, no species registered at all,
+  -- or no picked generation has any).
+  function Runtime.effectiveGenerations()
+    if not Config.enabled(mod) then return nil end
+    -- the cart's own species are enough (Red's 151, Emerald's 386): a species mod only widens
+    -- the pool. GEN 1 shuffles Gen 1 like any other setting; MODERN SPAWNS OFF is the way back
+    -- to the game's own tables.
+    return Runtime.registeredGenerations()
+  end
+
+  -- The highest generation in force, or nil when inactive.
+  function Runtime.effectiveGeneration()
+    local gs = Runtime.effectiveGenerations()
+    return gs and gs.max or nil
   end
 
   function Runtime.isActive()
@@ -317,10 +344,12 @@ return function(deps)
     return ok and period or nil
   end
 
-  local function context(gen, seed, only)
+  -- gs: a Config.genSet. maxGen carries its key into every RNG hash (the
+  -- generator compares with gens).
+  local function context(gs, seed, only)
     local tod = todMode()
     return {
-      world = world, pool = Runtime.pool(), seed = seed, maxGen = gen,
+      world = world, pool = Runtime.pool(), seed = seed, maxGen = gs.key, gens = gs.has,
       config = Config.SpawnConfig, dataVersion = DATA_VERSION,
       MapContext = MapContext, Rng = Rng,
       selection = Config.SpawnConfig.selection[Config.spawnMode(mod)],
@@ -336,10 +365,12 @@ return function(deps)
     return tod .. ":" .. TOD_VERSION
   end
 
-  local function announce(gen, seed)
+  local function announce(gs, seed)
     pcall(function()
+      local list = {}
+      for i, g in ipairs(gs.list) do list[i] = g end
       mod.events:emit("mod." .. mod.id .. ".tables_changed",
-        { maxGeneration = gen, seed = seed, mode = Config.spawnMode(mod),
+        { maxGeneration = gs.max, generations = list, seed = seed, mode = Config.spawnMode(mod),
           timeOfDay = todMode() })
     end)
   end
@@ -347,11 +378,11 @@ return function(deps)
   -- SEEDED: every map, generated once per (seed, cap, data version).
   -- COMPLETE DEX: the same, plus every role's pool (Generator.buildAtlas).
   function Runtime.tables()
-    local gen = Runtime.effectiveGeneration()
+    local gen = Runtime.effectiveGenerations()
     if not gen then return nil end
     local seed = Runtime.seed()
     local complete = Config.spawnMode(mod) == "complete"
-    local key = table.concat({ seed, gen, DATA_VERSION, complete and "complete" or "seeded",
+    local key = table.concat({ seed, gen.key, DATA_VERSION, complete and "complete" or "seeded",
                                todKey() }, ":")
     if cache.key == key then return cache.tables end
     local build = complete and Generator.buildAtlas or Generator.buildAll
@@ -369,7 +400,7 @@ return function(deps)
   -- EVERY MAP: the map as generated for its current visit.
   local function visitEntry(mapId, gen, seed)
     local visit = visits[mapId] or 0
-    local key = table.concat({ seed, gen, DATA_VERSION, visit, todKey() }, ":")
+    local key = table.concat({ seed, gen.key, DATA_VERSION, visit, todKey() }, ":")
     local held = visitTables[mapId]
     if held and held.key == key then return held.result end
     local ok, result = pcall(Generator.buildMap, context(gen, seed), mapId,
@@ -388,7 +419,7 @@ return function(deps)
   -- The fixed generated entry for a map under the current mode, or nil
   -- (inactive, no wild data, or RANDOM, which has no fixed table).
   local function entryFor(mapId)
-    local gen = Runtime.effectiveGeneration()
+    local gen = Runtime.effectiveGenerations()
     if not gen or type(mapId) ~= "string" then return nil end
     local mode = Config.spawnMode(mod)
     if mode == "random" then return nil end
@@ -456,7 +487,7 @@ return function(deps)
   -- remembered as a visit, so it never shifts another map's history. With TIME
   -- OF DAY SPAWNS, a roster for `period` alone.
   local function randomDraw(mapId, period)
-    local gen = Runtime.effectiveGeneration()
+    local gen = Runtime.effectiveGenerations()
     if not gen or Config.spawnMode(mod) ~= "random" then return nil end
     encounterCount = encounterCount + 1
     local ok, result = pcall(Generator.buildMap, context(gen, Runtime.seed(), period),
@@ -760,11 +791,11 @@ return function(deps)
   -- Home maps for every legendary/mythical under the current cap, or nil
   -- when inactive. Independent of seed and SPAWN MODE.
   function Runtime.legendaryHomes()
-    local gen = Runtime.effectiveGeneration()
+    local gen = Runtime.effectiveGenerations()
     if not gen then return nil end
     -- COMPLETE DEX guarantees every legendary/mythical a home
     local complete = Config.spawnMode(mod) == "complete"
-    local key = gen .. ":" .. DATA_VERSION .. (complete and ":complete" or "")
+    local key = gen.key .. ":" .. DATA_VERSION .. (complete and ":complete" or "")
     if homesCache.key == key then return homesCache.homes end
     local ctx = context(gen, Runtime.seed())
     ctx.guaranteeHomes = complete

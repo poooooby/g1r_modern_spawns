@@ -27,8 +27,9 @@ if spawns and (spawns.exports.apiVersion or 0) >= 1 and spawns.exports.isActive(
 end
 ```
 
-`apiVersion` is 2. It goes up only when an existing export changes meaning (2: `isActive()` is
-true on GEN 1 and with only the cart's own species, and `maxGeneration()` can answer 1); added
+`apiVersion` is 3. It goes up only when an existing export changes meaning (2: `isActive()` is
+true on GEN 1 and with only the cart's own species, and `maxGeneration()` can answer 1; 3:
+GENERATIONS can be any set, so `maxGeneration()` is only the highest generation in force); added
 exports don't bump it, so test for a newer one by presence,
 `type(exports.chainBonus) == "function"`.
 
@@ -36,8 +37,9 @@ exports don't bump it, so test for a newer one by presence,
 |---|---|
 | `isActive()` | whether generated tables are in use: MODERN SPAWNS ON and at least one species registered (the cart's own count) |
 | `generation()` | `1` (Red/Blue/Yellow), `2` (Gold/Silver/Crystal) or `3` (FireRed/LeafGreen/Ruby/Sapphire/Emerald): which shapes the table functions return |
-| `maxGeneration()` | the generation cap in force, or nil |
-| `settings()` | `{ enabled, maxGeneration, spawnMode, legendaries, shinyChain, timeOfDay, trainerTeams }` as the player set them (`timeOfDay`: `"off"`, `"prefer"` or `"strict"`; `trainerTeams`: `"off"`, `"on"` or `"items"`) |
+| `maxGeneration()` | the highest generation in force, or nil |
+| `generations()` | the generations in force, ascending (`{ 1, 3, 6 }` under CUSTOM), or nil while inactive |
+| `settings()` | `{ enabled, maxGeneration, generations, spawnMode, legendaries, shinyChain, timeOfDay, trainerTeams }` as the player set them (`timeOfDay`: `"off"`, `"prefer"` or `"strict"`; `trainerTeams`: `"off"`, `"on"` or `"items"`) |
 | `period()` | `"day"` or `"night"` on the clock TIME OF DAY SPAWNS follows (WoobleDex's Clock Source on Ruby/Sapphire/Emerald, the device's on FireRed/LeafGreen and Red/Blue/Yellow, the cart's on Gold/Silver/Crystal), whatever the option is set to; nil without a clock |
 | `spawnMode()` | `"seeded"` (LIMITED), `"map"`, `"random"` or `"complete"`; under RANDOM there is no fixed table, so `tableFor` / `superRodFor` / `explain` return nil |
 | `seed()` / `setSeed(text)` / `rerollSeed()` | read or change the loaded save's seed |
@@ -53,10 +55,10 @@ exports don't bump it, so test for a newer one by presence,
 | `chainBonus(species)` | for an encounter of `species` (an id or the engine's number): `{ shiny = chance 0..1, perfectIvs = 0..3 }`, or nil. The consumer makes it shiny and sets the stats |
 | `chainRecord(species, result)` | count a fight that wasn't a real battle (an overworld companion's): `"win"` / `"catch"` extend the chain, `"run"` ends it |
 | `explain(mapId, terrain, period?)` | per-slot records: species, replaced, score, reasons, penalties (`period` as for `tableFor`) |
-| `candidates(opts)` | the candidate pool, filterable by generation, terrain, level range and habitat |
+| `candidates(opts)` | the candidate pool, filterable by generation (`maxGeneration`, or `generations` = a list), terrain, level range and habitat |
 | `profileOf(speciesId)` | one species' spawn profile (with `candidates`: `timeOfDay` `"day"`/`"night"`/nil, `timeOfDayOnly` when it only comes out then, and `evolvesFrom`, the species it evolves from) |
 | `invalidate()` | drop cached tables |
-| `trainerTeams()` | TRAINER TEAMS: `{ mode, maxGeneration, active }`; `active` while it is not OFF and species are registered (independent of MODERN SPAWNS) |
+| `trainerTeams()` | TRAINER TEAMS: `{ mode, maxGeneration, generations, active }`; `active` while it is not OFF and species are registered (independent of MODERN SPAWNS) |
 | `trainerTeamFor(class, id, party)` | with the `trainer.party` hook's own arguments for the running game: a copy of the team that battle fields, or nil when TRAINER TEAMS leaves it alone |
 | `trainerIdentity(class, id, party)` | who that battle's trainer is (`"rival"`, `"LEADER:ROXANNE"`, `"FALKNER:FALKNER"`, ...): rematches and rounds share one identity and so one family map; nil when left alone |
 | `facilitySpecies(name)` | a battle facility's one-to-one species map for this save, `{ [original id] = new id }`, or nil (OFF, or no such facility on this cart). Names: `crystal_battle_tower`, `emerald_frontier` (every Frontier facility, the Battle Tents, Pyramid and Pike wild Pokémon), `trainer_hill`, `rs_battle_tower`, `frlg_trainer_tower` |
@@ -99,6 +101,15 @@ are synced; and if another mod writes the same tables, the last writer wins.
 ## How species are chosen
 
 The game's own tables are the skeleton; only data the game lacks is added.
+
+- **Generations.** `Config.generations(mod)` is the player's set: Gen 1 through N for a
+  numeric GENERATIONS, or the `gen_1` … `gen_9` toggles under CUSTOM (shown only then, by
+  `visible_if`). `Runtime.registeredGenerations()` intersects it with the generations that
+  have registered species and wraps it in `Config.genSet`: `{ has, list, max, key }`. The
+  generator and the trainer planner test `gens[c.gen]`. `key` enters every RNG hash and cache
+  key: `"N"` for Gen 1-N, exactly the old single cap, so those settings never drift, and the
+  list (`"1,3,6"`) otherwise. An empty set is inactive (the game's own tables). A pure ctx
+  with a numeric `maxGen` and no `gens` means Gen 1 through it (the fixture tests).
 
 - **From the running game:** each map's rate, slot levels, odds ladder and Super Rod groups;
   the tileset; which species are registered; their dex number, types and base stats; and
@@ -201,6 +212,11 @@ identical with it ON or OFF.
   (`type_weight`) plus `bst_per_point` per point of base stat total away from the original,
   where a typed boss measures from the original + `gym_bst_lift` (60), so it favours the
   stronger families of its type (`TrainerConfig`, `src/config.lua`).
+- **Generations** apply to trainers as to wild spawns: `TR.generations()` is
+  `Runtime.registeredGenerations()` (a `Config.genSet`). `Trainers.index(pool, key, gens)`
+  allows `gens[c.gen]`; `ix.next(id)` steps through a stage left out only for its generation
+  (GEN 2 + 4: Happiny -> Blissey), which never happens for Gen 1-N. Items take `gens` (the
+  picks plus the cart's own generations) in place of `maxGen`.
 - **The rival's starter** (`planIdentity`'s `rival` flag: identity `"rival"`, or May / Brendan
   on Ruby/Sapphire/Emerald via `info.rival`). The original rival's starter beats the player's,
   so its line is replaced by a starter line the player's starter beats (`Trainers.BEATS`
@@ -213,9 +229,20 @@ identical with it ON or OFF.
   rest, all from its own level-up moves at that level.
 - **Items** (ON + ITEMS): an item is offered only when its generation is at most
   `max(cap, the cart's generation)`, it exists, and its held effect runs (the cart's own, or
-  WoobleDex's `_held` / `_heldModern`). Bosses: the highest-level Pokémon gets an ace item,
-  the rest alternate type item / Berry; other trainers a 20% chance. The game's own held items
-  are kept.
+  WoobleDex's `_held` / `_heldModern`). Who holds an item scales with progress
+  (`trainer_runtime.lua` `holdersOf`, numbers in `TrainerConfig.items`): the battle's stage is
+  its ace's level (early < `mid_level` 20 <= mid < `late_level` 35 <= late). Elite Four and
+  champions (adapter `elite`) and the rival's final battle (top level = the identity's
+  `lastTop`): every Pokémon, `strong`. The rival's first battle (`firstTop`): none. Another boss:
+  its ace always (`basic` early, `ace` mid, `ace` + `strong` late), each other with
+  `others[stage]`. Ordinary trainers: `ordinary[stage]` items per team (fraction = chance of one
+  more), the strongest first, `basic` only, the game's own items counting. `basic` = type
+  booster or Berry; `strong` gates the competitive rows of `Items.ACE`. No item twice on a team,
+  told apart by `adapter.itemNumber` where the game has one. The game's own held items are kept. Choice Band / Specs read each move's `category` from the adapter: with WoobleDex's
+  MOVE SPLIT on, the move's own class (Gen 3: its hub `Types.__ndxSplit.categoryOf(num)`, nil
+  while off; Gen 2: its `move_split` option and `moveById(id).damageClass`), else the split by
+  type. `exports._trainerMovesFor(id, level)` is the test seam
+  (`tests/trainers_move_split_test.lua`; WoobleDex installs the hub on `game.ready`).
 - **Facilities.** Each facility gets one one-to-one species map per save
   (`Planner.facilityMap`: replacements come only from species outside the facility's own, so
   two sets never collapse into one species). The facilities' own "no repeated species / item"

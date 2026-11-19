@@ -3,6 +3,7 @@
 -- Player-facing options (options.lua is the schema; one reader each below):
 --   enabled         "on" | "off"       MODERN SPAWNS ("off": the game's own tables)
 --   max_generation  "1" .. "9"         GENERATIONS (Gen 1 only .. Gen 1-9)
+--                   "custom"           the gen_1 .. gen_9 toggles (Config.generations)
 --   spawn_mode, time_of_day, legendaries, shiny_chain, seed, reroll_seed
 --
 -- SpawnConfig holds every tuning number the generator uses, so balancing is
@@ -167,8 +168,25 @@ Config.TrainerConfig = {
   -- facilities (one-to-one species maps): type, base stats, and a fully
   -- evolved species replacing a fully evolved one
   facility = { top = 8, temperature = 6, type_weight = 10, bst_per_point = -0.2, final = 10 },
-  -- ON + ITEMS: an ordinary trainer's Pokemon holds something this often
-  ordinary_item_chance = 0.2,
+  -- ON + ITEMS: who holds what scales with how far into the game a battle
+  -- is, by its ace's level (its highest): "early" below mid_level (the first
+  -- Gyms), "mid" below late_level, "late" from there. Items a Pokemon
+  -- already held in the original game are kept and count.
+  --   ordinary  items per ordinary trainer's team: a fraction is a chance of
+  --             one more (0.5: none or one; 1.5: one or two). Its strongest
+  --             Pokemon first; a Berry or its type booster only.
+  --   others    a major battle (Gym Leader, the rival, a team boss): its ace
+  --             always holds something (early a Berry or its type booster,
+  --             mid also Leftovers / Black Sludge, late competitive items
+  --             such as Life Orb or Choice Band); each of its other Pokemon
+  --             with this chance.
+  -- The Elite Four, champions and the rival's final battle: every Pokemon,
+  -- any item. The rival's first battle: nothing.
+  items = {
+    mid_level = 20, late_level = 35,
+    ordinary = { early = 0, mid = 0.5, late = 1.5 },
+    others = { early = 0, mid = 0.4, late = 0.7 },
+  },
 }
 
 -- TRAINER TEAMS (default OFF): trainers, gym leaders, the Elite Four, the
@@ -270,13 +288,62 @@ function Config.shinyChain(mod)
   return value == "on" or value == true
 end
 
-function Config.maxGeneration(mod)
-  local value = tonumber(get(mod, "max_generation", Config.DEFAULT_MAX_GENERATION))
+-- GENERATIONS: "1".."9" (Gen 1 through N) or "custom" (the GEN 1..GEN 9
+-- toggles, keys gen_1..gen_9, default ON).
+local function numericCap(value)
+  value = tonumber(value)
   if not value then return tonumber(Config.DEFAULT_MAX_GENERATION) end
   value = math.floor(value)
   if value < 1 then return 1 end
   if value > Config.MAX_GENERATION then return Config.MAX_GENERATION end
   return value
+end
+
+-- The generations the player picked, as a set { [gen] = true } (may be
+-- empty under CUSTOM with every toggle off).
+function Config.generations(mod)
+  local value = get(mod, "max_generation", Config.DEFAULT_MAX_GENERATION)
+  local set = {}
+  if value == "custom" then
+    for g = 1, Config.MAX_GENERATION do
+      local on = get(mod, "gen_" .. g, true)
+      if on == true or on == "on" then set[g] = true end
+    end
+  else
+    for g = 1, numericCap(value) do set[g] = true end
+  end
+  return set
+end
+
+-- The highest generation picked (1 when none is).
+function Config.maxGeneration(mod)
+  local best = 1
+  for g in pairs(Config.generations(mod)) do
+    if g > best then best = g end
+  end
+  return best
+end
+
+-- A generation set in the shape the rest of the mod uses:
+--   has  { [gen] = true }      list  the gens, ascending
+--   max  the highest (nil when empty)
+--   key  what enters RNG hashes and cache keys: "N" for Gen 1-N (exactly as
+--        the old single cap did, so those settings never drift), else the
+--        list joined with commas ("1,3,6"), which no number can collide with
+-- nil when the set is empty.
+function Config.genSet(set)
+  local list = {}
+  for g in pairs(set or {}) do list[#list + 1] = g end
+  if #list == 0 then return nil end
+  table.sort(list)
+  local has, contiguous = {}, true
+  for i, g in ipairs(list) do
+    has[g] = true
+    if g ~= i then contiguous = false end
+  end
+  local max = list[#list]
+  return { has = has, list = list, max = max,
+           key = contiguous and tostring(max) or table.concat(list, ",") }
 end
 
 -- ------------------------------------------------------------ option writes

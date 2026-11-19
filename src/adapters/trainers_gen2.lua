@@ -27,6 +27,8 @@ return function(reg, mod)
   -- bosses with no single type, and the rival
   local BOSS = { BLUE = true, RED = true, RIVAL1 = true, RIVAL2 = true }
   local RIVAL = { RIVAL1 = true, RIVAL2 = true }
+  -- the Elite Four and the champion: every Pokemon may hold an item (ON + ITEMS)
+  local ELITE = { WILL = true, KOGA = true, BRUNO = true, KAREN = true, CHAMPION = true }
 
   local function memberOf(class, memberId)
     local record = reg.get("trainers", class)
@@ -51,10 +53,19 @@ return function(reg, mod)
         local id = A.identityOf(class, member)
         local info = out[id] or { appearances = {}, gymType = A.GYM_TYPES[class], boss = isBoss(class) }
         out[id] = info
+        -- the lowest and highest of its battles' top levels: the rival's
+        -- first and final battle (ON + ITEMS)
+        local top
         for _, row in ipairs(member.party or {}) do
           if type(row.species) == "string" then
-            info.appearances[#info.appearances + 1] = { species = row.species, level = tonumber(row.level) or 5 }
+            local level = tonumber(row.level) or 5
+            info.appearances[#info.appearances + 1] = { species = row.species, level = level }
+            top = math.max(top or level, level)
           end
+        end
+        if top then
+          info.firstTop = math.min(info.firstTop or top, top)
+          info.lastTop = math.max(info.lastTop or top, top)
         end
       end
     end
@@ -75,18 +86,38 @@ return function(reg, mod)
                   item = mon.item, customMoves = own and own.moves and #own.moves > 0 }
     end
     return { identity = A.identityOf(class, member), key = class .. ":" .. memberId,
-             gymType = A.GYM_TYPES[class], boss = isBoss(class), rows = rows }
+             gymType = A.GYM_TYPES[class], boss = isBoss(class), elite = ELITE[class] == true, rows = rows }
   end
 
   local function data() return mod.game and mod.game.data end
 
   local function plainType(t) return t and (tostring(t):gsub("_TYPE$", "")) or nil end
 
-  -- move -> { name, type (plain), power, accuracy }
+  -- WoobleDex's MOVE SPLIT (option move_split, off by default; one setting for every game):
+  -- physical or special by the move itself, as its battles then resolve every hit, from the
+  -- move's damage class in today's games (its moveById export). nil while the option is off,
+  -- for a status move, or without WoobleDex: the game's own split by type stands
+  -- (src/trainer_items.lua). Choice Band / Choice Specs follow it.
+  local function splitCategory(id)
+    local okO, on = pcall(function()
+      local options = mod.game.mods.modOptions
+      return options and options.national_dex_gen3 and options.national_dex_gen3.move_split
+    end)
+    if not (okO and on == true) then return nil end
+    local okF, dex = pcall(function() return mod:find("national_dex_gen3") end)
+    local fn = okF and type(dex) == "table" and type(dex.exports) == "table" and dex.exports.moveById
+    if type(fn) ~= "function" then return nil end
+    local ok, rec = pcall(fn, id)
+    local c = ok and type(rec) == "table" and rec.damageClass
+    return (c == "physical" or c == "special") and c or nil
+  end
+
+  -- move -> { name, type (plain), power, accuracy, category? (MOVE SPLIT only) }
   local function moveInfo(id)
     local m = data() and data().moves and data().moves[id]
     if not m then return nil end
-    return { name = m.id or id, type = plainType(m.type), power = m.power, accuracy = m.accuracy }
+    return { name = m.id or id, type = plainType(m.type), power = m.power, accuracy = m.accuracy,
+             category = splitCategory(id) }
   end
 
   local function typesOf(species)

@@ -13,7 +13,8 @@
 -- API VERSIONING: apiVersion only goes up, and only when an existing field
 -- changes meaning or disappears; check `>=`, never `==`.
 --
--- Event: mod.modern_spawns.tables_changed { maxGeneration, seed, mode, timeOfDay }
+-- Event: mod.modern_spawns.tables_changed { maxGeneration, generations, seed, mode,
+-- timeOfDay }
 -- fires each time tables are (re)generated (under EVERY MAP: once per map visit).
 -- Event: mod.modern_spawns.period_changed { period, previous } fires when TIME OF
 -- DAY SPAWNS sees the clock turn ("day" <-> "night"); a consumer holding visible
@@ -60,32 +61,58 @@ return function(deps)
   -- for a newer function by presence, `type(exports.drawFor) == "function"`.
   -- 2: isActive is true on GEN 1 and with only the cart's species (it was false for both),
   -- and maxGeneration can answer 1.
-  exports.apiVersion = 2
+  -- 3: GENERATIONS can be any set of generations (CUSTOM: Gen 1, 3, 6), so
+  -- maxGeneration is the highest one in force, no longer "every generation up
+  -- to it"; read generations() for the set.
+  exports.apiVersion = 3
 
   exports.isActive = function()
     return Runtime.isActive()
   end
 
-  -- The generation cap in force (2..9), or nil when inactive.
+  local function listOf(gs)
+    if not gs then return nil end
+    local out = {}
+    for i, g in ipairs(gs.list) do out[i] = g end
+    return out
+  end
+
+  -- The highest generation in force (1..9), or nil when inactive.
   exports.maxGeneration = function()
     return Runtime.effectiveGeneration()
   end
 
-  -- The player's settings, whatever is in force.
+  -- The generations in force, ascending ({ 1, 3, 6 }), or nil when inactive.
+  exports.generations = function()
+    return listOf(Runtime.effectiveGenerations())
+  end
+
+  -- The player's settings, whatever is in force: maxGeneration the highest
+  -- generation picked, generations every one picked (may be empty).
   exports.settings = function()
+    local picked = setToList(Config.generations(mod))
     return { enabled = Config.enabled(mod), maxGeneration = Config.maxGeneration(mod),
+             generations = picked,
              spawnMode = Config.spawnMode(mod), legendaries = Config.legendaries(mod),
              shinyChain = Config.shinyChain(mod), timeOfDay = Runtime.timeOfDay(),
              trainerTeams = Config.trainerTeams(mod) }
   end
 
   -- TRAINER TEAMS (since 0.15.0): { mode = "off"|"on"|"items", maxGeneration,
-  -- active } -- active while ON with species to draw from (independent of
-  -- MODERN SPAWNS).
+  -- generations, active } -- active while ON with species to draw from
+  -- (independent of MODERN SPAWNS).
   local Trainers = deps.Trainers
   exports.trainerTeams = function()
-    local cap = Trainers and Trainers.cap() or nil
-    return { mode = Config.trainerTeams(mod), maxGeneration = cap, active = cap ~= nil }
+    local gs = Trainers and Trainers.generations and Trainers.generations() or nil
+    return { mode = Config.trainerTeams(mod), maxGeneration = gs and gs.max or nil,
+             generations = listOf(gs), active = gs ~= nil }
+  end
+  -- Test seam: the moves (with their physical / special category) TRAINER
+  -- TEAMS' held items are chosen by for species `id` at `level`, or nil.
+  exports._trainerMovesFor = function(id, level)
+    if not (Trainers and Trainers.movesFor) then return nil end
+    local ok, out = pcall(Trainers.movesFor, id, level)
+    return ok and deepCopy(out) or nil
   end
   -- The team a battle would field: trainerTeamFor(class, id, party) with the
   -- trainer.party hook's own arguments for the running game; a copy of the
@@ -215,17 +242,24 @@ return function(deps)
     return deepCopy(Runtime.explain(mapId, terrain, period))
   end
 
-  -- Candidate pool entries. opts (all optional): maxGeneration, terrain
+  -- Candidate pool entries. opts (all optional): maxGeneration, generations
+  -- (a list: only these), terrain
   -- ("grass"|"cave"|"water"|"fish"), minLevel/maxLevel (overlap), habitat,
   -- includeSpecial (legendary/mythical are left out unless true).
   exports.candidates = function(opts)
     opts = opts or {}
     local pool = Runtime.pool()
     if not pool then return {} end
+    local only
+    if type(opts.generations) == "table" then
+      only = {}
+      for _, g in ipairs(opts.generations) do only[g] = true end
+    end
     local out = {}
     for _, c in ipairs(pool.list) do
       local ok = (opts.includeSpecial or not c.special)
         and (not opts.maxGeneration or c.gen <= opts.maxGeneration)
+        and (not only or only[c.gen] == true)
         and (not opts.terrain or c.terrains[opts.terrain])
         and (not opts.habitat or c.habitats[opts.habitat])
         and (not opts.minLevel or c.hi >= opts.minLevel)

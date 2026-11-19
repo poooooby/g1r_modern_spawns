@@ -3,6 +3,53 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.17.0] - 2026-11-19
+
+### Added
+
+- **CUSTOM GENERATIONS.** GENERATIONS gains a last choice, CUSTOM, which shows a GEN 1 (KANTO)
+  … GEN 9 (PALDEA) switch for each generation right under it (hidden again for any other
+  choice). Pick any mix: Gen 3-8, or Gen 1, 3 and 6. It covers wild Pokémon in every SPAWN MODE,
+  COMPLETE's catch-them-all guarantee (every species of the picked generations is catchable or
+  evolves from one that is), legendary homes, TRAINER TEAMS and its held items (only items of
+  the picked generations, plus the game's own). Every switch starts ON, so CUSTOM begins as
+  GEN 1-9.
+  - Trainers step through a left-out stage: with Gen 2 and 4 only, a Happiny grows straight
+    into Blissey (Chansey is Gen 1).
+  - Every switch off, or only generations no species mod adds: the game's original tables.
+- **API:** `generations()` (the generations in force, ascending), `settings().generations`,
+  `trainerTeams().generations`, `tables_changed`'s `generations`, `candidates({ generations })`.
+
+### Changed
+
+- **TRAINER TEAMS' held items (ON + ITEMS) grow with the journey** instead of every boss Pokémon
+  holding one from the first Gym (user request: fair for a regular player, and sensible for the
+  world). By how far into the game a battle is (its strongest Pokémon's level):
+  - the rival's first battle: nothing new;
+  - ordinary trainers: nothing before Lv 20, then one item half the time, from Lv 35 one or
+    two; a Berry or a type booster only (they used to have a 1-in-5 chance per Pokémon of
+    either, from the start);
+  - Gym Leaders, the rival and team bosses: the strongest Pokémon always holds something (a
+    Berry or its type booster before Lv 20, also Leftovers / Black Sludge before Lv 35,
+    competitive items such as Life Orb, Choice items, Focus Sash, Eviolite and Assault Vest
+    after); each of the others 40% of the time mid-game, 70% late;
+  - the Elite Four, champions and the rival's final battle: every Pokémon, any item.
+  Measured over every story trainer on Crystal and Emerald (`trainers_items_test`). Teams and
+  wild Pokémon are unchanged.
+- **Fixed: a team could hold two of one item** when two names are one item (Gold's
+  MIRACLEBERRY is the Lum Berry: Emerald's Drake held two). Items are now told apart by the
+  game's item number.
+- **TRAINER TEAMS' held items follow WoobleDex's Move Split.** With Move Split on (Gold, Silver,
+  Crystal and the Gen 3 games), Choice Band and Choice Specs are handed out by each move's own
+  physical / special class, as the battles then work it out: a Gengar with Shadow Ball and
+  Sludge Bomb is a special attacker, a Houndoom with Crunch and Fire Punch a physical one. With
+  Move Split off (or without WoobleDex), the game's own split by type, unchanged.
+- **API: `apiVersion` 3.** `maxGeneration()` is the highest generation in force, no longer
+  "every generation up to it"; read `generations()` for the set.
+- GEN 1 … GEN 1-9 are unchanged, byte for byte: wild tables in every mode and TIME OF DAY
+  SPAWNS, trainer teams and items (measured on Red, Crystal, FireRed and Emerald at GEN 1, 3
+  and 9). CUSTOM with every switch ON is GEN 1-9 exactly.
+
 ## [0.16.1] - 2026-11-19
 
 ### Changed

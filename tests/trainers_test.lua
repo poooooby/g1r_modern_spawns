@@ -289,15 +289,17 @@ local strong = { hp = 78, attack = 84, defense = 78, speed = 100, spAttack = 109
 local rng = Rng.new(1)
 T.eq(Items.choose({ role = "ace", mon = fire, stats = strong, maxGen = 3, available = everything, rng = rng }),
      "LEFTOVERS", "GEN 1-3: a Gen 3 ace holds Leftovers, no Life Orb")
+T.eq(Items.choose({ role = "ace", strong = true, mon = fire, stats = strong, maxGen = 4, available = everything, rng = rng }),
+     "LIFE_ORB", "GEN 1-4: an offensive late-game ace holds a Life Orb")
 T.eq(Items.choose({ role = "ace", mon = fire, stats = strong, maxGen = 4, available = everything, rng = rng }),
-     "LIFE_ORB", "GEN 1-4: an offensive ace holds a Life Orb")
+     "LEFTOVERS", "a mid-game ace: no competitive item, Leftovers")
 local poison = { types = set({ "POISON" }), canEvolve = false, moves = { { type = "POISON", power = 80 } } }
 T.eq(Items.choose({ role = "ace", mon = poison, stats = { hp = 90, attack = 60, defense = 80, speed = 50,
      spAttack = 60, spDefense = 80 }, maxGen = 9, available = everything, rng = rng }),
      "BLACK_SLUDGE", "a Poison type holds Black Sludge over Leftovers")
-T.eq(Items.choose({ role = "ace", mon = { types = set({ "NORMAL" }), canEvolve = true,
+T.eq(Items.choose({ role = "ace", strong = true, mon = { types = set({ "NORMAL" }), canEvolve = true,
      moves = { { type = "NORMAL", power = 40 } } }, stats = strong, maxGen = 9, available = everything, rng = rng }),
-     "EVIOLITE", "one that can still evolve holds an Eviolite")
+     "EVIOLITE", "one that can still evolve holds an Eviolite (late game)")
 T.eq(Items.choose({ role = "boss", slot = 1, mon = fire, stats = strong, maxGen = 3, available = everything, rng = rng }),
      "CHARCOAL", "a boss's odd slot holds its type's booster")
 T.eq(Items.choose({ role = "boss", slot = 1, mon = fire, stats = strong, maxGen = 4, available = everything, rng = rng }),
@@ -309,14 +311,13 @@ T.eq(Items.choose({ role = "boss", slot = 2, mon = fire, stats = strong, maxGen 
 T.eq(Items.choose({ role = "ace", mon = fire, stats = strong, maxGen = 9,
      available = available(set({ "CHARCOAL" })), rng = rng }), "CHARCOAL",
      "only what the game has: an item missing from the game is never handed out")
-T.eq(Items.choose({ role = "ace", mon = fire, stats = strong, maxGen = 9, available = everything, rng = rng,
+T.eq(Items.choose({ role = "ace", strong = true, mon = fire, stats = strong, maxGen = 9, available = everything, rng = rng,
      used = { LIFE_ORB = true } }) ~= "LIFE_ORB", true, "no two of an item on one team")
-local held = 0
-local orng = Rng.new(Rng.hash("ordinary"))
-for _ = 1, 1000 do
-  if Items.choose({ role = "ordinary", mon = fire, stats = strong, maxGen = 9, available = everything,
-                    rng = orng, chance = 0.2 }) then held = held + 1 end
-end
-T.check(held > 140 and held < 260, "an ordinary trainer's Pokemon holds something about 1 in 5 times (" .. held .. ")")
+-- "basic" (an early Gym's ace, an ordinary trainer): its type booster or a Berry, never more
+T.eq(Items.choose({ role = "basic", mon = fire, stats = strong, maxGen = 9, available = everything, rng = rng }),
+     "FLAME_PLATE", "basic: its type's booster")
+T.eq(Items.choose({ role = "basic", mon = { types = set({ "NORMAL" }), canEvolve = true, moves = {} }, stats = strong,
+     maxGen = 9, available = available(set({ "EVIOLITE", "LEFTOVERS", "SITRUS_BERRY" })), rng = rng }),
+     "SITRUS_BERRY", "basic: no Eviolite or Leftovers, a Berry")
 
 T.finish("modern_spawns trainers (planner)")

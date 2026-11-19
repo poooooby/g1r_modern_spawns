@@ -24,8 +24,56 @@ return {
       { "GEN 1", "1" }, { "GEN 1-2", "2" }, { "GEN 1-3", "3" },
       { "GEN 1-4", "4" }, { "GEN 1-5", "5" }, { "GEN 1-6", "6" },
       { "GEN 1-7", "7" }, { "GEN 1-8", "8" }, { "GEN 1-9", "9" },
+      { "CUSTOM", "custom" },
     },
-    description = "Which generations wild Pokemon may come from. With only the game's own Pokemon (no species mod), GEN 1 shuffles Red/Blue/Yellow's 151, Gold/Silver/Crystal mix their 251 and the Gen 3 games their 386. A species mod adds more: national_dex (Red/Blue/Yellow), national_dex_gen3 (FireRed to Emerald). MODERN SPAWNS OFF gives the original tables.",
+    description = "Which generations wild Pokemon (and, with TRAINER TEAMS, trainers' Pokemon) may come from. GEN 1-N: Gen 1 through N. CUSTOM: any mix (Gen 3-8, or Gen 1, 3 and 6), picked with the GEN 1 .. GEN 9 rows that appear below it. With only the game's own Pokemon (no species mod), GEN 1 shuffles Red/Blue/Yellow's 151, Gold/Silver/Crystal mix their 251 and the Gen 3 games their 386. A species mod adds more: national_dex (Red/Blue/Yellow), national_dex_gen3 (FireRed to Emerald). MODERN SPAWNS OFF gives the original tables.",
+  },
+  -- CUSTOM's picks: shown only while GENERATIONS is CUSTOM (the Manager has no
+  -- checkbox list; visible_if keeps them in the schema and stored options)
+  {
+    key = "gen_1", label = "GEN 1 (KANTO)", type = "toggle", default = true,
+    visible_if = { key = "max_generation", equals = "custom" },
+    description = "CUSTOM GENERATIONS: ON lets Pokemon from Gen 1 (Kanto) appear.",
+  },
+  {
+    key = "gen_2", label = "GEN 2 (JOHTO)", type = "toggle", default = true,
+    visible_if = { key = "max_generation", equals = "custom" },
+    description = "CUSTOM GENERATIONS: ON lets Pokemon from Gen 2 (Johto) appear.",
+  },
+  {
+    key = "gen_3", label = "GEN 3 (HOENN)", type = "toggle", default = true,
+    visible_if = { key = "max_generation", equals = "custom" },
+    description = "CUSTOM GENERATIONS: ON lets Pokemon from Gen 3 (Hoenn) appear.",
+  },
+  {
+    key = "gen_4", label = "GEN 4 (SINNOH)", type = "toggle", default = true,
+    visible_if = { key = "max_generation", equals = "custom" },
+    description = "CUSTOM GENERATIONS: ON lets Pokemon from Gen 4 (Sinnoh) appear.",
+  },
+  {
+    key = "gen_5", label = "GEN 5 (UNOVA)", type = "toggle", default = true,
+    visible_if = { key = "max_generation", equals = "custom" },
+    description = "CUSTOM GENERATIONS: ON lets Pokemon from Gen 5 (Unova) appear.",
+  },
+  {
+    key = "gen_6", label = "GEN 6 (KALOS)", type = "toggle", default = true,
+    visible_if = { key = "max_generation", equals = "custom" },
+    description = "CUSTOM GENERATIONS: ON lets Pokemon from Gen 6 (Kalos) appear.",
+  },
+  {
+    key = "gen_7", label = "GEN 7 (ALOLA)", type = "toggle", default = true,
+    visible_if = { key = "max_generation", equals = "custom" },
+    description = "CUSTOM GENERATIONS: ON lets Pokemon from Gen 7 (Alola) appear.",
+  },
+  {
+    key = "gen_8", label = "GEN 8 (GALAR)", type = "toggle", default = true,
+    visible_if = { key = "max_generation", equals = "custom" },
+    description = "CUSTOM GENERATIONS: ON lets Pokemon from Gen 8 (Galar) appear.",
+  },
+  {
+    key = "gen_9", label = "GEN 9 (PALDEA)", type = "toggle", default = true,
+    visible_if = { key = "max_generation", equals = "custom" },
+    description = "CUSTOM GENERATIONS: ON lets Pokemon from Gen 9 (Paldea) appear.",
   },
   {
     key = "spawn_mode",
@@ -66,7 +114,7 @@ return {
     type = "choice",
     default = "off",
     choices = { { "OFF", "off" }, { "ON", "on" }, { "ON + ITEMS", "items" } },
-    description = "ON: trainers, gym leaders, the Elite Four, the rival and the end-game facilities field Pokemon from the generations GENERATIONS allows, chosen to fit their original teams. A gym keeps its type, and the rival's Pokemon stay the same lines from fight to fight, evolving as they level up. Levels and team sizes are the game's own. ON + ITEMS: they also hold fitting items (Gold/Silver/Crystal and the Gen 3 games; newer items like Life Orb or Eviolite need WoobleDex and a GENERATIONS range that includes them). Works whether MODERN SPAWNS is on or off, from the save's seed. OFF: the game's own teams.",
+    description = "ON: trainers, gym leaders, the Elite Four, the rival and the end-game facilities field Pokemon from the generations GENERATIONS allows, chosen to fit their original teams. A gym keeps its type, and the rival's Pokemon stay the same lines from fight to fight, evolving as they level up. Levels and team sizes are the game's own. ON + ITEMS: they also hold fitting items, more as the game goes on: nothing new in the rival's first battle or from ordinary trainers early on, a Berry or booster on an early Gym Leader's strongest Pokemon, competitive items from about Lv 35, and items on every Pokemon of the Elite Four, the Champion and the rival's last battle (Gold/Silver/Crystal and the Gen 3 games; newer items like Life Orb or Eviolite need WoobleDex and a GENERATIONS range that includes them). Works whether MODERN SPAWNS is on or off, from the save's seed. OFF: the game's own teams.",
   },
   {
     -- Mirrors the loaded save's seed (src/runtime.lua keeps it in sync);

@@ -184,7 +184,8 @@ local schema, byKey = H.schema()
 local keys = {}
 for i, row in ipairs(schema) do keys[i] = row.key end
 T.eq(table.concat(keys, ","),
-     "enabled,max_generation,spawn_mode,time_of_day,legendaries,shiny_chain,trainer_teams,seed,reroll_seed",
+     "enabled,max_generation,gen_1,gen_2,gen_3,gen_4,gen_5,gen_6,gen_7,gen_8,gen_9,"
+       .. "spawn_mode,time_of_day,legendaries,shiny_chain,trainer_teams,seed,reroll_seed",
      "the Mod Manager schema carries every setting, in menu order")
 T.eq(byKey.enabled.label, "MODERN SPAWNS", "MODERN SPAWNS row")
 T.eq(byKey.max_generation.label, "GENERATIONS", "GENERATIONS row")

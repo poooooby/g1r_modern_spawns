@@ -17,6 +17,8 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
 - 🌱 **New Pokémon, same game feel:** Every wild encounter table is refilled with species from
   across the generations. Each map keeps the game's own encounter rate, levels and odds; only
   the Pokémon change.
+- 🧩 **Your generations, your mix:** Allow Gen 1 through any generation, or pick exactly the
+  ones you want (just Gen 3-8, or Gen 1, 3 and 6) with CUSTOM.
 - 🧭 **Pokémon that belong there:** Species are chosen to fit each spot's levels, terrain and
   habitat. Water types by the sea, Ghosts in Pokémon Tower and Mt. Pyre, Electric types in the
   Power Plant and New Mauville, Bugs in the forests, Ground types in the desert, Ice types in
@@ -70,13 +72,22 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
   Trainer Hill, Ruby and Sapphire's Battle Tower and FireRed and LeafGreen's Trainer Tower.
   Each Pokémon keeps its set's item, nature and training and gets moves of its own species.
   The Battle Factory's rentals turn modern too.
-- 🎒 **Held items** (ON + ITEMS): Gym Leaders, the Elite Four, champions and your rival hand
-  their Pokémon fitting items, their strongest one a standout like Leftovers. Other trainers' Pokémon sometimes carry a Berry or a type
-  booster. Newer items such as Life Orb, Choice Specs, Focus Sash, Black Sludge, Eviolite and
-  Assault Vest turn up once GENERATIONS reaches them, with
+- 🎒 **Held items** (ON + ITEMS) that grow with your journey, so the first battles stay fair:
+  - **Your rival's first battle** and the trainers before the third Gym hold nothing new.
+  - **Gym Leaders, your rival and the villain bosses:** their strongest Pokémon always holds
+    something (a Berry or its type booster at the first Gyms, Leftovers mid-game, standouts like
+    Life Orb or a Choice item from about Lv 35), and more of their team joins in as you go.
+  - **Other trainers** later on carry one item, then sometimes two: a Berry or a type booster.
+  - **The Elite Four, the Champion and your rival's last battle:** every Pokémon holds one.
+  - Items the original trainers held stay, and no team holds two of the same item.
+
+  Newer items such as Life Orb, Choice Specs, Focus Sash, Black Sludge, Eviolite and
+  Assault Vest turn up once GENERATIONS includes their generation, with
   [WoobleDex](https://github.com/poooooby/national_dex_gen3) installed to make them work. Each
   goes to a Pokémon it suits: Black Sludge to Poison types, Eviolite to one that can still
-  evolve.
+  evolve, Choice Band to an all-physical attacker and Choice Specs to an all-special one. With
+  WoobleDex's Move Split on, physical and special go by each move, just like the battles do
+  (Shadow Ball special, Crunch physical).
 
 ### Rare Finds
 
@@ -101,7 +112,7 @@ Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own 
 | Option | Choices | Default | What it does |
 |---|---|---|---|
 | **MODERN SPAWNS** | ON / OFF | ON | OFF keeps the game's original tables. |
-| **GENERATIONS** | GEN 1 … GEN 1-9 | GEN 1-9 | Which generations can appear (up to what's installed). GEN 1 shuffles the Gen 1 Pokémon. |
+| **GENERATIONS** | GEN 1 … GEN 1-9 / CUSTOM | GEN 1-9 | Which generations can appear, wild and (with TRAINER TEAMS) on trainers' teams, up to what's installed. GEN 1 shuffles the Gen 1 Pokémon. CUSTOM shows a GEN 1 … GEN 9 switch for each generation, so you can pick any mix. |
 | **SPAWN MODE** | LIMITED / EVERY MAP / RANDOM / COMPLETE | COMPLETE | How rosters are drawn (see above). |
 | **TIME OF DAY SPAWNS** | OFF / PREFER / STRICT | OFF | Day and night rosters. PREFER makes Pokémon more common at their own time; STRICT keeps night-only and day-only Pokémon to their time. |
 | **LEGENDARIES** | OFF / ON | OFF | Rare legendaries and mythicals on their home maps, after the League. |
@@ -150,13 +161,18 @@ Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own 
   same seed gives the same teams.
   - Red, Blue and Yellow's trainers can't hold items, so ON + ITEMS plays like ON there.
   - Pokémon that already held an item in the original game keep it. Your game's own items are
-    always in play; newer ones wait until GENERATIONS reaches their generation.
+    always in play; newer ones only appear when GENERATIONS includes their generation.
   - Teams from other players (record mixing, secret bases), e-Reader trainers and link battles
     stay as they are.
   - Switching TRAINER TEAMS in the middle of a facility challenge changes the opponents still
     to come.
   - With a narrow GENERATIONS range there are fewer species to swap in, so the facilities
     change less.
+- 🧩 With CUSTOM GENERATIONS, a Pokémon from a left-out generation never appears, but your own
+  Pokémon still evolve as usual (a Chansey you catch can still become a Blissey). Trainers
+  skip a left-out stage: with Gen 2 and 4 only, a trainer's Happiny grows straight into Blissey.
+  Turning every generation off (or picking only generations no species mod adds) leaves the
+  game's original Pokémon.
 - On Gen 3, forms that are wild in the real games appear (Galarian and Hisuian forms, Flabébé's
   colours, Pumpkaboo's sizes and more); megas and item forms never do.
 

@@ -48,8 +48,10 @@ Items.BERRIES = {
   { name = "BERRY", gen = 2, score = 20 },
 }
 
--- Physical and special by type, as Gen 2 and 3 split them (a move's own
--- category wins when it has one)
+-- Physical and special by type, as Gen 2 and 3 split them. A move's own
+-- category wins when it has one: the adapters give it with WoobleDex's MOVE
+-- SPLIT on (physical / special by the move, as today's games), and on Gen 3
+-- the engine's own category, which is this same split by type.
 local PHYSICAL = { NORMAL = true, FIGHTING = true, FLYING = true, POISON = true, GROUND = true,
                    ROCK = true, BUG = true, GHOST = true, STEEL = true }
 
@@ -84,22 +86,24 @@ local function shape(mon)
   return s
 end
 
--- The "ace" items, best first by score; cond(mon, stats, shape)
+-- The "ace" items, best first by score; cond(mon, stats, shape). `strong`:
+-- a competitive item, only for a late-game ace and the Elite Four's teams
+-- (args.strong): an early Gym Leader with a Choice Band is no fair fight.
 Items.ACE = {
-  { name = "EVIOLITE", gen = 5, score = 45, cond = function(mon) return mon.canEvolve end },
+  { name = "EVIOLITE", gen = 5, score = 45, strong = true, cond = function(mon) return mon.canEvolve end },
   { name = "BLACK_SLUDGE", gen = 4, score = 44, cond = function(mon) return mon.types.POISON end },
-  { name = "ASSAULT_VEST", gen = 6, score = 43, cond = function(_, st, sh)
+  { name = "ASSAULT_VEST", gen = 6, score = 43, strong = true, cond = function(_, st, sh)
       return sh.all and st.hp >= 80 and st.spDefense >= 80 end },
-  { name = "LIFE_ORB", gen = 4, score = 42, cond = function(_, st, sh)
+  { name = "LIFE_ORB", gen = 4, score = 42, strong = true, cond = function(_, st, sh)
       return math.max(st.attack, st.spAttack) >= 100 and sh.damaging >= 3 end },
-  { name = "CHOICE_BAND", gen = 3, score = 41, cond = function(_, st, sh)
+  { name = "CHOICE_BAND", gen = 3, score = 41, strong = true, cond = function(_, st, sh)
       return sh.all and sh.special == 0 and st.attack >= st.spAttack end },
-  { name = "CHOICE_SPECS", gen = 4, score = 41, cond = function(_, st, sh)
+  { name = "CHOICE_SPECS", gen = 4, score = 41, strong = true, cond = function(_, st, sh)
       return sh.all and sh.physical == 0 and st.spAttack >= st.attack end },
-  { name = "CHOICE_SCARF", gen = 4, score = 41, cond = function(_, st, sh)
+  { name = "CHOICE_SCARF", gen = 4, score = 41, strong = true, cond = function(_, st, sh)
       return sh.all and st.speed >= 80 and math.max(st.attack, st.spAttack) >= 90 end },
   { name = "LEFTOVERS", gen = 2, score = 40, cond = function() return true end },
-  { name = "FOCUS_SASH", gen = 4, score = 39, cond = function(_, st)
+  { name = "FOCUS_SASH", gen = 4, score = 39, strong = true, cond = function(_, st)
       return st.speed >= 90 and st.hp <= 60 and st.defense <= 70 end },
 }
 
@@ -124,19 +128,23 @@ local function bestBerry(allowed)
 end
 
 -- One Pokemon's item, or nil.
---   args.role       "ace" (a boss's strongest), "boss" or "ordinary"
+--   args.role       "ace" (a boss's strongest), "boss" (its others) or
+--                   "basic" (an early boss's ace: its type booster or a Berry)
+--   args.strong     competitive items allowed (Items.ACE `strong`)
 --   args.slot       its party position (bosses alternate berries and boosters)
 --   args.mon        { types (plain names set), canEvolve, moves = { {type, power, category?} } }
 --   args.stats      { hp, attack, defense, speed, spAttack, spDefense }
 --   args.maxGen     items up to this generation (max(GENERATIONS, the cart's own))
+--   args.gens       optional { [gen] = true }: items of exactly these generations
+--                   (GENERATIONS' picks plus the cart's own); replaces maxGen
 --   args.available  function(name) -> true when the game has it and it works
 --   args.used       names already held on this team (skipped)
---   args.rng        Rng for the ordinary trainer's chance and coin
---   args.chance     the ordinary trainer's chance (Config.TrainerConfig)
 function Items.choose(args)
   local used = args.used or {}
   local function allowed(name, gen)
-    return gen <= args.maxGen and not used[name] and args.available(name)
+    local genOk
+    if args.gens then genOk = args.gens[gen] == true else genOk = gen <= args.maxGen end
+    return genOk and not used[name] and args.available(name)
   end
   local mon, st = args.mon, args.stats or {}
   for _, k in ipairs({ "hp", "attack", "defense", "speed", "spAttack", "spDefense" }) do
@@ -147,16 +155,15 @@ function Items.choose(args)
   local function add(entry)
     if entry then options[#options + 1] = entry end
   end
-  if args.role == "ordinary" then
-    if args.rng:next() >= (args.chance or 0) then return nil end
-    if args.rng:int(1, 2) == 1 then
-      add(bestBerry(allowed))
-    else
-      add(sh.bestType and typeItem(sh.bestType, allowed))
-    end
+  local function aceOk(row)
+    return (args.strong or not row.strong) and allowed(row.name, row.gen) and row.cond(mon, st, sh)
+  end
+  if args.role == "basic" then
+    add(sh.bestType and typeItem(sh.bestType, allowed))
+    add(bestBerry(allowed))
   elseif args.role == "ace" then
     for _, row in ipairs(Items.ACE) do
-      if allowed(row.name, row.gen) and row.cond(mon, st, sh) then
+      if aceOk(row) then
         add({ name = row.name, score = row.score })
       end
     end
@@ -170,8 +177,7 @@ function Items.choose(args)
       add(bestBerry(allowed))
     end
     for _, row in ipairs(Items.ACE) do
-      if (row.name == "EVIOLITE" or row.name == "BLACK_SLUDGE")
-        and allowed(row.name, row.gen) and row.cond(mon, st, sh) then
+      if (row.name == "EVIOLITE" or row.name == "BLACK_SLUDGE") and aceOk(row) then
         add({ name = row.name, score = row.score })
       end
     end

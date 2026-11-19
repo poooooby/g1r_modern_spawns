@@ -42,8 +42,11 @@ end
 -- Returns set(key, value) and the stub game.
 -- COMPLETE's bar: a species is obtainable when it is caught somewhere
 -- (`seen[id]`) or evolves from an obtainable, non-special species under the
--- cap (api profileOf's `evolvesFrom`). Returns a function(id) -> boolean.
+-- cap (api profileOf's `evolvesFrom`). `cap` is a number (Gen 1 through it)
+-- or a set { [gen] = true } (CUSTOM GENERATIONS). Returns a function(id) -> boolean.
 function H.obtainable(seen, ms, cap)
+  local inCap = type(cap) == "table" and function(g) return cap[g] == true end
+    or function(g) return g <= cap end
   local memo = {}
   local function ok(id, depth)
     if seen[id] then return true end
@@ -51,7 +54,7 @@ function H.obtainable(seen, ms, cap)
     memo[id] = false
     local p = ms.profileOf(id)
     local parent = p and p.evolvesFrom and ms.profileOf(p.evolvesFrom)
-    local result = parent ~= nil and not parent.special and parent.generation <= cap
+    local result = parent ~= nil and not parent.special and inCap(parent.generation)
       and (depth or 0) < 6 and ok(parent.id, (depth or 0) + 1)
     memo[id] = result and true or false
     return memo[id]

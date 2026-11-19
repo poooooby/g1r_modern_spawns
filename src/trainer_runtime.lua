@@ -23,26 +23,33 @@ return function(deps)
 
   local function mode() return Config.trainerTeams(mod) end
 
-  -- The generation cap in force, or nil (OFF, or no species at all).
-  function TR.cap()
+  -- The generations in force (a Config.genSet), or nil (OFF, no species at
+  -- all, or none of the picked generations registered). MODERN SPAWNS
+  -- doesn't matter. Its key is "N" for Gen 1-N, as the old single cap.
+  function TR.generations()
     if mode() == "off" then return nil end
-    local pool = Runtime.pool()
-    if not pool or #pool.list == 0 then return nil end
-    return math.min(Config.maxGeneration(mod), Runtime.poolMaxGeneration())
+    return Runtime.registeredGenerations()
+  end
+
+  -- The highest generation in force, or nil.
+  function TR.cap()
+    local gs = TR.generations()
+    return gs and gs.max or nil
   end
 
   function TR.invalidate() cache = { key = nil } end
 
   local function state()
-    local cap = TR.cap()
-    if not cap then return nil end
+    local gs = TR.generations()
+    if not gs then return nil end
     local seed = Runtime.seed()
-    local key = table.concat({ seed, cap, Runtime.dataVersion(), ALGO }, ":")
+    local key = table.concat({ seed, gs.key, Runtime.dataVersion(), ALGO }, ":")
     if cache.key == key then return cache end
     local pool = Runtime.pool()
-    local ctx = { pool = pool, cap = cap, seed = seed, Rng = Rng, config = Config.TrainerConfig,
-                  canShow = adapter.canShow }
-    cache = { key = key, ctx = ctx, ix = Planner.index(pool, cap), plans = {}, facilityMaps = {} }
+    -- cap carries the key into every RNG hash ("N" hashes as the number did)
+    local ctx = { pool = pool, cap = gs.key, gens = gs.has, maxGen = gs.max, seed = seed, Rng = Rng,
+                  config = Config.TrainerConfig, canShow = adapter.canShow }
+    cache = { key = key, ctx = ctx, ix = Planner.index(pool, gs.key, gs.has), plans = {}, facilityMaps = {} }
     return cache
   end
   TR.state = state
@@ -66,39 +73,118 @@ return function(deps)
     return plan
   end
 
+  -- How far into the game a battle is, by its ace's level (Config items):
+  -- "early", "mid" or "late".
+  local function stageOf(level)
+    local rules = Config.TrainerConfig.items
+    if level >= rules.late_level then return "late" end
+    if level >= rules.mid_level then return "mid" end
+    return "early"
+  end
+
+  -- Who holds an item in a battle (ON + ITEMS), scaled to how far into the
+  -- game it is and how big a battle it is: { [slot] = { role, strong } }.
+  -- The Elite Four, champions and the rival's final battle: everyone, any
+  -- item. Another major battle (a boss): its ace always, its others by
+  -- chance. An ordinary trainer: none early, then one or two. The rival's
+  -- first battle: none. Seeded per battle, so a battle always looks the same.
+  local function holdersOf(st, battle, ace, aceLevel)
+    local rules = Config.TrainerConfig.items
+    local stage = stageOf(aceLevel)
+    local rng = Rng.new(Rng.hash(st.ctx.seed, st.ctx.cap, "trainers", "items", battle.key, "held"))
+    local info = identityInfo(battle.identity)
+    local rival = battle.identity == "rival" or battle.rival or (info and info.rival)
+    local full = battle.elite == true
+    if rival and info and info.firstTop and info.lastTop and info.firstTop < info.lastTop then
+      if aceLevel <= info.firstTop then return {} end
+      if aceLevel >= info.lastTop then full = true end
+    end
+    local out = {}
+    if full then
+      for i in ipairs(battle.rows) do out[i] = { role = i == ace and "ace" or "boss", strong = true } end
+      return out
+    end
+    if battle.boss then
+      out[ace] = { role = stage == "early" and "basic" or "ace", strong = stage == "late" }
+      for i in ipairs(battle.rows) do
+        if i ~= ace and rng:next() < (rules.others[stage] or 0) then
+          out[i] = { role = "boss", strong = stage == "late" }
+        end
+      end
+      return out
+    end
+    -- an ordinary trainer: a few items at most, its strongest Pokemon first;
+    -- the ones it already held in the game count
+    local want = rules.ordinary[stage] or 0
+    local count = math.floor(want)
+    if rng:next() < want - count then count = count + 1 end
+    local order = {}
+    for i in ipairs(battle.rows) do order[#order + 1] = i end
+    table.sort(order, function(a, b)
+      if battle.rows[a].level ~= battle.rows[b].level then return battle.rows[a].level > battle.rows[b].level end
+      return a < b
+    end)
+    for _, i in ipairs(order) do
+      if battle.rows[i].item then count = count - 1 end
+    end
+    for _, i in ipairs(order) do
+      if count <= 0 then break end
+      if not battle.rows[i].item then
+        out[i] = { role = "basic", strong = false }
+        count = count - 1
+      end
+    end
+    return out
+  end
+
   -- ON + ITEMS: one item name (or nil) per slot. The game's own held items
-  -- are kept (nil); a boss's highest-level Pokemon is its ace.
+  -- are kept (nil); a battle's highest-level Pokemon is its ace.
   local function itemsFor(st, battle, species)
     if mode() ~= "items" or not adapter.itemAvailable then return nil end
     local ace, aceLevel = nil, -1
     for i, row in ipairs(battle.rows) do
       if row.level >= aceLevel then ace, aceLevel = i, row.level end
     end
-    local maxGen = math.max(st.ctx.cap, adapter.cartGeneration or 1)
-    local used, out = {}, {}
+    local holders = holdersOf(st, battle, ace, aceLevel)
+    -- items of the generations in force, and always the cart's own
+    local cartGen = adapter.cartGeneration or 1
+    local gens = {}
+    for g in pairs(st.ctx.gens) do gens[g] = true end
+    for g = 1, cartGen do gens[g] = true end
+    local maxGen = math.max(st.ctx.maxGen, cartGen)
+    -- no two of an item on one team, by the game's item number where it has one:
+    -- two names can be one item (Gen 2's MIRACLEBERRY is Emerald's Lum Berry)
+    local function itemKey(name)
+      local num = adapter.itemNumber and adapter.itemNumber(name)
+      return num or name
+    end
+    local used, taken, out = {}, {}, {}
     for i, row in ipairs(battle.rows) do
-      if row.item then used[row.item] = true end
+      if row.item then
+        used[row.item] = true
+        taken[itemKey(row.item)] = true
+      end
+    end
+    local function available(name)
+      return not taken[itemKey(name)] and adapter.itemAvailable(name)
     end
     for i, row in ipairs(battle.rows) do
-      if not row.item then
+      local holder = holders[i]
+      if holder and not row.item then
         local c = st.ix.byId[species[i]]
         if c then
-          local canEvolve = false
-          for _, child in ipairs(st.ix.children[c.id] or {}) do
-            if st.ix.allowed(child) then canEvolve = true break end
-          end
-          local role = battle.boss and (i == ace and "ace" or "boss") or "ordinary"
+          local canEvolve = #st.ix.next(c.id) > 0
           local name = Items.choose({
-            role = role, slot = i,
+            role = holder.role, strong = holder.strong, slot = i,
             mon = { types = c.types, canEvolve = canEvolve,
                     moves = adapter.movesFor and adapter.movesFor(c.id, row.level) or {} },
             stats = adapter.statsOf and adapter.statsOf(c.id) or {},
-            maxGen = maxGen, available = adapter.itemAvailable, used = used,
+            maxGen = maxGen, gens = gens, available = available, used = used,
             rng = Rng.new(Rng.hash(st.ctx.seed, st.ctx.cap, "trainers", "items", battle.key, i)),
-            chance = Config.TrainerConfig.ordinary_item_chance,
           })
           if name then
             used[name] = true
+            taken[itemKey(name)] = true
             out[i] = name
           end
         end
@@ -124,6 +210,11 @@ return function(deps)
       end
     end
     return adapter.write(party, battle, species, itemsFor(st, battle, species), st)
+  end
+
+  -- the moves a species' held item is chosen by (exports._trainerMovesFor)
+  function TR.movesFor(id, level)
+    return adapter.movesFor and adapter.movesFor(id, level) or nil
   end
 
   -- who a battle's trainer is (rematches share one identity), or nil
