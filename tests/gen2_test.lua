@@ -68,12 +68,22 @@ local function checkTables(version, data, api)
       for _, slot in ipairs(vanilla.slots[time]) do distinct[slot.species] = true end
     end
     local single = next(distinct, next(distinct)) == nil
+    -- COMPLETE (the default here) hands a role under 5% of the encounters to a bigger role out
+    -- at the same time, so no one is met under 5%; a small role no single role is out all day
+    -- for goes slot by slot, and may be two species then
+    local ODDS, share = { 30, 30, 20, 10, 5, 4, 1 }, {}
+    for _, time in ipairs(TIMES) do
+      for i, slot in ipairs(vanilla.slots[time]) do
+        local key = single and i or slot.species
+        share[key] = (share[key] or 0) + (ODDS[i] or 0) / 300
+      end
+    end
     local mapped = {}
     for _, time in ipairs(TIMES) do
       for i, slot in ipairs(vanilla.slots[time]) do
         local new = mine.slots[time][i].species
         local key = single and i or slot.species
-        if mapped[key] and mapped[key] ~= new then
+        if share[key] >= 0.05 and mapped[key] and mapped[key] ~= new then
           T.check(false, version .. " " .. mapId .. ": " .. slot.species
                   .. " became two species across the day")
         end

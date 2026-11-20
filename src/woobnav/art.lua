@@ -40,8 +40,9 @@ return function(mod)
   end
   A.hex, A.mix, A.rampOf = hex, mix, rampOf
 
-  -- the Pokegear skin, light
-  A.C = {
+  -- the Pokegear skin, light and dark (Kanto Gear's two variants); A.C is the one in use, swapped
+  -- in place by A.setDark so every reader of A.C sees it
+  local LIGHT = {
     bgA = hex("c3e6cf"), bgB = hex("b5dec5"), emboss = hex("a6d3b8"),
     paper = hex("f8f8f0"), paper2 = hex("e8efe6"), line = hex("cfdcd2"),
     ink = hex("383c44"), muted = hex("5f7468"), disabled = hex("8c9a92"), outline = hex("283036"),
@@ -51,7 +52,35 @@ return function(mod)
     shadow = { 0.09, 0.19, 0.16, 0.24 }, well = hex("14483c"),
     acc = { M = hex("2f8c76"), L = hex("4fae95"), D = hex("1b5a4c"), Hi = hex("9fe0cc") },
     accS = hex("3a9a82"),
+    -- the WoobNav's own: a heading on a window, a RARE card, a long-odds bar, an idle tab
+    heading = hex("1b5a4c"), rare = hex("fff6dc"), low = hex("c070f0"), tabOff = hex("8c9a92"),
+    moon = hex("5a6c88"),
   }
+  local DARK = {
+    bgA = hex("1f2b47"), bgB = hex("1b2640"), emboss = hex("26355a"),
+    paper = hex("2d3748"), paper2 = hex("273041"), line = hex("3a4659"),
+    ink = hex("eef1f6"), muted = hex("a9b6c8"), disabled = hex("6d7a8c"), outline = hex("0b0f17"),
+    surface = hex("2d3748"), white = hex("f4f6fa"), silver = hex("9aa6b8"), silverDark = hex("4a5668"),
+    red = hex("c03830"), amber = hex("d08a18"), amberLight = hex("f8c850"), blue = hex("3a7ad8"),
+    hp = hex("40d058"), hpMid = hex("f8c030"), hpLow = hex("f04838"), focus = hex("3a4a5e"),
+    shadow = { 0, 0, 0, 0.45 }, well = hex("0f3640"),
+    acc = { M = hex("2c7f8f"), L = hex("47a3b3"), D = hex("164a56"), Hi = hex("86d4e0") },
+    accS = hex("348c9c"),
+    heading = hex("86d4e0"), rare = hex("443c2c"), low = hex("c080f8"), tabOff = hex("4a5668"),
+    moon = hex("a9b6c8"),
+  }
+  A.LIGHT, A.DARK = LIGHT, DARK
+  A.C = {}
+  for k, v in pairs(LIGHT) do A.C[k] = v end
+  A.dark = false
+
+  local stripes = {} -- the backdrop's tile, one per variant
+  function A.setDark(dark)
+    dark = dark == true
+    A.dark = dark
+    for k, v in pairs(dark and DARK or LIGHT) do A.C[k] = v end
+  end
+
   A.WHITE = { 1, 1, 1, 1 }
 
   -- each type's colour (the games' own hues)
@@ -151,9 +180,10 @@ return function(mod)
 
   -- ------- backdrop and header plate (Kanto Gear's Pokegear chrome)
 
-  local stripe
   function A.backdrop(top)
     top = top or 0
+    local key = A.dark and "dark" or "light"
+    local stripe = stripes[key]
     if stripe == nil then
       stripe = false
       pcall(function()
@@ -167,6 +197,7 @@ return function(mod)
         image:setWrap("repeat", "repeat")
         stripe = { image = image, quad = G.newQuad(0, 0, 240, 216, 8, 8) }
       end)
+      stripes[key] = stripe
     end
     if stripe then
       stripe.quad:setViewport(0, top, 240, 216 - top, 8, 8)
@@ -180,10 +211,29 @@ return function(mod)
   local BACK = { "...#", "..##", ".###", "####", ".###", "..##", "...#" }
   A.CHEV_L = { "..#", ".##", "###", ".##", "..#" }
   A.CHEV_R = { "#..", "##.", "###", "##.", "#.." }
+  -- the theme button's faces: a moon (light: tap for night) and a sun (dark: tap for day)
+  A.MOON = { "..####..", ".###....", "###.....", "###.....", "###.....", "###.....", "###.....",
+             ".###....", "..####.." }
+  A.SUN = { "....#....", ".#.....#.", "...###...", "..#####..", "#.#####.#", "..#####..", "...###...",
+            ".#.....#.", "....#...." }
 
-  -- the header plate in the page's tint, the back button at (3,3) 20x16 when `back`, the title
-  -- in the well; `pressed`: the back button held. Returns the well's right edge.
-  function A.header(title, tint, back, pressed, right)
+  -- a header button, 20x16 at (x,3) (Kanto Gear's back button), `glyph` drawn in `ink` over a
+  -- shadow in the plate's dark
+  local function headerButton(x, acc, pressed, glyph, gx, gy, ink)
+    local o = pressed and 1 or 0
+    RR(x, 3, 20, 16, 4, A.C.outline)
+    RR(x + 1, 4 + o, 18, 14 - o, 3, pressed and acc.M or acc.L)
+    if not pressed then RR(x + 1, 4, 18, 14, 3, acc.Hi, 0, 7) end
+    R(x + 1, 15, 18, 2, acc.D)
+    ART(glyph, gx + 1, gy + 1 + o, { ["#"] = acc.D })
+    ART(glyph, gx, gy + o, { ["#"] = ink })
+  end
+
+  -- the header plate in the page's tint, the title in the well. o = { back, backPressed, theme
+  -- ("moon" | "sun"), themePressed }: the back button at (3,3), the theme button at (217,3).
+  -- Returns the well's right edge.
+  function A.header(title, tint, o)
+    o = o or {}
     local acc = tint and rampOf(tint) or A.C.acc
     local accS = tint and mix(acc.M, acc.L, 0.35) or A.C.accS
     local well = tint and mix(acc.D, { 0, 0, 0, 1 }, 0.45) or A.C.well
@@ -197,18 +247,18 @@ return function(mod)
       R(x + 1, 24, 1, 1, C.shadow); R(x + 4, 24, 1, 1, C.shadow)
       R(x + 2, 25, 2, 1, C.shadow)
     end
-    local left = 4
-    if back then
-      local o = pressed and 1 or 0
-      RR(3, 3, 20, 16, 4, C.outline)
-      RR(4, 4 + o, 18, 14 - o, 3, pressed and acc.M or acc.L)
-      if not pressed then RR(4, 4, 18, 14, 3, acc.Hi, 0, 7) end
-      R(4, 15, 18, 2, acc.D)
-      ART(BACK, 10, 7 + o, { ["#"] = acc.D })
-      ART(BACK, 9, 6 + o, { ["#"] = A.WHITE })
+    local left, right = 4, 236
+    if o.back then
+      headerButton(3, acc, o.backPressed, BACK, 9, 6, A.WHITE)
       left = 26
     end
-    local wellW = (right or 236) - left
+    if o.theme then
+      local sun = o.theme == "sun"
+      headerButton(217, acc, o.themePressed, sun and A.SUN or A.MOON, sun and 222 or 223, 6,
+                   sun and hex("f8c048") or hex("fff8dc"))
+      right = 214
+    end
+    local wellW = right - left
     RR(left, 3, wellW, 17, 3, acc.D)
     RR(left + 1, 4, wellW - 2, 15, 2, well)
     R(left + 3, 18, wellW - 6, 1, acc.M)
@@ -330,6 +380,7 @@ return function(mod)
   local TIME_PAL = { a = hex("c07a10"), A = hex("f8c048"), o = hex("8c9a92"), m = hex("5a6c88") }
   function A.timeIcon(time, x, y)
     local rows = (time == "NITE" or time == "night") and MOON or time == "MORN" and MORN or SUN
+    TIME_PAL.m = A.C.moon -- the moon reads on either window
     ART(rows, x, y, TIME_PAL)
   end
 

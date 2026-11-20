@@ -230,7 +230,8 @@ end
 T.check(allRegistered, "every rod slot is a registered species")
 
 -- COMPLETE: a rod slot is drawn from its pool, as big as keeps each species
--- at 5% of casts or more (a 1% slot holds its primary alone)
+-- at 5% of casts or more (the 4% and 1% slots carry a bigger slot's species
+-- and pool, so no one is caught under 5%)
 set("spawn_mode", "complete")
 local pools = api.poolFor(FISH_MAP, "fish.super")
 T.check(pools ~= nil and #pools == 5, "COMPLETE gives the Super Rod's slots pools")
@@ -248,7 +249,7 @@ end
 local distinct = 0
 for _ in pairs(seen) do distinct = distinct + 1 end
 T.eq(outside, 0, "COMPLETE casts come from the rod's pools")
-T.check(distinct >= 3, "COMPLETE casts draw across the pools (" .. distinct .. " species)")
+T.check(distinct >= 2, "COMPLETE casts draw across the pools (" .. distinct .. " species)")
 set("spawn_mode", "seeded")
 
 -- ------- legendaries: rare, hosted, stop once owned

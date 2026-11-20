@@ -141,7 +141,13 @@ and 2, `FLAG_SYS_GAME_CLEAR` on Gen 3). How wide each mode draws is
 wider, so the two differ on one seed. COMPLETE gives each slot a small pool (its main species
 first, then extras from coverage, then the cart's own species for that slot), as big as keeps
 every member at `SpawnConfig.complete.min_share` (5%) of the table's encounters or more (a 40%
-role holds 8, a 1% role its main species alone; at most `max_pool`). Coverage seats only species
+role holds 8; at most `max_pool`). A role under 5% (Gen 3's 4% and 1% slots, Gen 2's 4% and 1%,
+Gen 1's 11/256 and 3/256) never draws a species of its own: `mergeSmallRoles` hands its slots to
+the table's biggest role out at the same times (Gen 2 grass: one host for all its times when
+one exists, else slot by slot), so those slots carry the host's species and pool; the slot odds
+and levels stay the cart's. With TIME OF DAY SPAWNS the 3:1 lean is floored (`Rates.floored`,
+used by `poolPick` and `Rates.section` alike): no member that may come out drops under 5% of the
+table, and when a pool cannot keep everyone there, the other period's primary steps aside. Coverage seats only species
 the player cannot evolve into (`evolved_by_evolving`: no non-special parent under the cap), so
 every first stage lives somewhere and the rest come from evolving; a main species in a role
 under 5% doesn't count as placed. The cart's own species go back into at most `original_homes`
@@ -205,10 +211,15 @@ WoobNav draws and takes input itself:
 | `init.lua` | state, the model (`exports.encounters` -> six-a-page cards; a species' HERE rows at each time of day), input actions, events, the registration |
 | `gear.lua` | the Store spec: words, 24x24 pal/rows icon, translations |
 | `view.lua` | the two screens on 240x216 (Kanto Gear's bottom screen) and their hit-testing (pure) |
-| `art.lua` | Kanto Gear's Pokegear palette, header plate, windows and buttons; its HGSS pixel fonts (`assets/fonts`); Pokémon pictures (Gen 1/2 coloured on the CPU, Gen 3 `frontPic`), trimmed to their opaque part |
+| `art.lua` | Kanto Gear's Pokegear palette in its light and dark variants (`A.setDark` swaps `A.C` in place), header plate, windows and buttons; its HGSS pixel fonts (`assets/fonts`); Pokémon pictures (Gen 1/2 coloured on the CPU, Gen 3 `frontPic`), trimmed to their opaque part |
 | `info.lua` | the summary page from the game's own Pokédex data (the sources WoobOS reads) |
 | `display.lua` | where it shows, following the Gear's DISPLAY MODE: second display (gate at `render.compose` 900, async readback push), handheld (the game to the second display), combined / fullscreen split (Gen 1/2 `render.viewport` capture + `render.window`; Gen 3 `Playfield.cutout` + `render.hud`); touches from `pollTouch`, `input.pointer`, Gen 3 `TouchControls` and a desktop mouse poll. No input layer: buttons stay with the game |
 | `layout.lua`, `gate.lua`, `surface.lua`, `host.lua` | geometry, the second-display gate, the canvas, the engine seams; condensed from NaviPlay (MIT, same author), engine wraps keyed `__woobnav*` so they chain with NaviPlay's |
+
+The theme button (top right, `View.hit` -> `"theme"`) flips `Art.setDark`; the choice is kept per
+playthrough like Kanto Gear's Home: `mod.save` key `woobnav_dark`, plus `mod.storage`
+`woobnav/theme` written at once and read on `save.loaded` / `save.created` /
+`checkpoint.restored` (never at load: a storage read can name the playthrough).
 
 `exports._woobnav` is a test seam (not API). `tests/woobnav_test.lua` covers the spec, the layout,
 the gate, registering with the real Gear (Crystal) and the whole tap flow;

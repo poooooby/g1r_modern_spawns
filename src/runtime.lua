@@ -642,9 +642,11 @@ return function(deps)
       if not lookBase then todWeight(id, "day") end -- builds lookBase
       return lookBase and lookBase[id]
     end
-    local function push(entry, def, pools, weightOf, time, indices)
+    local floor = Config.SpawnConfig.complete and Config.SpawnConfig.complete.min_share
+    local function push(entry, def, pools, weightOf, time, indices, spareOf)
       local mons = Rates.section({ slots = def.slots, weights = entry.weights, indices = indices,
-                                   pools = pools, weightOf = weightOf, baseOf = baseOf })
+                                   pools = pools, weightOf = weightOf, floor = floor, spareOf = spareOf,
+                                   baseOf = baseOf })
       if #mons == 0 then return end
       local method = METHOD[entry.kind] or entry.kind
       if method == "grass" and entry.terrain == "cave" then method = "cave" end
@@ -678,7 +680,12 @@ return function(deps)
           end
         else
           local weightOf = pools and period and function(id) return todWeight(id, period) end or nil
-          push(entry, def, pools, weightOf, nil, nil)
+          local spareOf
+          if weightOf then
+            local otherDef = generated(mapId, kind, period == "night" and "day" or "night")
+            spareOf = function(i) return otherDef and otherDef.slots[i] and otherDef.slots[i].species end
+          end
+          push(entry, def, pools, weightOf, nil, nil, spareOf)
         end
       end
     end
@@ -715,6 +722,32 @@ return function(deps)
   -- OF DAY SPAWNS: weighted by todWeight at `period`; nil when nothing in the
   -- pool may come out now); a species with looks (Rotom's appliances, ...)
   -- shows as itself or one of them. Only registered species are ever answered.
+  -- The share of its table (Gen 2 grass: of its time's block) that the slots
+  -- drawing from `list` hold, as a fraction; cached per pool list.
+  local shareCache = setmetatable({}, { __mode = "k" })
+  local function poolShare(mapId, kind, index, list)
+    local byIndex = shareCache[list]
+    if byIndex and byIndex[index] ~= nil then return byIndex[index] or nil end
+    local share = false
+    local okT, entries = pcall(world.tables, mapId)
+    local pools = poolsOf(mapId, kind)
+    for _, e in ipairs(okT and entries or {}) do
+      if e.kind == kind and pools then
+        local total, mine = 0, 0
+        for j, w in ipairs(e.weights or {}) do
+          if not (e.times and e.times[j] ~= e.times[index]) then
+            total = total + w
+            if pools[j] == list then mine = mine + w end
+          end
+        end
+        if total > 0 and mine > 0 then share = mine / total end
+      end
+    end
+    shareCache[list] = byIndex or {}
+    shareCache[list][index] = share
+    return share or nil
+  end
+
   local completeCount = 0
   local function poolPick(mapId, kind, index, list, period)
     completeCount = completeCount + 1
@@ -729,6 +762,22 @@ return function(deps)
         if weights[i] > 0 then any = true end
       end
       if not any then return nil end
+      -- the lean never takes anyone under COMPLETE's minimum share (rates.lua)
+      local minShare = Config.SpawnConfig.complete and Config.SpawnConfig.complete.min_share
+      local share = minShare and Rates and poolShare(mapId, kind, index, list)
+      if share then
+        -- a small slot's day pick and night pick: the other time's steps aside
+        local here = generated(mapId, kind, period)
+        local there = generated(mapId, kind, period == "night" and "day" or "night")
+        local mine = here and here.slots[index] and here.slots[index].species
+        local other = there and there.slots[index] and there.slots[index].species
+        local spare
+        if other ~= nil and other ~= mine then
+          spare = {}
+          for i, sid in ipairs(list) do if sid == other then spare[#spare + 1] = i end end
+        end
+        weights = Rates.floored(weights, minShare / 100 / share, spare)
+      end
       id = list[rng:weighted(weights) or 1]
     end
     local c = pool and pool.byId[id]

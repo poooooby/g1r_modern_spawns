@@ -31,8 +31,8 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
   - **EVERY MAP:** a fresh roster each time you enter a map.
   - **RANDOM:** a new species every encounter.
   - **COMPLETE:** catch them all. Every first-stage Pokémon in your range lives in the wild,
-    and every one you can find has at least a 5% chance per encounter somewhere, so nothing is
-    buried behind odds of 1 in 500. Evolved Pokémon are mostly left for you to evolve. The
+    and no Pokémon on any map is under a 5% chance per encounter (with TIME OF DAY SPAWNS too),
+    so nothing is buried behind odds of 1 in 500. Evolved Pokémon are mostly left for you to evolve. The
     game's own Pokémon keep a few of their old homes too (Pikachu in Viridian Forest,
     Zigzagoon on Route 101), without crowding every route.
 - 🌱 **Seeds you can share:** Each save has its own seed. Type in a friend's seed for the same
@@ -122,6 +122,8 @@ on the Gear's own screen, in its pixel style:
   at each time of day.
 - The list follows you from map to map. The back button (top left) returns to the list, then
   to Kanto Gear.
+- 🌙 **Light or dark:** tap the moon (top right) for night mode and the sun to go back. Your
+  pick stays with your save.
 - ⚔️ In a battle, Kanto Gear takes the screen back for its battle controls; WoobNav returns on
   its own once the battle is over.
 - It shows wherever Kanto Gear shows (second screen, combined screen or fullscreen), by touch or

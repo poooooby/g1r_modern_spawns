@@ -3,6 +3,33 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.18.2] - 2026-11-20
+
+### Changed
+
+- **COMPLETE: no Pokémon on any map under a 5% chance** (user report: the WoobNav showed 1%
+  surfing and fishing catches on Route 111 and 3-4% walking ones). 0.16.0 only made sure each
+  species had 5% or more *somewhere*. Two things still showed lower on a map:
+  - The game's smallest slots (Gen 3's 4% and 1% slots on land, water and the Super Rod;
+    Gen 2's 4% and 1%; Gen 1's two rarest) each held a species of their own. Such a slot now
+    carries the species and pool of the biggest slot out at the same times, so it adds to a
+    Pokémon you already meet at 5% or more. The slot odds and levels are still the game's.
+  - TIME OF DAY SPAWNS leans a pool 3:1 towards the Pokémon out at this hour, which could
+    leave the others at 2-4%. The lean now stops at 5%: nobody that may come out drops
+    under it.
+
+  **This reshuffles COMPLETE rosters on existing saves** (COMPLETE's pinned fixture moved from
+  5e880f5a to c09f243f). LIMITED, EVERY MAP and RANDOM rosters and trainer teams are unchanged.
+  Every species is still catchable somewhere. Checked on every map of Red, Crystal, FireRed
+  and Emerald, with TIME OF DAY SPAWNS off, PREFER and STRICT.
+
+### Added
+
+- **WoobNav night mode** (user request). A button in the top-right corner of both WoobNav pages
+  switches between light and dark: a moon in light mode, a sun in dark mode. Dark mode uses
+  Kanto Gear's own dark Pokégear colours. The choice is kept with the save, the same way Kanto
+  Gear keeps its Home screen.
+
 ## [0.18.1] - 2026-11-20
 
 ### Changed

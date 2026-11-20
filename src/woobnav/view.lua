@@ -19,6 +19,7 @@ return function(deps)
   local PREV = { x = 4, y = FOOT_Y, w = 44, h = FOOT_H }
   local NEXT = { x = 192, y = FOOT_Y, w = 44, h = FOOT_H }
   local BACK = { x = 0, y = 0, w = 26, h = 24 }
+  local THEME = { x = 214, y = 0, w = 26, h = 24 }
   local TAB_Y, TAB_H = 128, 16
   local TABS = { "info", "stats", "evolves" }
   local TAB_LABEL = { info = "INFO", stats = "STATS", evolves = "EVOLVES" }
@@ -42,10 +43,12 @@ return function(deps)
     return x >= r.x and y >= r.y and x < r.x + r.w and y < r.y + r.h
   end
 
-  -- what a point touches: "back", "prev", "next", "card:<n on the page>", "tab:<name>" or nil
+  -- what a point touches: "back", "theme", "prev", "next", "card:<n on the page>", "tab:<name>"
+  -- or nil
   function View.hit(screen, x, y, model)
     if not (x and y) then return nil end
     if inside(BACK, x, y) then return "back" end
+    if inside(THEME, x, y) then return "theme" end
     if screen == "area" then
       local pages = View.pages(model and #model.rows or 0)
       if pages > 1 and inside(PREV, x, y) then return "prev" end
@@ -87,9 +90,15 @@ return function(deps)
     Art.ART(left and Art.CHEV_L or Art.CHEV_R, r.x + floor(r.w / 2) - 1, r.y + 7 + off, { ["#"] = Art.WHITE })
   end
 
+  -- the header's buttons: back, and the theme (a moon by day, a sun by night)
+  local function headerOpts(pressed)
+    return { back = true, backPressed = pressed == "back",
+             theme = Art.dark and "sun" or "moon", themePressed = pressed == "theme" }
+  end
+
   local function card(row, r, pressed)
     local C = Art.C
-    Art.window(r.x, r.y, r.w, r.h, pressed and C.focus or (row.rare and Art.hex("fff6dc") or C.surface))
+    Art.window(r.x, r.y, r.w, r.h, pressed and C.focus or (row.rare and C.rare or C.surface))
     -- the seat behind the picture
     Art.RR(r.x + 3, r.y + 3, 46, 44, 3, C.paper2)
     Art.R(r.x + 5, r.y + 42, 42, 3, C.line)
@@ -112,7 +121,7 @@ return function(deps)
     -- the odds at a glance: a hairline as Kanto Gear's wild cards have
     if not row.rare then
       local f = max(1, floor(56 * min(1, (row.chance or 0) / 50) + 0.5))
-      local cc = (row.chance or 0) >= 25 and C.hp or (row.chance or 0) >= 10 and C.hpMid or Art.hex("c070f0")
+      local cc = (row.chance or 0) >= 25 and C.hp or (row.chance or 0) >= 10 and C.hpMid or C.low
       Art.R(tx, r.y + 34, 56, 1, C.line)
       Art.R(tx, r.y + 34, f, 1, cc)
     end
@@ -122,7 +131,7 @@ return function(deps)
   function View.drawArea(G, model, pressed)
     local C = Art.C
     Art.backdrop(23)
-    Art.header(model.title or "WOOBNAV", nil, true, pressed == "back")
+    Art.header(model.title or "WOOBNAV", nil, headerOpts(pressed))
     local rows = model.rows or {}
     if #rows == 0 then
       Art.window(14, 70, 212, 60)
@@ -181,7 +190,7 @@ return function(deps)
   function View.drawSummary(G, pg, here, tab, pressed)
     local C = Art.C
     Art.backdrop(23)
-    Art.header(pg.name or "?", pg.types[1] and Art.TYPE[pg.types[1]] or nil, true, pressed == "back")
+    Art.header(pg.name or "?", pg.types[1] and Art.TYPE[pg.types[1]] or nil, headerOpts(pressed))
     -- the top card
     Art.window(4, 28, 232, 64)
     Art.RR(7, 31, 64, 58, 3, C.paper2)
@@ -198,7 +207,7 @@ return function(deps)
     if pg.weight then Art.text("small", "WT " .. pg.weight, x, 78, C.muted) end
     -- where it is met here
     Art.window(4, 95, 232, 31)
-    Art.text("small", "HERE", 8, 98, C.acc.D)
+    Art.text("small", "HERE", 8, 98, C.heading)
     local shown = 0
     for i, h in ipairs(here or {}) do
       if i > 4 then break end
@@ -221,7 +230,7 @@ return function(deps)
     for i, name in ipairs(TABS) do
       local r = tabRect(i)
       local on = tab == name
-      local a = on and Art.C.acc or Art.rampOf(Art.hex("8c9a92"))
+      local a = on and Art.C.acc or Art.rampOf(C.tabOff)
       local off = Art.button(r.x, r.y, r.w, r.h, a, pressed == "tab:" .. name or on, 4)
       local label = TAB_LABEL[name]
       local w = Art.width("small", label)
@@ -243,7 +252,7 @@ return function(deps)
           local yy = y + (i - 1) * 12
           local name = step.name or step.id
           local mark = step.id == pg.id and "> " or "  "
-          Art.text("small", mark .. name, 10, yy, step.id == pg.id and C.acc.D or C.ink)
+          Art.text("small", mark .. name, 10, yy, step.id == pg.id and C.heading or C.ink)
           if step.how then Art.text("small", step.how, 150, yy, C.muted) end
         end
       end

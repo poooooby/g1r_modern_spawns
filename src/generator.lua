@@ -454,6 +454,61 @@ local function keptByNight(role, env)
   return { c = c, shown = seat.pool[1], reasons = { "kept_day_and_night" }, penalties = {} }
 end
 
+-- COMPLETE (buildAtlas): a role too small to give anyone `complete.min_share`
+-- of its table (Gen 3's 4% and 1% slots, Gen 2's 4% and 1%, Gen 1's 11/256
+-- and 3/256) hands each of its slots to the table's biggest role out at that
+-- slot's time (Gen 2 grass; any role elsewhere), so the slot carries that
+-- role's species and pool and nobody is met there under the minimum share.
+-- The slot odds stay the cart's; a host keeps its own levels and rarity for
+-- scoring. Roles come heaviest first, so every host is already in `out`; a
+-- role with a slot no host can take stays as it is.
+local function mergeSmallRoles(roles, env, weights)
+  local minShare = env.seats and env.config.complete and env.config.complete.min_share
+  if not (minShare and minShare > 0) then return roles end
+  local times = env.slotTimes
+  local out = {}
+  for _, role in ipairs(roles) do
+    local hosts
+    if (role.share or 0) * 100 < minShare then
+      hosts = {}
+      -- one host out at all the role's times keeps it one species all day
+      local whole
+      for _, h in ipairs(out) do
+        local fits = (h.share or 0) * 100 >= minShare
+        for t in pairs(fits and role.times or {}) do
+          if not (h.times and h.times[t]) then fits = false break end
+        end
+        if fits then whole = h break end
+      end
+      for n, i in ipairs(role.slots) do
+        if whole then hosts[n] = whole end
+      end
+      for n, i in ipairs(whole and {} or role.slots) do
+        local t = times and times[i]
+        for _, h in ipairs(out) do
+          if (h.share or 0) * 100 >= minShare and (not t or (h.times and h.times[t])) then
+            hosts[n] = h
+            break
+          end
+        end
+        if not hosts[n] then hosts = nil break end
+      end
+    end
+    if hosts then
+      local perWeight = role.weight > 0 and (role.share or 0) / role.weight or 0
+      for n, i in ipairs(role.slots) do
+        local h, w = hosts[n], weights[i] or 0
+        h.slots[#h.slots + 1] = i
+        h.weight = h.weight + w
+        h.share = (h.share or 0) + w * perWeight
+      end
+    else
+      out[#out + 1] = role
+    end
+  end
+  return out
+end
+
 -- `weights[i]` is slot i's odds as the running game rolls them (the
 -- adapter's business: Gen 1 ladders, Gen 2 percents, fish chances).
 local function redistribute(def, env, rng, weights)
@@ -465,7 +520,7 @@ local function redistribute(def, env, rng, weights)
   end
 
   local explain = {}
-  for _, role in ipairs(buildRoles(def.slots, weights, env.slotTimes)) do
+  for _, role in ipairs(mergeSmallRoles(buildRoles(def.slots, weights, env.slotTimes), env, weights)) do
     local kept = keptByNight(role, env)
     local pick = kept or choose(role, env, rng)
     local species = pick and pick.c.id or role.species

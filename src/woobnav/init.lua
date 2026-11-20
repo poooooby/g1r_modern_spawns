@@ -166,6 +166,42 @@ return function(deps)
     dirty()
   end
 
+  -- ------- the theme: light (Kanto Gear's Pokegear) or dark, the player's pick, kept per
+  -- playthrough as Kanto Gear keeps its Home (the save's copy, and mod.storage at once so it
+  -- outlasts a quit without saving)
+
+  local THEME_KEY = "woobnav_dark"
+  local function storageGame() return mod.game end
+
+  -- `durable`: read mod.storage too (only once a save is in: a read can name the playthrough)
+  function N.loadTheme(durable)
+    local dark
+    pcall(function()
+      if durable and mod.storage and mod.storage.read then
+        local v = mod.storage:read(storageGame(), "woobnav/theme")
+        if type(v) == "table" and type(v.dark) == "boolean" then dark = v.dark end
+      end
+    end)
+    if dark == nil then
+      pcall(function() dark = mod.save:get(THEME_KEY, false) == true end)
+    end
+    Art.setDark(dark == true)
+    state.dark = Art.dark
+    dirty()
+  end
+
+  function N.setDark(dark)
+    Art.setDark(dark == true)
+    state.dark = Art.dark
+    pcall(function() mod.save:set(THEME_KEY, state.dark) end)
+    pcall(function()
+      if mod.storage and mod.storage.write then
+        mod.storage:write(storageGame(), "woobnav/theme", { dark = state.dark })
+      end
+    end)
+    dirty()
+  end
+
   -- ------- open / close
 
   function N.open()
@@ -231,6 +267,10 @@ return function(deps)
   -- ------- input
 
   local function act(target)
+    if target == "theme" then
+      N.setDark(not Art.dark)
+      return
+    end
     if target == "back" then
       if state.screen == "summary" then
         state.screen = "area"
@@ -339,6 +379,7 @@ return function(deps)
       mod.events:on(name, function()
         Info.reset()
         Art.dropPictures()
+        N.loadTheme(true)
         stale()
       end)
     end
@@ -384,6 +425,8 @@ return function(deps)
       mod.events:on("game.ready", function() register() end)
     end)
   end
+
+  N.loadTheme()
 
   -- a test seam (not an API: it may change in any release)
   ex._woobnav = N

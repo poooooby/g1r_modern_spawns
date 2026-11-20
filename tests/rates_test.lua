@@ -94,6 +94,35 @@ T.check(near(n.HOOTHOOT.chance, 100 - 15), "NITE: its own block only, slot 15 sp
 T.check(near(n.NOCTOWL.chance, 15), "the NITE block's pool reads slot 15's")
 T.eq(n.PIDGEY, nil, "no MORN / DAY species at night")
 
+-- ------- the 5% floor: TIME OF DAY's lean never takes anyone under it
+
+local function frac(ws)
+  local s, out = 0, {}
+  for _, w in ipairs(ws) do s = s + w end
+  for i, w in ipairs(ws) do out[i] = w / s end
+  return out
+end
+local same = { 3, 1 }
+T.eq(Rates.floored(same, 0.25), same, "nobody under the floor: the weights as they were")
+local f = frac(Rates.floored({ 3, 3, 1 }, 0.25))
+T.check(near(f[3], 0.25), "the lean's 1 of 7 raised to the floor")
+T.check(near(f[1], 0.375) and near(f[2], 0.375), "...the rest share what is left by their weights")
+f = frac(Rates.floored({ 3, 3, 1, 1 }, 0.25))
+T.check(near(f[1], 0.25) and near(f[4], 0.25), "a full pool: all equal")
+f = frac(Rates.floored({ 3, 0, 1 }, 0.5))
+T.check(f[2] == 0 and near(f[1], 0.5) and near(f[3], 0.5), "a member that may not come out stays out")
+f = frac(Rates.floored({ 3, 3 }, 1, { 2 }))
+T.check(near(f[1], 1) and f[2] == 0, "room for one: the other time's pick steps aside")
+-- a section: a 20% slot pooled four ways with a 3:3:1:1 lean keeps each at 5%
+local one = { { species = "A", level = 5 }, { species = "B", level = 5 } }
+local leaned = byId(Rates.section({ slots = one, weights = { 20, 80 }, pools = { [1] = { "A", "C", "D", "E" } },
+                                    weightOf = function(id) return (id == "A" or id == "C") and 3 or 1 end,
+                                    floor = 5 }))
+T.check(near(leaned.E.chance, 5) and near(leaned.A.chance, 5), "a section's pool held at 5% each under the lean")
+local free = byId(Rates.section({ slots = one, weights = { 20, 80 }, pools = { [1] = { "A", "C", "D", "E" } },
+                                  weightOf = function(id) return (id == "A" or id == "C") and 3 or 1 end }))
+T.check(near(free.E.chance, 2.5), "...without the floor the lean gives 2.5%")
+
 -- ------- how a chance reads
 
 T.eq(Rates.text(35.2), "35%", "a chance in whole percent")

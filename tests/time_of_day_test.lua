@@ -48,8 +48,9 @@ end
 -- ------- OFF: exactly 0.13.x (digests recorded on 0.13.3 before this option existed)
 
 -- COMPLETE re-pinned at 0.16.0 (pools sized for a 5% share, evolved species
--- left to evolving); 0.13.x's was 4e12442f
-for mode, want in pairs({ seeded = "4d2e4e40", complete = "5e880f5a" }) do
+-- left to evolving; 0.13.x's was 4e12442f) and at 0.18.2 (a role under 5%
+-- carries a bigger role's species and pool; 0.16.0's was 5e880f5a)
+for mode, want in pairs({ seeded = "4d2e4e40", complete = "c09f243f" }) do
   local plain, withData = {}, {}
   for seed = 1, 10 do
     plain[#plain + 1] = H.serialize(build(seed, mode, nil, nil))

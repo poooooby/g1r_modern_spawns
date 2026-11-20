@@ -9,7 +9,9 @@
 --   * the game's own Old Rod (and Gen 1's Good Rod) are listed as the cart has them;
 --   * RANDOM: no fixed walking list; OFF: the game's own tables, `active` false;
 --   * currentMap follows map.entered; areaName names the place;
---   * reading never moves a table (the wild rosters are the same before and after).
+--   * reading never moves a table (the wild rosters are the same before and after);
+--   * COMPLETE: no one is met under 5% on any map, TIME OF DAY SPAWNS or not (the cart's
+--     own Old Rod and Rock Smash aside).
 package.path = "./?.lua;./?/init.lua;" .. package.path
 
 local T = require("tests.modkit")
@@ -39,7 +41,39 @@ local function load(game, gen, options)
   if loader.modOptions.national_dex then loader.modOptions.national_dex.national_dex = "on" end
   local set, game_ = H.manager(loader)
   game_.data = data
-  return run, loader.exports.modern_spawns, set, loader
+  return run, loader.exports.modern_spawns, set, loader, data
+end
+
+-- every map's ids: the encounter registry's keys
+local function mapsOf(data, gen)
+  local ids, seen = {}, {}
+  local function add(id) if type(id) == "string" and not seen[id] then seen[id] = true; ids[#ids + 1] = id end end
+  if gen == 3 then for id in pairs(data.gen3Encounters) do add(id) end
+  elseif gen == 2 then
+    for _, k in ipairs({ "grass", "water" }) do for id in pairs(data.gen2Encounters[k] or {}) do add(id) end end
+  else for id in pairs(data.encounters) do add(id) end end
+  table.sort(ids)
+  return ids
+end
+
+-- COMPLETE: every species listed on every map at 5% or more (`each` the encounters options)
+local function floorOk(ex, ids, label, each)
+  local low, rows = {}, 0
+  for _, id in ipairs(ids) do
+    for _, o in ipairs(each) do
+      local enc = ex.encounters(id, o)
+      for _, s in ipairs(enc and enc.sections or {}) do
+        if s.method ~= "old" and s.method ~= "rock" then
+          for _, m in ipairs(s.mons) do
+            rows = rows + 1
+            if m.chance < 5 - 1e-6 then low[#low + 1] = ("%s %s %s %.1f%%"):format(id, s.method, m.id, m.chance) end
+          end
+        end
+      end
+    end
+  end
+  T.check(rows > 200, label .. ": rows read (" .. rows .. ")")
+  T.eq(#low, 0, label .. ": no one under 5% on any map (" .. table.concat(low, ", ", 1, math.min(#low, 4)) .. ")")
 end
 
 local function sums(enc, label)
@@ -76,7 +110,7 @@ end
 -- (first: a Gen 3 mount in the same process changes what Data:load reads)
 
 do
-  local run, ex = load("red", 1, { spawn_mode = "seeded" })
+  local run, ex, set, _, data = load("red", 1, { spawn_mode = "seeded" })
   local enc = ex.encounters("ROUTE_12")
   sums(enc, "Red Route 12")
   local methods = {}
@@ -87,13 +121,16 @@ do
   T.eq(ex.areaName("ROUTE_12"), "ROUTE 12", "the Town Map's name")
   T.eq(#ex.encounters("REDS_HOUSE_1F").sections, 0, "a house lists nothing")
   T.eq(#ex.encounters("PALLET_TOWN").sections, 3, "Pallet Town: its water's three rods")
+  set("spawn_mode", "complete")
+  floorOk(ex, mapsOf(data, 1), "Red COMPLETE", { {} })
   run.release()
 end
 
 -- ======================================================== Emerald (Gen 3)
 
 do
-  local run, ex, set, loader = load("emerald", 3)
+  local run, ex, set, loader, data = load("emerald", 3)
+  floorOk(ex, mapsOf(data, 3), "Emerald COMPLETE", { {} })
   local mapId = "EM_ROUTE101"
   local before = roster(ex, mapId)
   local enc = ex.encounters(mapId)
@@ -159,7 +196,8 @@ end
 -- ======================================================== Emerald, TIME OF DAY STRICT
 
 do
-  local run, ex = load("emerald", 3, { time_of_day = "strict" })
+  local run, ex, _, _, data = load("emerald", 3, { time_of_day = "strict" })
+  floorOk(ex, mapsOf(data, 3), "Emerald COMPLETE, TIME OF DAY STRICT", { { period = "day" }, { period = "night" } })
   -- a night-only species somewhere in the day's pools never shows by day
   local leaks, nights = {}, 0
   for _, mapId in ipairs({ "EM_ROUTE101", "EM_ROUTE102", "EM_ROUTE103", "EM_ROUTE110", "EM_ROUTE119", "EM_PETALBURG_WOODS" }) do
@@ -185,7 +223,8 @@ end
 -- ======================================================== Crystal (Gen 2)
 
 do
-  local run, ex = load("crystal", 2)
+  local run, ex, set, _, data = load("crystal", 2)
+  floorOk(ex, mapsOf(data, 2), "Crystal COMPLETE", { { time = "all" } })
   local all = ex.encounters("ROUTE_29", { time = "all" })
   local times = {}
   for _, s in ipairs(all.sections) do if s.method == "grass" then times[s.time] = true end end
@@ -205,6 +244,9 @@ do
   local rods = false
   for _, s in ipairs(inland.sections) do if s.method == "good" or s.method == "super" or s.method == "old" then rods = true end end
   T.eq(rods, false, "Route 29 has no water: no rods listed")
+  set("time_of_day", "prefer")
+  floorOk(ex, mapsOf(data, 2), "Crystal COMPLETE, TIME OF DAY PREFER", { { time = "all", period = "day" },
+                                                                          { time = "all", period = "night" } })
   run.release()
 end
 
