@@ -15,8 +15,8 @@ and, for Gen 3, `mods/national_dex_gen3`. `tests/rse_test.lua` runs against Ruby
 and Emerald directly. Every test, fixture and the data generator are listed by exact path in
 `.modkitignore` so none of them ships.
 
-Keep [README.md](README.md) describing the mod as it is now (players read it); what changed
-goes in [CHANGELOG.md](CHANGELOG.md).
+Keep [README.md](README.md) and the player guides in [docs/](docs/) describing the mod as it is
+now (players read them); what changed goes in [CHANGELOG.md](CHANGELOG.md).
 
 ## API (`mod.exports`)
 

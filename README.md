@@ -7,127 +7,85 @@ gets fresh Pokémon from Generations 1 to 9, picked to fit the place.*
 
 </div>
 
-A mod for [Gen1Recomp](https://github.com/bryanthaboi/gen1recomp): Red, Blue, Yellow, Gold,
-Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
+WoobleSpawns is a mod for [Gen1Recomp](https://github.com/bryanthaboi/gen1recomp) that fills the
+wild with Pokémon from across the whole series. Step into the grass on Route 1 in Red, Route 29
+in Crystal or Route 101 in Emerald and you'll meet Pokémon those games never had. They still
+make sense where you find them: Water types by the sea, Ghosts in Pokémon Tower and Mt. Pyre,
+Bugs in the forests, Ice types in the frozen caves.
 
-## ✨ Features
+The rest is the game you know. Every map keeps its original encounter rate, levels and odds;
+only the Pokémon change.
 
-### Core Mechanics
+It plays on **Red, Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and
+Emerald**.
 
-- 🌱 **New Pokémon, same game feel:** Every wild encounter table is refilled with species from
-  across the generations. Each map keeps the game's own encounter rate, levels and odds; only
-  the Pokémon change.
-- 🧩 **Your generations, your mix:** Allow Gen 1 through any generation, or pick exactly the
-  ones you want (just Gen 3-8, or Gen 1, 3 and 6) with CUSTOM.
-- 🧭 **Pokémon that belong there:** Species are chosen to fit each spot's levels, terrain and
-  habitat. Water types by the sea, Ghosts in Pokémon Tower and Mt. Pyre, Electric types in the
-  Power Plant and New Mauville, Bugs in the forests, Ground types in the desert, Ice types in
-  the frozen caves. Named places in Kanto, Johto, Hoenn and the Sevii Islands each keep their
-  character, night owls stay nocturnal in Johto, and late evolutions turn up in late areas.
-- 🎲 **Four ways to play:**
-  - **LIMITED:** the classic feel. One set roster per map for your whole playthrough, picked to
-    fit like the original games: newcomers tend to share the types of the Pokémon they
-    replace, so each route and cave keeps its character.
-  - **EVERY MAP:** a fresh roster each time you enter a map.
-  - **RANDOM:** a new species every encounter.
-  - **COMPLETE:** catch them all. Every first-stage Pokémon in your range lives in the wild,
-    and no Pokémon on any map is under a 5% chance per encounter (with TIME OF DAY SPAWNS too),
-    so nothing is buried behind odds of 1 in 500. Evolved Pokémon are mostly left for you to evolve. The
-    game's own Pokémon keep a few of their old homes too (Pikachu in Viridian Forest,
-    Zigzagoon on Route 101), without crowding every route.
-- 🌱 **Seeds you can share:** Each save has its own seed. Type in a friend's seed for the same
-  wild Pokémon.
+## 🎯 Why play with it
 
-### Day and Night
+- 🔁 **A fresh run of a game you know by heart.** Every save gets its own seed, so every
+  playthrough meets different Pokémon. Share your seed and a friend gets the same world.
+- 📚 **Catch them all in the region you grew up in.** By default every first-stage Pokémon in
+  your range lives somewhere in the wild, and none of them is buried behind 1-in-500 odds.
+- 🎛️ **Make it your own.** Choose which generations appear, how often the wild changes, and
+  whether to add day and night rosters, modern trainer teams or legendaries.
 
-- 🌙 **Time of day spawns** (optional): every map gets a day roster and a night roster.
-  Hoothoot, Gastly, Murkrow and the other night owls come out after dark; Pidgey, Ledyba and
-  Sunkern keep to the daytime.
-  - **PREFER:** Pokémon are more common at their own time and rarer at the other, but you can
-    still meet any of them at any hour.
-  - **STRICT:** like Gold, Silver and Crystal. Pokémon that only come out at night appear only
-    at night, and day-only ones only by day. COMPLETE still lets you catch every first stage
-    at some hour.
-- 🕗 **Your clock:** night runs from 8 PM to 4 AM.
-  - **Ruby, Sapphire and Emerald:** they follow [WoobleDex](https://github.com/poooooby/national_dex_gen3)'s
-    Clock Source, either the game's own clock or your device's.
-  - **FireRed, LeafGreen, Red, Blue and Yellow:** your device's clock.
-  - **Gold, Silver and Crystal:** their own clock, where night starts at 6 PM.
+## ✨ What's inside
 
-### Trainer Battles
+### 🌿 Wild Pokémon that fit the place
 
-- 🥊 **Modern trainer teams** (optional): trainers, Gym Leaders, the Elite Four and your rival
-  field Pokémon from the generations you allow, picked to fit their original teams. Every Gym
-  and Elite Four member keeps their type, so Brock still throws Rock types and Phoebe Ghosts,
-  and they favour the stronger Pokémon of that type for their level.
-  Levels and team sizes stay the game's own, and legendaries never join a trainer's team.
-- 🧬 **A rival who grows with you:** each of your rival's Pokémon becomes a new evolution line
-  that stays the same in every fight and evolves as its level rises. Rematches and repeat
-  trainers keep their lines too.
-- ⚖️ **A fair first rival battle:** your rival's starter is a modern starter that YOUR starter
-  beats (pick a Grass starter and your rival leads with a Water one), and it evolves exactly
-  when the original rival's starter would.
-- 🏟️ **The end game too:** Crystal's Battle Tower, Emerald's Battle Frontier (all seven
-  facilities, the Battle Tents and the wild Pokémon of the Battle Pyramid and Battle Pike),
-  Trainer Hill, Ruby and Sapphire's Battle Tower and FireRed and LeafGreen's Trainer Tower.
-  Each Pokémon keeps its set's item, nature and training and gets moves of its own species.
-  The Battle Factory's rentals turn modern too.
-- 🎒 **Held items** (ON + ITEMS) that grow with your journey, so the first battles stay fair:
-  - **Your rival's first battle** and the trainers before the third Gym hold nothing new.
-  - **Gym Leaders, your rival and the villain bosses:** their strongest Pokémon always holds
-    something (a Berry or its type booster at the first Gyms, Leftovers mid-game, standouts like
-    Life Orb or a Choice item from about Lv 35), and more of their team joins in as you go.
-  - **Other trainers** later on carry one item, then sometimes two: a Berry or a type booster.
-  - **The Elite Four, the Champion and your rival's last battle:** every Pokémon holds one.
-  - Items the original trainers held stay, and no team holds two of the same item.
+Every species is picked for the map's levels, terrain and habitat, and late evolutions wait in
+late areas. Choose how the wild behaves: **COMPLETE** puts every first stage in the wild at a
+fair chance, **LIMITED** keeps one classic-feeling roster per map, **EVERY MAP** reshuffles each
+time you walk in, and **RANDOM** rolls a new Pokémon every encounter. Allow every generation, or
+pick any mix you like.
 
-  Newer items such as Life Orb, Choice Specs, Focus Sash, Black Sludge, Eviolite and
-  Assault Vest turn up once GENERATIONS includes their generation, with
-  [WoobleDex](https://github.com/poooooby/national_dex_gen3) installed to make them work. Each
-  goes to a Pokémon it suits: Black Sludge to Poison types, Eviolite to one that can still
-  evolve, Choice Band to an all-physical attacker and Choice Specs to an all-special one. With
-  WoobleDex's Move Split on, physical and special go by each move, just like the battles do
-  (Shadow Ball special, Crunch physical).
+➡️ [Spawn modes, generations, seeds and what stays the same](docs/wild-pokemon.md)
 
-### Rare Finds
+### 🌙 Day and night
 
-- 👑 **Legendaries in the wild** (optional): Once you've entered the Hall of Fame, legendary
-  and mythical Pokémon can turn up on a few fitting maps, very rarely (1 in 1024 encounters
-  there, 1 in 2048 for a mythical), until you own them. On Gen 3 their Pokédex AREA page shows
-  where to look before then.
-- ✨ **Shiny chains:** Win or catch the same species again and again. It turns up more often
-  (every encounter from a chain of 9), is likelier to be shiny (about 1 in 82 at 100) and gains
-  perfect stats (1 / 2 / 3 from a chain of 10 / 25 / 40). Running from it or blacking out ends
-  the chain. On Gen 3, [Wilds of Hoenn](https://github.com/poooooby/wilds-of-hoenn) adds the
-  shinies and stats.
-- 📖 **Pokédex AREA page** (Gen 3): shows where each species lives under your settings. With
-  [WoobleDex](https://github.com/poooooby/national_dex_gen3), you can even look up
-  where to find Pokémon you haven't seen yet. Legendaries with a home are marked as seen.
+Turn on time-of-day spawns and Hoothoot, Gastly and Murkrow come out after dark while Pidgey and
+Ledyba keep to the daytime. Lean the odds towards each Pokémon's own hour, or keep them strictly
+to it, like Gold, Silver and Crystal.
 
-### 📟 WoobNav (Kanto Gear)
+➡️ [How day and night work](docs/day-and-night.md)
 
-With [Kanto Gear](https://github.com/AverageConsumer/kanto-gear) installed, WoobleSpawns adds a
-**WOOBNAV** app to its Silph Store. Open it from the Gear's Home screen to see your current area
-on the Gear's own screen, in its pixel style:
+### 🥊 Modern trainer teams
 
-- 🔎 **Every wild Pokémon here**, six to a page: sprite, name, the chance of meeting it, its
-  levels, and how you meet it (grass, cave, surfing, each rod, Rock Smash). It includes every
-  Pokémon COMPLETE can turn a slot into, not just the first species in each slot. Tap the arrows
-  or swipe to turn the page.
-- 📊 **Real odds:** each percentage is that Pokémon's share of that way of meeting Pokémon here,
-  with the game's own slot odds, TIME OF DAY SPAWNS and the time of day right now (Gold, Silver
-  and Crystal show morning, day or night). Legendaries waiting on the map show as RARE.
-- 📖 **Tap a Pokémon** for its summary: number, types, category, height and weight, Pokédex
-  entry, base stats, evolution line (and abilities on Gen 3), and where it turns up on this map
-  at each time of day.
-- The list follows you from map to map. The back button (top left) returns to the list, then
-  to Kanto Gear.
-- 🌙 **Light or dark:** tap the moon (top right) for night mode and the sun to go back. Your
-  pick stays with your save.
-- ⚔️ In a battle, Kanto Gear takes the screen back for its battle controls; WoobNav returns on
-  its own once the battle is over.
-- It shows wherever Kanto Gear shows (second screen, combined screen or fullscreen), by touch or
-  mouse. Your buttons stay with the game, so you can keep walking with it open.
+Trainers, Gym Leaders, the Elite Four and your rival can field Pokémon from the generations you
+allow. They keep their types and their levels. Your rival's starter is one yours can beat, and
+the battle facilities join in too. Add held items that grow with your journey, so early battles
+stay fair.
+
+➡️ [Trainer teams, your rival, the battle facilities and held items](docs/trainer-teams.md)
+
+### 👑 Rare finds
+
+After the Hall of Fame, legendaries and mythicals can turn up on fitting maps, very rarely.
+Battle the same species again and again to build a shiny chain: more of it, better shiny odds,
+better stats.
+
+➡️ [Legendaries and shiny chains](docs/rare-finds.md)
+
+### 📟 WoobNav
+
+With [Kanto Gear](https://github.com/AverageConsumer/kanto-gear), get the WOOBNAV app from its
+Silph Store. It shows every wild Pokémon on your map with its real odds and levels, plus a
+summary for each one, in light or dark mode.
+
+➡️ [Using the WoobNav](docs/woobnav.md)
+
+## 💾 Getting started
+
+1. Download the latest release from the
+   [Releases](https://github.com/poooooby/g1r_modern_spawns/releases) page.
+2. Import it with the Gen1Recomp Mod Manager, or drop it in your mods folder.
+3. Play. On its own, WoobleSpawns mixes up your game's own Pokémon: 151 in Red, Blue and
+   Yellow, 251 in Gold, Silver and Crystal, and 386 in the Gen 3 games. For the newer
+   generations, add the species mod for your game:
+   - **Red, Blue, Yellow:** [National Dex](https://github.com/sanjinpepic/gen1recomp-national-dex),
+     with its **NATIONAL DEX** option ON.
+   - **FireRed, LeafGreen, Ruby, Sapphire, Emerald:**
+     [WoobleDex](https://github.com/poooooby/national_dex_gen3), plus
+     [WoobleSpritePack](https://github.com/poooooby/g9-battle-sprites-gen3) for battle art.
 
 ## ⚙️ Options
 
@@ -136,73 +94,25 @@ Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own 
 
 | Option | Choices | Default | What it does |
 |---|---|---|---|
-| **MODERN SPAWNS** | ON / OFF | ON | OFF keeps the game's original tables. |
-| **GENERATIONS** | GEN 1 … GEN 1-9 / CUSTOM | GEN 1-9 | Which generations can appear, wild and (with TRAINER TEAMS) on trainers' teams, up to what's installed. GEN 1 shuffles the Gen 1 Pokémon. CUSTOM shows a GEN 1 … GEN 9 switch for each generation, so you can pick any mix. |
-| **SPAWN MODE** | LIMITED / EVERY MAP / RANDOM / COMPLETE | COMPLETE | How rosters are drawn (see above). |
-| **TIME OF DAY SPAWNS** | OFF / PREFER / STRICT | OFF | Day and night rosters. PREFER makes Pokémon more common at their own time; STRICT keeps night-only and day-only Pokémon to their time. |
-| **LEGENDARIES** | OFF / ON | OFF | Rare legendaries and mythicals on their home maps, after the League. |
-| **SHINY CHAINS** | ON / OFF | ON | Build chains by beating one species in a row. OFF pauses it; your chain is kept. |
-| **TRAINER TEAMS** | OFF / ON / ON + ITEMS | OFF | Modern Pokémon for trainers, Gyms, the Elite Four, your rival and the battle facilities. ON + ITEMS also gives them held items. |
+| **MODERN SPAWNS** | ON / OFF | ON | OFF keeps the game's original wild Pokémon. |
+| **GENERATIONS** | GEN 1 … GEN 1-9 / CUSTOM | GEN 1-9 | Which generations can appear, wild and on trainers' teams. CUSTOM lets you switch each one on or off. |
+| **SPAWN MODE** | LIMITED / EVERY MAP / RANDOM / COMPLETE | COMPLETE | How often the wild changes. |
+| **TIME OF DAY SPAWNS** | OFF / PREFER / STRICT | OFF | Day and night rosters. |
+| **LEGENDARIES** | OFF / ON | OFF | Rare legendaries and mythicals after the Hall of Fame. |
+| **SHINY CHAINS** | ON / OFF | ON | OFF pauses your chain and keeps it. |
+| **TRAINER TEAMS** | OFF / ON / ON + ITEMS | OFF | Modern Pokémon for trainers; ON + ITEMS adds held items. |
 | **SEED** | up to 10 letters | your save's | Type a seed to share or replay a world. |
 | **REROLL SEED** | - / REROLL | - | Draw a new random seed for this save. |
-
-## 💾 Installation
-
-1. Download the latest release from the
-   [Releases](https://github.com/poooooby/g1r_modern_spawns/releases) page.
-2. Import it with the Gen1Recomp Mod Manager, or drop it in your mods folder.
-3. That's it: on its own, WoobleSpawns mixes up your game's own Pokémon (Red, Blue and
-   Yellow's 151, Gold, Silver and Crystal's 251, the Gen 3 games' 386). For newer Pokémon, add
-   the species mod for your game:
-   - **Red, Blue, Yellow:** [National Dex](https://github.com/sanjinpepic/gen1recomp-national-dex),
-     with its **NATIONAL DEX** option ON.
-   - **FireRed, LeafGreen, Ruby, Sapphire, Emerald:**
-     [WoobleDex](https://github.com/poooooby/national_dex_gen3), plus
-     [WoobleSpritePack](https://github.com/poooooby/g9-battle-sprites-gen3) for battle art.
 
 ## 🔗 Works With
 
 - [Wilds of Hoenn](https://github.com/poooooby/wilds-of-hoenn) and
   [Wilds of Kanto Revival](https://github.com/poooooby/wilds-of-kanto-gen-3): their visible
-  overworld Pokémon use these tables, legendaries and shiny chains too.
-- [Kanto Gear](https://github.com/AverageConsumer/kanto-gear): the WOOBNAV app (above), and its
-  wild-encounter guide shows the new species.
-- [WoobleDex](https://github.com/poooooby/national_dex_gen3) makes the newer held items work
-  for TRAINER TEAMS.
-
-## 📌 Good to Know
-
-- 🎣 The Good and Super Rods catch new Pokémon too (water species only, at the game's own
-  levels and odds). The Old Rod keeps the game's own catches everywhere, and Rock Smash does on
-  Gen 3.
-  Gold, Silver and Crystal also keep swarms, the Bug-Catching Contest, Headbutt and the roaming
-  beasts.
-- Early routes have the fewest suitable species, so variety grows as you go.
-- 🌙 With TIME OF DAY SPAWNS on, the Pokédex AREA page lists every place a species lives, by day
-  or at night.
-- 🌙 Which Pokémon keep to the day or the night comes from the games with a clock (Gold, Silver,
-  Crystal, Diamond, Pearl, Platinum, HeartGold and SoulSilver). Newer Pokémon lean the way their
-  Pokédex entries describe; STRICT only rules out what those games did.
-- 🥊 TRAINER TEAMS works whether MODERN SPAWNS is on or off, and follows your save's seed: the
-  same seed gives the same teams.
-  - Red, Blue and Yellow's trainers can't hold items, so ON + ITEMS plays like ON there.
-  - Pokémon that already held an item in the original game keep it. Your game's own items are
-    always in play; newer ones only appear when GENERATIONS includes their generation.
-  - Teams from other players (record mixing, secret bases), e-Reader trainers and link battles
-    stay as they are.
-  - Switching TRAINER TEAMS in the middle of a facility challenge changes the opponents still
-    to come.
-  - With a narrow GENERATIONS range there are fewer species to swap in, so the facilities
-    change less.
-- 🧩 With CUSTOM GENERATIONS, a Pokémon from a left-out generation never appears, but your own
-  Pokémon still evolve as usual (a Chansey you catch can still become a Blissey). Trainers
-  skip a left-out stage: with Gen 2 and 4 only, a trainer's Happiny grows straight into Blissey.
-  Turning every generation off (or picking only generations no species mod adds) leaves the
-  game's original Pokémon.
-- 📟 The WoobNav lists the game's own Pokémon when MODERN SPAWNS is OFF, and under RANDOM only
-  the Old Rod and Rock Smash (everything else is a new roll each time).
-- On Gen 3, forms that are wild in the real games appear (Galarian and Hisuian forms, Flabébé's
-  colours, Pumpkaboo's sizes and more); megas and item forms never do.
+  overworld Pokémon use WoobleSpawns' Pokémon, legendaries and shiny chains.
+- [Kanto Gear](https://github.com/AverageConsumer/kanto-gear): the WOOBNAV app, and its own
+  wild-encounter guide shows the Pokémon WoobleSpawns picked.
+- [WoobleDex](https://github.com/poooooby/national_dex_gen3): newer Pokémon on Gen 3, the
+  Pokédex AREA page for Pokémon you haven't seen, and working held items for trainer teams.
 
 ## 🪪 Credits
 
