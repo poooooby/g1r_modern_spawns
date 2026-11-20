@@ -104,6 +104,27 @@ Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald.
   [WoobleDex](https://github.com/poooooby/national_dex_gen3), you can even look up
   where to find Pokémon you haven't seen yet. Legendaries with a home are marked as seen.
 
+### 📟 WoobNav (Kanto Gear)
+
+With [Kanto Gear](https://github.com/AverageConsumer/kanto-gear) installed, WoobleSpawns adds a
+**WOOBNAV** app to its Silph Store. Open it from the Gear's Home screen to see your current area
+on the Gear's own screen, in its pixel style:
+
+- 🔎 **Every wild Pokémon here**, six to a page: sprite, name, the chance of meeting it, its
+  levels, and how you meet it (grass, cave, surfing, each rod, Rock Smash). It includes every
+  Pokémon COMPLETE can turn a slot into, not just the first species in each slot. Tap the arrows
+  or swipe to turn the page.
+- 📊 **Real odds:** each percentage is that Pokémon's share of that way of meeting Pokémon here,
+  with the game's own slot odds, TIME OF DAY SPAWNS and the time of day right now (Gold, Silver
+  and Crystal show morning, day or night). Legendaries waiting on the map show as RARE.
+- 📖 **Tap a Pokémon** for its summary: number, types, category, height and weight, Pokédex
+  entry, base stats, evolution line (and abilities on Gen 3), and where it turns up on this map
+  at each time of day.
+- The list follows you from map to map. The back button (top left) returns to the list, then
+  to Kanto Gear.
+- It shows wherever Kanto Gear shows (second screen, combined screen or fullscreen), by touch or
+  mouse. Your buttons stay with the game, so you can keep walking with it open.
+
 ## ⚙️ Options
 
 Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own option list (or
@@ -140,7 +161,8 @@ Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own 
 - [Wilds of Hoenn](https://github.com/poooooby/wilds-of-hoenn) and
   [Wilds of Kanto Revival](https://github.com/poooooby/wilds-of-kanto-gen-3): their visible
   overworld Pokémon use these tables, legendaries and shiny chains too.
-- Wild-encounter guides such as Kanto Gear's show the new species.
+- [Kanto Gear](https://github.com/AverageConsumer/kanto-gear): the WOOBNAV app (above), and its
+  wild-encounter guide shows the new species.
 - [WoobleDex](https://github.com/poooooby/national_dex_gen3) makes the newer held items work
   for TRAINER TEAMS.
 
@@ -173,6 +195,8 @@ Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own 
   skip a left-out stage: with Gen 2 and 4 only, a trainer's Happiny grows straight into Blissey.
   Turning every generation off (or picking only generations no species mod adds) leaves the
   game's original Pokémon.
+- 📟 The WoobNav lists the game's own Pokémon when MODERN SPAWNS is OFF, and under RANDOM only
+  the Old Rod and Rock Smash (everything else is a new roll each time).
 - On Gen 3, forms that are wild in the real games appear (Galarian and Hisuian forms, Flabébé's
   colours, Pumpkaboo's sizes and more); megas and item forms never do.
 
@@ -181,6 +205,8 @@ Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own 
 - Wild level, habitat and rarity data, and which Pokémon come out by day or at night:
   [PokéAPI](https://pokeapi.co/).
 - Shiny chains: inspired by **TTiN** and **Untamed Tohjo**, used with permission.
+- WoobNav: Kanto Gear's look and its pixel fonts by **AverageConsumer** (MIT); the fonts are
+  BobsGame nD by Robert Matthew Pelloni (WTFPL) and scientifica by Akshay Oppiliappan (OFL 1.1).
 
 ---
 

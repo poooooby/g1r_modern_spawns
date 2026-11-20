@@ -214,6 +214,36 @@ return function(deps)
     return deepCopy(Runtime.poolFor(mapId, terrain or "grass", period))
   end
 
+  -- Every species on a map and how likely it is, method by method, under
+  -- the current settings (since 0.18.0; the WoobNav reads it). mapId defaults
+  -- to the player's map. Percentages are of that method's encounters (a
+  -- walking encounter is 35% this species), the cart's own odds per slot,
+  -- COMPLETE's pools split the way the encounter hook draws from them
+  -- (TIME OF DAY SPAWNS weights included), looks folded into their base.
+  -- Unlike every other function it also answers while inactive, from the
+  -- game's own tables (`active` false). opts: period ("day"/"night"; default
+  -- now), time (Gen 2 grass: "MORN"/"DAY"/"NITE"/"all"; default now).
+  --   -> { mapId, name, active, random, mode, period, time,
+  --        sections = { { method = "grass"|"cave"|"surf"|"old"|"good"|"super"|"rock",
+  --                       kind, time?, rate,
+  --                       mons = { { id, chance (0-100), minLevel, maxLevel, pooled } } } },
+  --        rare = { { id, category = "legendary"|"mythical", method, odds (1 in odds) } } }
+  -- RANDOM (`random` true) has no fixed walking/surfing/rod lists, so only
+  -- the game's own sections (the Old Rod, Rock Smash) are listed.
+  exports.encounters = function(mapId, opts)
+    return deepCopy(Runtime.encountersAt(mapId, opts))
+  end
+
+  -- The map the player is on (the id every other function takes), or nil.
+  exports.currentMap = function()
+    return Runtime.currentMap()
+  end
+
+  -- A map's place name as the game shows it ("ROUTE 1"), or nil.
+  exports.areaName = function(mapId)
+    return Runtime.areaName(mapId)
+  end
+
   -- Where a species can be met under the current settings:
   -- { [mapId] = { land|grass|water = true } } (a copy). Generated tables and
   -- COMPLETE pools, the maps drawn this session under EVERY MAP, and home

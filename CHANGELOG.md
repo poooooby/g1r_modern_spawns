@@ -3,6 +3,34 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.18.0] - 2026-11-20
+
+### Added
+
+- **WOOBNAV, a DexNav-style Kanto Gear app** (user request). With Kanto Gear installed, a WOOBNAV tile joins
+  its Silph Store. It shows every wild Pokémon on the player's current map at Kanto Gear's
+  bottom-screen size (240x216), in its pixel style and with its fonts:
+  - six cards a page (sprite, name, chance, levels, how it's met), with page buttons and swipes;
+  - COMPLETE's pooled species listed with the share each one gets of its slot, not just the
+    first species in each slot;
+  - a summary per species (number, types, category, height and weight, Pokédex entry, base
+    stats, evolution line, Gen 3 abilities, where it's met on the map at each time of day);
+  - a back button in the top-left corner that returns to the list, then to Kanto Gear.
+
+  It follows Kanto Gear's DISPLAY MODE (second screen, handheld, combined screen, fullscreen; phone
+  as combined). It is driven by touch or mouse only, so the buttons stay with the game. Without
+  Kanto Gear nothing registers and no hook is installed. It reads the tables and never changes a
+  roll: wild and trainer output is byte-identical (golden probe on Red, Crystal, FireRed and
+  Emerald).
+- **API: per-map odds.** `encounters(mapId?, { period?, time? })` lists every species on a map,
+  method by method, with its chance in percent, its levels and whether a COMPLETE pool supplies
+  it. Odds use the game's own slot odds, and COMPLETE's pools are split as the encounter hook
+  draws them (TIME OF DAY SPAWNS weights included). Legendaries waiting there are listed under
+  `rare`. Unlike the other functions, it also answers while inactive, from the game's own tables.
+  - `currentMap()` gives the player's map; `areaName(mapId)` gives its place name.
+  - These are additions only, so apiVersion stays 3.
+  - WoobOS's Pokédex can read these instead of working out its own percentages.
+
 ## [0.17.0] - 2026-11-19
 
 ### Added

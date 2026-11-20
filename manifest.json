@@ -1,7 +1,7 @@
 {
   "id": "modern_spawns",
   "name": "WoobleSpawns",
-  "version": "0.17.0",
+  "version": "0.18.0",
   "api": 2,
   "entry": "main.lua",
   "profile": "content",
@@ -18,14 +18,15 @@
     "wilds_of_kanto_gen3",
     "wilds_of_hoenn",
     "national_dex",
-    "national_dex_gen3"
+    "national_dex_gen3",
+    "kanto_gear"
   ],
   "conflicts": [
     "1025Dex",
     "wildfollowers"
   ],
   "options_schema": "options.lua",
-  "description": "Redistributes every wild encounter table across Gen 1-9 species, dynamically, in Red, Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald: each map keeps the game's own rates, slot levels, odds, and only the species are re-picked by level, terrain, habitat, type and rarity. Settings in OPTIONS > MODS > WoobleSpawns: on/off, a generation cap, LIMITED / EVERY MAP / RANDOM / COMPLETE rosters, day and night rosters on WoobleDex's clock (TIME OF DAY SPAWNS), rare legendaries, modern trainer, gym and battle-facility teams with optional held items (TRAINER TEAMS), and a per-save seed. Published through mod.exports as a framework other mods can build on. Works on the game's own Pokemon alone; a species mod widens the pool: national_dex (NATIONAL DEX option ON) on Red/Blue/Yellow, national_dex_gen3 on FireRed to Emerald. COMPLETE mode (the default) makes every species catchable.",
+  "description": "Redistributes every wild encounter table across Gen 1-9 species, dynamically, in Red, Blue, Yellow, Gold, Silver, Crystal, FireRed, LeafGreen, Ruby, Sapphire and Emerald: each map keeps the game's own rates, slot levels, odds, and only the species are re-picked by level, terrain, habitat, type and rarity. Settings in OPTIONS > MODS > WoobleSpawns: on/off, a generation cap, LIMITED / EVERY MAP / RANDOM / COMPLETE rosters, day and night rosters on WoobleDex's clock (TIME OF DAY SPAWNS), rare legendaries, modern trainer, gym and battle-facility teams with optional held items (TRAINER TEAMS), and a per-save seed, and a DEXNAV app for Kanto Gear (every wild Pokemon on your map with its odds). Published through mod.exports as a framework other mods can build on. Works on the game's own Pokemon alone; a species mod widens the pool: national_dex (NATIONAL DEX option ON) on Red/Blue/Yellow, national_dex_gen3 on FireRed to Emerald. COMPLETE mode (the default) makes every species catchable.",
   "permissions": [
     "engine_internals"
   ],

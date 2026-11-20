@@ -140,6 +140,33 @@ return function(deps)
     return (hour >= 18 or hour < 4) and "night" or "day"
   end
 
+  -- Gold/Silver/Crystal's word for now: "MORN" | "DAY" | "NITE" (DARK reads
+  -- as NITE), or nil off Gen 2 / unknown. Read only (the WoobNav's grass list).
+  function C.gen2Time()
+    if generation ~= 2 then return nil end
+    if pinned then return pinned == "night" and "NITE" or "DAY" end
+    local okW, world = pcall(function() return mod.game and mod.game.world end)
+    world = okW and type(world) == "table" and world or nil
+    local word = world and world.tod
+    if word ~= "MORN" and word ~= "DAY" and word ~= "NITE" and word ~= "DARK" then
+      word = nil
+      local Palettes = engine("src.world.gen2.Palettes")
+      if Palettes and type(Palettes.clockDaytime) == "function" then
+        local hour
+        if world and type(world.hour) == "function" then
+          local ok, h = pcall(world.hour, world)
+          if ok then hour = tonumber(h) end
+        end
+        local ok, w = pcall(Palettes.clockDaytime, hour)
+        if ok then word = w end
+      end
+    end
+    if word == "DARK" then word = "NITE" end
+    if word == "MORN" or word == "DAY" or word == "NITE" then return word end
+    local hour = deviceHour()
+    return (hour >= 18 or hour < 4) and "NITE" or (hour < 10 and "MORN" or "DAY")
+  end
+
   -- "day" or "night" for an encounter's ctx (or nil: right now).
   function C.period(ctx)
     if pinned then return pinned end

@@ -365,6 +365,74 @@ return function(reg, MapContext, mod)
     return #out > 0 and out or nil
   end
 
+  -- ------------------------------------------------------- area (WoobNav)
+
+  -- The map's canonical id (the alias this adapter generates) for any of its
+  -- aliases, or nil when it has no wild data.
+  function A.canonicalMap(id)
+    if id == nil then return nil end
+    local all = maps()
+    if all[id] then return id end
+    local rec = record(id)
+    if not (rec and rec.mapGroup and rec.mapNum) then return nil end
+    for cid, crec in pairs(all) do
+      if crec.mapGroup == rec.mapGroup and crec.mapNum == rec.mapNum then return cid end
+    end
+    return nil
+  end
+
+  -- What the cart rolls and this mod never touches: the Old Rod (fishing
+  -- slots 1-2, 70/30) and Rock Smash (60/30/5/4/1).
+  local FIXED = {
+    { kind = "fish.old", key = "fishing", first = 1, weights = { 70, 30 }, terrain = "fish" },
+    { kind = "rocks", key = "rocks", first = 1, weights = { 60, 30, 5, 4, 1 }, terrain = "rocks" },
+  }
+  function A.fixedTables(mapId)
+    local rec = maps()[mapId]
+    local out = {}
+    for _, f in ipairs(FIXED) do
+      local area = rec and rec[f.key]
+      local list = type(area) == "table" and type(area.slots) == "table" and area.slots or nil
+      if list and #list >= f.first + #f.weights - 1 and (f.key == "fishing" or (area.rate or 0) > 0) then
+        local slots, w = {}, {}
+        for i = 1, #f.weights do
+          local s = list[f.first + i - 1]
+          slots[i] = { species = s.species, level = s.minLevel or 1, maxLevel = s.maxLevel or s.minLevel or 1 }
+          w[i] = f.weights[i]
+        end
+        out[#out + 1] = { kind = f.kind, terrain = f.terrain, def = { rate = area.rate, slots = slots }, weights = w }
+      end
+    end
+    return out
+  end
+
+  -- The place's name: Hoenn's map section (src.ui.game3.rse.mapsec) or
+  -- Kanto's (map_sections_extract), else the id made readable.
+  function A.mapName(mapId)
+    local name
+    pcall(function()
+      local data = mod and mod.game and mod.game.data
+      local def = (data and data.maps and data.maps[mapId]) or reg.get("maps", mapId)
+      local section = type(def) == "table" and def.regionMapSectionId
+      if section == nil then return end
+      local Mapsec = engine("src.ui.game3.rse.mapsec")
+      local Version = engine("src.core.GameVersion")
+      local edition = Version and Version.get and Version.get()
+      if Mapsec and (edition == "ruby" or edition == "sapphire" or edition == "emerald") then
+        local entry = Mapsec.entry(section)
+        name = entry and entry.name
+      else
+        local Sections = engine("src.import.gba.map_sections_extract")
+        local info = Sections and Sections.getInfo(section, mapId, def.floorNum)
+        name = info and info.resolved and info.rawName
+      end
+    end)
+    if type(name) ~= "string" or not name:find("%S") then
+      name = tostring(mapId):gsub("^%u%u_", ""):gsub("_", " ")
+    end
+    return (name:gsub("<LF>", " "):gsub("\n", " "))
+  end
+
   -- ----------------------------------------------------------------- save
 
   -- The live Pokedex is game.session.dex, keyed by species slot.

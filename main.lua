@@ -67,6 +67,7 @@ return function(mod)
   local makeApi = loadSibling(mod, "src/api.lua")
   local makeDexArea = loadSibling(mod, "src/dex_area.lua")
   local Chain = loadSibling(mod, "src/chain.lua", true)
+  local Rates = loadSibling(mod, "src/rates.lua", true)
   -- one adapter per engine: Red/Blue/Yellow, Gold/Silver/Crystal,
   -- FireRed/LeafGreen
   local adapters = {
@@ -103,7 +104,7 @@ return function(mod)
   local Runtime = makeRuntime({
     mod = mod, Config = Config, Generator = Generator, SpeciesPool = SpeciesPool,
     MapContext = MapContext, Rng = Rng, profiles = profiles, adapters = adapters,
-    makeLiveSync = makeLiveSync, Chain = Chain,
+    makeLiveSync = makeLiveSync, Chain = Chain, Rates = Rates,
     timeOfDay = timeOfDay, makeClock = makeClock,
   })
   Runtime.install()
@@ -143,4 +144,11 @@ return function(mod)
   end
   -- Gen 3's Pokedex AREA page reads the generated tables (src/dex_area.lua)
   if makeDexArea then makeDexArea({ mod = mod, Runtime = Runtime })() end
+  -- the WoobNav, a Kanto Gear app (optional: without the Gear, or broken, nothing changes)
+  local makeWoobNav = loadSibling(mod, "src/woobnav/init.lua", true)
+  if makeWoobNav then
+    local ok, err = pcall(makeWoobNav, { mod = mod, Rates = Rates,
+      load = function(name) return loadSibling(mod, name, true) end })
+    if not ok then mod.log:warn("WoobNav is off: %s", tostring(err)) end
+  end
 end

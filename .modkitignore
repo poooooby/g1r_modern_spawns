@@ -49,3 +49,7 @@ tests/options_shortcut_test.lua
 tests/generations_test.lua
 tests/trainers_move_split_test.lua
 tests/trainers_items_test.lua
+tests/rates_test.lua
+tests/encounters_test.lua
+tests/woobnav_test.lua
+tests/drivers/woobnav_probe.lua
