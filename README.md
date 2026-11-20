@@ -122,6 +122,8 @@ on the Gear's own screen, in its pixel style:
   at each time of day.
 - The list follows you from map to map. The back button (top left) returns to the list, then
   to Kanto Gear.
+- ⚔️ In a battle, Kanto Gear takes the screen back for its battle controls; WoobNav returns on
+  its own once the battle is over.
 - It shows wherever Kanto Gear shows (second screen, combined screen or fullscreen), by touch or
   mouse. Your buttons stay with the game, so you can keep walking with it open.
 

@@ -184,6 +184,50 @@ return function(deps)
 
   function N.isOpen() return state.open == true end
 
+  -- A battle hands the screen to Kanto Gear (its battle controls), as NaviPlay's apps do: the
+  -- WoobNav stays open underneath, reports itself not shown, and is back when the battle ends.
+  -- Gen 3: the engine's battle module; Gen 1/2: a battle state on the game's stack.
+  -- (N.battleOverride: a test's)
+  local generation = tonumber(mod.generation) or 1
+  local Battle3
+  function N.inBattle()
+    if N.battleOverride ~= nil then return N.battleOverride == true end
+    if generation == 3 then
+      if Battle3 == nil then
+        local ok, B = pcall(require, "src.core.game3.battle")
+        Battle3 = ok and type(B) == "table" and B or false
+      end
+      if not (Battle3 and Battle3.isActive) then return false end
+      local ok, active = pcall(Battle3.isActive)
+      return ok and active == true
+    end
+    local ok, found = pcall(function()
+      local stack = mod.game and mod.game.stack
+      for _, st in ipairs(stack and stack.states or {}) do
+        if type(st) == "table" and (st.isBattleState or st.isGen2BattleState or st.screenId == "Gen2BattleState") then
+          return true
+        end
+      end
+      return false
+    end)
+    return ok and found == true
+  end
+
+  -- what Kanto Gear asks (its module API's shown()): open, and no battle on
+  local wasBattle = false
+  function N.shown()
+    if state.open ~= true then return false end
+    local battle = N.inBattle()
+    if battle ~= wasBattle then
+      wasBattle = battle
+      state.pressed, state.down = nil, nil
+      -- back from a battle: the list again, refreshed (caught marks, a new map)
+      if not battle then state.stale = true end
+      dirty()
+    end
+    return not battle
+  end
+
   -- ------- input
 
   local function act(target)
@@ -303,7 +347,7 @@ return function(deps)
   -- ------- Kanto Gear
 
   local app = {
-    isOpen = N.isOpen,
+    isOpen = N.shown, -- the display stands down in a battle too
     draw = N.draw,
     pointer = N.pointer,
     prepare = N.prepare,
@@ -317,7 +361,7 @@ return function(deps)
     if not (type(modules) == "table" and modules.api == 1 and type(modules.register) == "function") then
       return false
     end
-    local spec = makeSpec({ shown = N.isOpen, open = N.open })
+    local spec = makeSpec({ shown = N.shown, open = N.open })
     local ok, done, why = pcall(modules.register, spec)
     if ok and done == true then
       N.registered = true

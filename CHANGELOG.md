@@ -3,6 +3,16 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.18.1] - 2026-11-20
+
+### Changed
+
+- **WoobNav steps aside for battles** (user request, as NaviPlay's apps do). While a battle runs
+  it reports itself not shown, so Kanto Gear takes the screen back for its battle controls. It
+  stays open underneath and returns on its own when the battle ends, its list refreshed.
+  Battles are detected by the Gen 3 engine's battle module, or a battle screen on the Gen 1/2
+  game's screen stack.
+
 ## [0.18.0] - 2026-11-20
 
 ### Added

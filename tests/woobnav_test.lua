@@ -141,6 +141,17 @@ do
   T.eq(N.open(), true, "opening answers true (the screen is taken)")
   T.eq(N.isOpen(), true, "shown() is true while open")
 
+  -- a battle hands the screen to Kanto Gear, and it comes back after
+  T.eq(N.inBattle(), false, "no battle on the field")
+  N.battleOverride = true
+  T.eq(N.shown(), false, "in a battle: not shown, so the Gear takes over")
+  T.eq(N.isOpen(), true, "...though still open underneath")
+  T.eq(N.Display.wantedMode(), "off", "...and its display stands down")
+  N.battleOverride = false
+  T.eq(N.shown(), true, "after the battle: shown again")
+  T.eq(N.state.stale, true, "...its list read afresh")
+  N.battleOverride = nil
+
   -- the display it asks for
   local D = N.Display
   D.state.gearOptions = { display_mode = "combined" }
