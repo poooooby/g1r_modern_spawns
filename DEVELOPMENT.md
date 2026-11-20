@@ -47,6 +47,9 @@ exports don't bump it, so test for a newer one by presence,
 | `tableFor(mapId, terrain, period?)` | the generated grass / indoor / water table (copy) in the running game's own shape, or nil. Gen 1: `{ rate, slots, buckets? }`. Gen 2 grass: `{ map, rates, slots = { MORN, DAY, NITE } }`; Gen 2 water: `{ map, rate, slots }`. With TIME OF DAY SPAWNS on, `period` (`"day"`/`"night"`) picks that roster, by default the one in force now; OFF has one roster and ignores it |
 | `superRodFor(mapId)` | the Super Rod catches (copy): Gen 1 `{ { species, level } }`, Gen 2 fish rows `{ { chance, species, level } }`, Gen 3 `{ rate, slots = { { species, minLevel, maxLevel } } }`; or nil |
 | `poolFor(mapId, terrain, period?)` | COMPLETE only (terrain `land`/`grass`, `water`, and on Gen 3 `fish.good`/`fish.super`): `{ [slot] = { species ids } }`, what each slot can turn into (its main species first, the cart's own species for the slot last where it keeps one of its homes); nil in other modes. With TIME OF DAY SPAWNS on, what it can turn into at `period` (STRICT leaves out species that only come out at the other time), that period's main species first |
+| `encounters(mapId?, opts?)` | every species on a map (default: the player's) with its odds, method by method: `{ mapId, name, active, random, mode, period, time, sections = { { method, kind, time?, rate, mons = { { id, chance, minLevel, maxLevel, pooled } } } }, rare = { { id, category, method, odds } } }`. `method` is `grass`/`cave`/`surf`/`old`/`good`/`super`/`rock`; `chance` is percent of that method's encounters (the cart's slot odds; COMPLETE's pools split as the `encounter.species` hook draws them, TIME OF DAY SPAWNS weights included; looks folded into their base); `pooled` when only a pool supplies it. `opts.period` `"day"`/`"night"` (default now); `opts.time` on Gen 2 grass `"MORN"`/`"DAY"`/`"NITE"`/`"all"` (default now). Answers while inactive too, from the game's own tables (`active` false); under RANDOM (`random` true) only the game's own sections (the Old Rod, Gen 1's Good Rod, Gen 3's Rock Smash). `rare`: legendaries hosted there once the League is beaten and not owned (`odds` = 1 in that many). Read only. Since 0.18.0 |
+| `currentMap()` | the player's map id (the last `map.entered`, else the engine's position), as the other functions take it. Since 0.18.0 |
+| `areaName(mapId)` | the place's name as the game shows it (Town Map, landmark, map section). Since 0.18.0 |
 | `locate(speciesId)` | `{ [mapId] = { land/grass/water = true } }`: where a species can be met under the current settings (empty under RANDOM, nil while inactive). What the Gen 3 Pokédex AREA page shows |
 | `drawFor(mapId, terrain, period?)` | for a mod that picks species itself, once per pick (visible overworld spawns): `tableFor` under LIMITED / EVERY MAP, a fresh one-off draw under RANDOM; `period` as for `tableFor` |
 | `legendaryFor(mapId, terrain)` | the LEGENDARIES roll for such a pick: a hosted, not-yet-owned legendary (1/1024) or mythical (1/2048) id once the League is beaten, or nil |
@@ -188,6 +191,33 @@ MORN/DAY/NITE slots.
 
 Tuning numbers live in `SpawnConfig`
 ([src/config.lua](src/config.lua)); shiny chains are [src/chain.lua](src/chain.lua).
+
+## WoobNav (Kanto Gear app)
+
+`src/woobnav/` registers a Silph Store app through Kanto Gear's module hook
+(`mod:find("kanto_gear").exports.modules`, `api == 1`: `register{ id, label, category,
+description, icon, accent, available, shown, open }`). Without the Gear nothing registers and no
+hook is installed. While the app is open (`shown()` true) the Gear stands down entirely, so the
+WoobNav draws and takes input itself:
+
+| File | What |
+|---|---|
+| `init.lua` | state, the model (`exports.encounters` -> six-a-page cards; a species' HERE rows at each time of day), input actions, events, the registration |
+| `gear.lua` | the Store spec: words, 24x24 pal/rows icon, translations |
+| `view.lua` | the two screens on 240x216 (Kanto Gear's bottom screen) and their hit-testing (pure) |
+| `art.lua` | Kanto Gear's Pokegear palette, header plate, windows and buttons; its HGSS pixel fonts (`assets/fonts`); Pokémon pictures (Gen 1/2 coloured on the CPU, Gen 3 `frontPic`), trimmed to their opaque part |
+| `info.lua` | the summary page from the game's own Pokédex data (the sources WoobOS reads) |
+| `display.lua` | where it shows, following the Gear's DISPLAY MODE: second display (gate at `render.compose` 900, async readback push), handheld (the game to the second display), combined / fullscreen split (Gen 1/2 `render.viewport` capture + `render.window`; Gen 3 `Playfield.cutout` + `render.hud`); touches from `pollTouch`, `input.pointer`, Gen 3 `TouchControls` and a desktop mouse poll. No input layer: buttons stay with the game |
+| `layout.lua`, `gate.lua`, `surface.lua`, `host.lua` | geometry, the second-display gate, the canvas, the engine seams; condensed from NaviPlay (MIT, same author), engine wraps keyed `__woobnav*` so they chain with NaviPlay's |
+
+`exports._woobnav` is a test seam (not API). `tests/woobnav_test.lua` covers the spec, the layout,
+the gate, registering with the real Gear (Crystal) and the whole tap flow;
+`tests/drivers/woobnav_probe.lua` shoots it in the running game (combined and fullscreen; a
+stand-in Store hook where the Gear is switched off on the machine):
+
+```sh
+SHOT_DIR=<dir> POKEPORT_GAME=crystal POKEPORT_VERSION=crystal WOOBNAV_MAP=ROUTE_29   POKEPORT_DRIVER=mods/modern_spawns/tests/drivers/woobnav_probe.lua love .
+```
 
 ## Trainer teams
 

@@ -315,6 +315,43 @@ return function(reg, MapContext, mod)
     return (type(list) == "table" and #list > 0) and { list } or nil
   end
 
+  -- ------------------------------------------------------- area (WoobNav)
+
+  -- The Old Rod, as the cart has it, on maps with a water table (a fish
+  -- group is on hundreds of headers, most of them indoors).
+  function A.hasWater(mapId)
+    local water = kindTable("water")[mapId]
+    return type(water) == "table" and type(water.slots) == "table" and #water.slots > 0
+  end
+  function A.fixedTables(mapId)
+    if not A.hasWater(mapId) then return {} end
+    local group = fishGroup(mapId)
+    local out = {}
+    local old = fishEntry(group, "old")
+    if old then
+      old.kind = "fish.old"
+      out[1] = old
+    end
+    return out
+  end
+
+  -- The map header's landmark name (src.core.gen2.Nests), else the id.
+  local landmarkName
+  function A.mapName(mapId)
+    local info = A.mapInfo(mapId)
+    local name
+    pcall(function()
+      landmarkName = landmarkName or require("src.core.gen2.Nests").landmark
+      local data = mod and mod.game and mod.game.data
+      local lm = landmarkName(data, info and info.landmark)
+      name = type(lm) == "table" and lm.name or nil
+    end)
+    if type(name) ~= "string" or name == "" then
+      name = tostring(mapId):gsub("_%d*F$", ""):gsub("_", " ")
+    end
+    return (name:gsub("\n", " "))
+  end
+
   -- ----------------------------------------------------------------- save
 
   -- Gold writes save.pokedex.caught (BattleState), not Gen 1's `owned`.

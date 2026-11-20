@@ -48,6 +48,10 @@ return function(deps)
   local DATA_VERSION = profiles and profiles.version or 0
 
   local Runtime = {}
+  -- the map the player last entered (map.entered), for the WoobNav
+  local currentMap
+  -- per-map odds (src/rates.lua), for exports.encounters
+  local Rates = deps.Rates
   local pool, poolMaxGen, poolGens
   local cache = { key = nil, tables = nil }       -- seeded: every map
   local visits = {}                                -- map mode: entries per map
@@ -573,6 +577,140 @@ return function(deps)
     return out
   end
 
+  -- ------------------------------------------------- area rates (WoobNav)
+
+  -- What each table kind is to a player: how it is met.
+  local METHOD = {
+    grass = "grass", land = "grass", water = "surf", superRod = "super",
+    ["fish.old"] = "old", ["fish.good"] = "good", ["fish.super"] = "super", rocks = "rock",
+  }
+  local METHOD_ORDER = { grass = 1, cave = 1, surf = 2, old = 3, good = 4, super = 5, rock = 6 }
+
+  -- The player's map: the last map.entered (the id the hooks see), else the
+  -- engine's live position (a Gen 1 checkpoint load enters no map), made
+  -- canonical where the adapter names maps by several aliases.
+  function Runtime.currentMap()
+    local id = currentMap
+    if id == nil then
+      local ok, here = pcall(function() return mod.world:current() end)
+      id = ok and type(here) == "table" and here.mapId or nil
+    end
+    if id ~= nil and world.canonicalMap then id = world.canonicalMap(id) or id end
+    return id
+  end
+
+  function Runtime.areaName(mapId)
+    if mapId == nil then return nil end
+    if world.mapName then
+      local ok, name = pcall(world.mapName, mapId)
+      if ok and type(name) == "string" then return name end
+    end
+    return (tostring(mapId):gsub("_", " "))
+  end
+
+  -- Every species on a map with how likely it is, method by method, under the
+  -- current settings (exports.encounters). Read only: it reads the same
+  -- cached tables the hooks roll, and never draws, counts a visit or touches
+  -- generator memory.
+  --   opts.period  "day" | "night" (TIME OF DAY SPAWNS; default now)
+  --   opts.time    Gen 2 grass: "MORN" | "DAY" | "NITE" | "all" (default now)
+  -- -> { mapId, name, active, random, mode, period, time, sections = {
+  --        { method, kind, time?, rate, mons = { { id, chance, minLevel, maxLevel, pooled } } } },
+  --      rare = { { id, category, method, odds } } }
+  function Runtime.encountersAt(mapId, opts)
+    opts = opts or {}
+    mapId = mapId or Runtime.currentMap()
+    if mapId == nil or not Rates then return nil end
+    if world.canonicalMap then mapId = world.canonicalMap(mapId) or mapId end
+    local active = Runtime.isActive()
+    local mode = Config.spawnMode(mod)
+    local random = active and mode == "random"
+    local period = active and periodOrNow(opts.period) or nil
+    local nowTime = Clock and Clock.gen2Time and Clock.gen2Time() or nil
+    local wantTime = opts.time or nowTime
+    local out = { mapId = mapId, name = Runtime.areaName(mapId), active = active, random = random,
+                  mode = mode, period = period, time = world.generation == 2 and nowTime or nil,
+                  sections = {}, rare = {} }
+    local okT, entries = pcall(world.tables, mapId)
+    entries = okT and entries or {}
+    local fixed = {}
+    if world.fixedTables then
+      local okF, f = pcall(world.fixedTables, mapId)
+      fixed = okF and f or {}
+    end
+    local baseOf = function(id)
+      if not lookBase then todWeight(id, "day") end -- builds lookBase
+      return lookBase and lookBase[id]
+    end
+    local function push(entry, def, pools, weightOf, time, indices)
+      local mons = Rates.section({ slots = def.slots, weights = entry.weights, indices = indices,
+                                   pools = pools, weightOf = weightOf, baseOf = baseOf })
+      if #mons == 0 then return end
+      local method = METHOD[entry.kind] or entry.kind
+      if method == "grass" and entry.terrain == "cave" then method = "cave" end
+      out.sections[#out.sections + 1] = { method = method, kind = entry.kind, time = time,
+                                          rate = def.rate, mons = mons }
+    end
+    for _, entry in ipairs(entries) do
+      local kind = entry.kind
+      local skip = random and entry.def ~= nil
+      -- Gen 2's rods on a map without water (the generator gives every wild
+      -- map its fish group's rods) are not fishable there
+      if world.hasWater and (kind == "fish.good" or kind == "fish.super") and not world.hasWater(mapId) then
+        skip = true
+      end
+      if not skip then
+        local def = active and generated(mapId, kind, period) or nil
+        local pools = def and poolsOf(mapId, kind) or nil
+        def = def or entry.def
+        if entry.times then
+          -- Gen 2 grass: one flat table, MORN 1-7, DAY 8-14, NITE 15-21
+          for _, time in ipairs({ "MORN", "DAY", "NITE" }) do
+            if wantTime == "all" or wantTime == time or wantTime == nil then
+              local indices = {}
+              for i, t in ipairs(entry.times) do
+                if t == time then indices[#indices + 1] = i end
+              end
+              local p = todMode() ~= "off" and (time == "NITE" and "night" or "day") or nil
+              local weightOf = pools and p and function(id) return todWeight(id, p) end or nil
+              push(entry, def, pools, weightOf, time, indices)
+            end
+          end
+        else
+          local weightOf = pools and period and function(id) return todWeight(id, period) end or nil
+          push(entry, def, pools, weightOf, nil, nil)
+        end
+      end
+    end
+    for _, entry in ipairs(fixed) do push(entry, entry.def, nil, nil, nil, nil) end
+    table.sort(out.sections, function(a, b)
+      local oa, ob = METHOD_ORDER[a.method] or 9, METHOD_ORDER[b.method] or 9
+      if oa ~= ob then return oa < ob end
+      local ta = ({ MORN = 1, DAY = 2, NITE = 3 })[a.time or ""] or 0
+      local tb = ({ MORN = 1, DAY = 2, NITE = 3 })[b.time or ""] or 0
+      return ta < tb
+    end)
+    -- LEGENDARIES: once the League is beaten, each unowned host may appear
+    if active and not random and Config.legendaries(mod) and world.leagueCleared() then
+      local homes = Runtime.legendaryHomes()
+      local rules = Config.SpawnConfig.legendary
+      for kind, hosts in pairs(homes and homes[mapId] or {}) do
+        for _, host in ipairs(hosts) do
+          if world.hasSpecies(host.id) and not world.owned(host.id) then
+            local method = METHOD[kind] or kind
+            out.rare[#out.rare + 1] = { id = host.id, category = host.category, method = method,
+              odds = host.category == "mythical" and rules.mythical_chance or rules.chance }
+          end
+        end
+      end
+      table.sort(out.rare, function(a, b)
+        if a.odds ~= b.odds then return a.odds < b.odds end
+        return tostring(a.id) < tostring(b.id)
+      end)
+    end
+    return out
+  end
+
   -- COMPLETE DEX: one species out of a slot's pool, each equally likely (TIME
   -- OF DAY SPAWNS: weighted by todWeight at `period`; nil when nothing in the
   -- pool may come out now); a species with looks (Rotom's appliances, ...)
@@ -686,7 +824,7 @@ return function(deps)
   local syncedOnce = {}
   -- TIME OF DAY SPAWNS: the period live sync last wrote, the period last seen,
   -- and the map the player is on (EVERY MAP / RANDOM re-sync only that one)
-  local syncedPeriod, seenPeriod, currentMap
+  local syncedPeriod, seenPeriod
   local function liveSyncMap(mapId)
     if not (LiveSync and Runtime.isActive() and type(mapId) == "string") then return end
     if not syncedOnce[mapId] then

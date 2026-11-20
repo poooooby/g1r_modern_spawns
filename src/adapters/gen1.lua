@@ -192,6 +192,43 @@ return function(reg, MapContext, mod)
     return slots and { slots } or nil
   end
 
+  -- ------------------------------------------------------- area (WoobNav)
+
+  -- The rods this mod never touches, as the cart has them (FieldDefaults:
+  -- the Old Rod always Magikarp, the Good Rod Goldeen or Poliwag alike), on
+  -- maps with fish (a Super Rod group): `tables`-shaped entries.
+  local CART_RODS = {
+    { kind = "fish.old", rod = "OLD_ROD", fallback = { always = { species = "MAGIKARP", level = 5 } } },
+    { kind = "fish.good", rod = "GOOD_ROD", fallback = { pool = { { species = "GOLDEEN", level = 10 },
+                                                                  { species = "POLIWAG", level = 10 } } } },
+  }
+  function A.fixedTables(mapId)
+    if not superRod(mapId) then return {} end
+    local fishing = reg.get("field", "fishing")
+    local out = {}
+    for _, r in ipairs(CART_RODS) do
+      local spec = type(fishing) == "table" and type(fishing[r.rod]) == "table" and fishing[r.rod] or r.fallback
+      local list = spec.always and { spec.always } or spec.pool
+      if type(list) == "table" and #list > 0 then
+        local weights = {}
+        for i = 1, #list do weights[i] = 1 end
+        out[#out + 1] = { kind = r.kind, terrain = "fish", def = { rate = 1, slots = list }, weights = weights }
+      end
+    end
+    return out
+  end
+
+  -- The place's name on the Town Map, else the map id made readable.
+  function A.mapName(mapId)
+    local loc = reg.get("field", "townMap")
+    loc = type(loc) == "table" and type(loc.locations) == "table" and loc.locations[mapId]
+    local name = type(loc) == "table" and loc.name or nil
+    if type(name) ~= "string" or name == "" then
+      name = tostring(mapId):gsub("_%d*F$", ""):gsub("_", " ")
+    end
+    return (name:gsub("\n", " "))
+  end
+
   -- ----------------------------------------------------------------- save
 
   function A.owned(game, id)
