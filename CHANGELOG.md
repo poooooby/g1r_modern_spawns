@@ -3,6 +3,21 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.19.0] - 2026-11-20
+
+The stable release of the 0.18.x betas, with no further changes. Coming from 0.17.0:
+
+- **WoobNav**, a DexNav-style Kanto Gear app (0.18.0): every wild Pokémon on your map, its
+  odds, levels and how it's met, and a summary page per species.
+- WoobNav steps aside in battles so Kanto Gear's battle controls take over, and comes back after
+  (0.18.1).
+- WoobNav night mode: a moon/sun button switches light and dark, kept with your save (0.18.2).
+- **COMPLETE: no Pokémon on any map under a 5% chance**, TIME OF DAY SPAWNS or not (0.18.2).
+  This reshuffles COMPLETE rosters on saves from 0.17.0 or earlier; LIMITED, EVERY MAP, RANDOM
+  and trainer teams are unchanged.
+- `exports.encounters`, `exports.currentMap` and `exports.areaName`: the odds per map, for other
+  mods (0.18.0).
+
 ## [0.18.2] - 2026-11-20
 
 ### Changed
