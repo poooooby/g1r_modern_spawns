@@ -1486,6 +1486,9 @@ return function(deps)
       -- TRAINER TEAMS never touches the wild tables (src/trainer_runtime.lua
       -- handles its own change)
       if ev.key == "trainer_teams" then return end
+      -- LANGUAGE only changes the WoobNav's words (src/woobnav/init.lua): no table is
+      -- dropped, so EVERY MAP's rosters and the session memory stay as they are
+      if ev.key == "language" then return end
       Runtime.invalidate()
       if LiveSync then LiveSync.restore() end
       if ev.key == "seed" then

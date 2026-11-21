@@ -9,6 +9,11 @@
 
 return function(deps)
   local Art, Rates = deps.Art, deps.Rates
+  -- the words (src/i18n.lua); a bare stand-in shows the keys' English
+  local T = deps.T or setmetatable({ f = function(key, ...)
+    local ok, s = pcall(string.format, key, ...)
+    return ok and s or key
+  end }, { __call = function(_, key) return key end })
   local floor, max, min = math.floor, math.max, math.min
   local View = {}
 
@@ -22,7 +27,6 @@ return function(deps)
   local THEME = { x = 214, y = 0, w = 26, h = 24 }
   local TAB_Y, TAB_H = 128, 16
   local TABS = { "info", "stats", "evolves" }
-  local TAB_LABEL = { info = "INFO", stats = "STATS", evolves = "EVOLVES" }
 
   function View.card(i)
     local slot = (i - 1) % View.PER_PAGE
@@ -70,17 +74,13 @@ return function(deps)
   local function levelText(lo, hi)
     lo, hi = tonumber(lo), tonumber(hi)
     if not lo then return "" end
-    if hi and hi ~= lo then return ("Lv %d-%d"):format(lo, hi) end
-    return ("Lv %d"):format(lo)
+    if hi and hi ~= lo then return T.f("level.range", lo, hi) end
+    return T.f("level.one", lo)
   end
   View.levelText = levelText
 
-  local METHOD_NAME = { grass = "GRASS", cave = "CAVE", surf = "SURF", old = "OLD ROD", good = "GOOD ROD",
-                        super = "SUPER ROD", rock = "ROCK SMASH" }
-  View.METHOD_NAME = METHOD_NAME
-
   local function chanceText(row)
-    if row.rare then return "RARE" end
+    if row.rare then return T("card.rare") end
     return Rates.text(row.chance)
   end
 
@@ -111,7 +111,7 @@ return function(deps)
     local pct = chanceText(row)
     Art.text("label", pct, tx, r.y + 15, row.rare and C.amber or C.ink)
     Art.methodIcon(row.method, tx, r.y + 39)
-    local lv = row.rare and ("1 in " .. tostring(row.odds or 1024)) or levelText(row.minLevel, row.maxLevel)
+    local lv = row.rare and T.f("card.odds", tonumber(row.odds) or 1024) or levelText(row.minLevel, row.maxLevel)
     local after = tx + 10
     if row.time then
       Art.timeIcon(row.time, after, r.y + 39)
@@ -135,7 +135,7 @@ return function(deps)
     local rows = model.rows or {}
     if #rows == 0 then
       Art.window(14, 70, 212, 60)
-      local lines = Art.wrap("label", model.empty or "No wild Pokemon here.", 196)
+      local lines = Art.wrap("label", model.empty or T("area.empty"), 196)
       for i, l in ipairs(lines) do
         local w = Art.width("label", l)
         Art.text("label", l, 120 - floor(w / 2), 78 + (i - 1) * 15, C.ink)
@@ -160,12 +160,16 @@ return function(deps)
     end
   end
 
+  -- (`name` the engine's English type: its colour; the pill shows it in the language)
   local function typePill(name, x, y)
     local c = Art.TYPE[name] or Art.C.silverDark
-    local w = Art.width("small", name) + 8
+    local key = "type." .. tostring(name)
+    local word = T(key)
+    if word == key then word = name end
+    local w = Art.width("small", word) + 8
     Art.RR(x, y, w, 12, 3, Art.mix(c, { 0, 0, 0, 1 }, 0.35))
     Art.RR(x + 1, y + 1, w - 2, 10, 2, c)
-    Art.text("small", name, x + 4, y, Art.WHITE)
+    Art.text("small", word, x + 4, y, Art.WHITE)
     return w
   end
 
@@ -173,17 +177,22 @@ return function(deps)
     local C = Art.C
     local n = #pg.stats
     local rowH = n > 5 and 8 or 10
+    -- the names' column as wide as the language's longest (at least the English one's)
+    local nameW = 40
+    for _, s in ipairs(pg.stats) do nameW = max(nameW, Art.width("small", T("stat." .. s[1])) + 2) end
+    nameW = min(nameW, 80)
     for i, s in ipairs(pg.stats) do
       local yy = y + (i - 1) * rowH
-      Art.text("small", s[1], x, yy - 2, C.muted)
-      Art.text("small", tostring(s[2]), x + 44, yy - 2, C.ink, 20, "right")
-      local bw = w - 72
+      Art.text("small", Art.fit("small", T("stat." .. s[1]), nameW), x, yy - 2, C.muted)
+      Art.text("small", tostring(s[2]), x + nameW + 4, yy - 2, C.ink, 20, "right")
+      local bx = x + nameW + 30
+      local bw = w - (bx - x) - 2
       local f = max(1, floor(bw * min(1, s[2] / 200) + 0.5))
       local cc = s[2] >= 90 and C.hp or s[2] >= 50 and C.hpMid or C.hpLow
-      Art.R(x + 70, yy + 3, bw, 4, C.line)
-      Art.R(x + 70, yy + 3, f, 4, cc)
+      Art.R(bx, yy + 3, bw, 4, C.line)
+      Art.R(bx, yy + 3, f, 4, cc)
     end
-    Art.text("small", "TOTAL " .. tostring(pg.total), x, y + n * rowH - 1, C.ink)
+    Art.text("small", T.f("sum.total", tonumber(pg.total) or 0), x, y + n * rowH - 1, C.ink)
   end
 
   -- here = { { method, time?, chance, minLevel, maxLevel, rare? } }
@@ -197,17 +206,17 @@ return function(deps)
     Art.R(9, 84, 60, 3, C.line)
     if not Art.pokemon(pg.id, 39, 87, 62, 56) then Art.text("label", "?", 35, 50, C.disabled) end
     local x = 76
-    local no = pg.dex and ("No. %03d"):format(pg.dex) or "No. ---"
+    local no = pg.dex and T.f("sum.number", pg.dex) or T("sum.noNumber")
     Art.text("small", no, x, 31, C.muted)
     if pg.caught then Art.ball(x + Art.width("small", no) + 4, 33) end
     local px = x
     for _, t in ipairs(pg.types) do px = px + typePill(t, px, 44) + 3 end
-    if pg.category then Art.text("small", Art.fit("small", pg.category .. " Pokemon", 156), x, 58, C.ink) end
-    if pg.height then Art.text("small", "HT " .. pg.height, x, 68, C.muted) end
-    if pg.weight then Art.text("small", "WT " .. pg.weight, x, 78, C.muted) end
+    if pg.category then Art.text("small", Art.fit("small", T.f("sum.category", pg.category), 156), x, 58, C.ink) end
+    if pg.height then Art.text("small", Art.fit("small", T.f("sum.height", pg.height), 156), x, 68, C.muted) end
+    if pg.weight then Art.text("small", Art.fit("small", T.f("sum.weight", pg.weight), 156), x, 78, C.muted) end
     -- where it is met here
     Art.window(4, 95, 232, 31)
-    Art.text("small", "HERE", 8, 98, C.heading)
+    Art.text("small", Art.fit("small", T("sum.here"), 28), 8, 98, C.heading)
     local shown = 0
     for i, h in ipairs(here or {}) do
       if i > 4 then break end
@@ -224,7 +233,7 @@ return function(deps)
       local s = (h.rare and ("1/" .. tostring(h.odds or 1024)) or Rates.text(h.chance)) .. " " .. levelText(h.minLevel, h.maxLevel)
       Art.text("small", Art.fit("small", s, hx + 96 - tx), tx, hy - 1, C.ink)
     end
-    if shown == 0 then Art.text("small", "Not met here now", 38, 104, C.muted) end
+    if shown == 0 then Art.text("small", Art.fit("small", T("sum.notHere"), 194), 38, 104, C.muted) end
     if #(here or {}) > 4 then Art.text("small", "+" .. (#here - 4), 214, 112, C.muted) end
     -- the tabs
     for i, name in ipairs(TABS) do
@@ -232,7 +241,7 @@ return function(deps)
       local on = tab == name
       local a = on and Art.C.acc or Art.rampOf(C.tabOff)
       local off = Art.button(r.x, r.y, r.w, r.h, a, pressed == "tab:" .. name or on, 4)
-      local label = TAB_LABEL[name]
+      local label = Art.fit("small", T("tab." .. name), r.w - 6)
       local w = Art.width("small", label)
       Art.text("small", label, r.x + floor((r.w - w) / 2), r.y + 1 + off, Art.WHITE)
     end
@@ -240,11 +249,11 @@ return function(deps)
     Art.window(4, 147, 232, 66)
     if tab == "stats" then
       if #pg.stats > 0 then statBars(pg, 10, 151, 220)
-      else Art.text("small", "No stats known.", 10, 152, C.muted) end
+      else Art.text("small", T("sum.noStats"), 10, 152, C.muted) end
     elseif tab == "evolves" then
       local y = 151
       if #pg.line <= 1 then
-        Art.text("small", "It does not evolve.", 10, y, C.muted)
+        Art.text("small", T("sum.noEvolution"), 10, y, C.muted)
       end
       if #pg.line > 1 then
         for i, step in ipairs(pg.line) do
@@ -257,10 +266,10 @@ return function(deps)
         end
       end
       if #pg.abilities > 0 then
-        Art.text("small", Art.fit("small", "ABILITY " .. table.concat(pg.abilities, " / "), 220), 10, 199, C.muted)
+        Art.text("small", Art.fit("small", T.f("sum.ability", table.concat(pg.abilities, " / ")), 220), 10, 199, C.muted)
       end
     else
-      local lines = Art.wrap("small", pg.text ~= nil and pg.text ~= "" and pg.text or "No Pokedex entry.", 220)
+      local lines = Art.wrap("small", pg.text ~= nil and pg.text ~= "" and pg.text or T("sum.noEntry"), 220)
       for i, l in ipairs(lines) do
         if i > 6 then break end
         Art.text("small", l, 10, 150 + (i - 1) * 10, C.ink)

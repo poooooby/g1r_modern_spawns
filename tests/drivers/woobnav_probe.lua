@@ -51,6 +51,14 @@ local function body(game, log, dir)
     end
   end
   if not N.Display then log("FAIL no display"); return end
+  -- WOOBNAV_LANG=de|ja|...: the WoobNav's words in that language (in memory, as LANGUAGE does;
+  -- the options file is never written)
+  local lang = os.getenv("WOOBNAV_LANG")
+  if lang and lang ~= "" then
+    log("language", lang, "->", tostring(N.T.set(lang)))
+    N.Info.reset()
+    N.state.stale = true
+  end
   local opts = { kanto_gear = {} }
   N.Display.state.gearOptions = opts.kanto_gear
   local display0 = nil

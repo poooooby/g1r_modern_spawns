@@ -25,14 +25,29 @@ return function(deps)
   end
 
   local ex = mod.exports
+  -- the words, in the LANGUAGE option's language (src/i18n.lua, lang/*.lua)
+  local makeI18n = load("src/i18n.lua")
+  local T = makeI18n and makeI18n({ read = function(path) return mod:read(path) end,
+    log = function(fmt, ...) mod.log:warn("WoobNav: " .. fmt, ...) end })
+  if not T then
+    -- (no lang/ files: the keys' English is still better than nothing)
+    T = setmetatable({ f = function(key) return key end, set = function() return false end,
+                       code = function() return "en" end }, { __call = function(_, k) return k end })
+  end
+  local function language()
+    local ok, v = pcall(function() return mod.options:get("language") end)
+    return ok and type(v) == "string" and v or "en"
+  end
+  T.set(language())
+
   local Art = makeArt(mod)
-  local Info = makeInfo({ mod = mod, profileOf = function(id)
+  local Info = makeInfo({ mod = mod, T = T, profileOf = function(id)
     local ok, p = pcall(ex.profileOf, id)
     return ok and p or nil
   end })
-  local View = makeView({ Art = Art, Rates = Rates })
+  local View = makeView({ Art = Art, Rates = Rates, T = T })
 
-  local N = { View = View, Art = Art, Info = Info, registered = false }
+  local N = { View = View, Art = Art, Info = Info, T = T, registered = false }
   local state = { open = false, screen = "area", page = 1, tab = "info", rows = {}, stale = true }
   N.state = state
 
@@ -48,8 +63,6 @@ return function(deps)
     local ok, s = pcall(ex.settings)
     return ok and type(s) == "table" and s.timeOfDay or "off"
   end
-
-  local NOTE_TIME = { MORN = "MORNING", DAY = "DAY", NITE = "NIGHT" }
 
   local function rowsOf(enc)
     local rows = {}
@@ -78,15 +91,15 @@ return function(deps)
     state.rows = rowsOf(enc)
     state.page = math.min(state.page, View.pages(#state.rows))
     local note
-    if enc and not enc.active then note = "GAME'S OWN"
-    elseif enc and enc.random then note = "RANDOM"
-    elseif enc and enc.time then note = NOTE_TIME[enc.time]
-    elseif enc and enc.period then note = enc.period == "night" and "NIGHT" or "DAY" end
+    if enc and not enc.active then note = T("note.own")
+    elseif enc and enc.random then note = T("note.random")
+    elseif enc and enc.time then note = T("time." .. tostring(enc.time))
+    elseif enc and enc.period then note = T(enc.period == "night" and "time.NITE" or "time.DAY") end
     state.model = {
       title = enc and enc.name or (mapId and tostring(mapId)) or "WOOBNAV",
       note = note, rows = state.rows, page = state.page,
-      empty = enc and enc.random and "RANDOM: a new Pokemon every encounter here."
-        or (mapId and "No wild Pokemon here." or "Step outside to scan the area."),
+      empty = enc and enc.random and T("area.random")
+        or T(mapId and "area.empty" or "area.outside"),
     }
     dirty()
   end
@@ -373,7 +386,14 @@ return function(deps)
     mod.events:on("mod." .. mod.id .. ".tables_changed", stale)
     mod.events:on("mod." .. mod.id .. ".period_changed", stale)
     mod.events:on("world.tod_changed", stale)
-    mod.events:on("mod.options_changed", stale)
+    mod.events:on("mod.options_changed", function(ev)
+      -- LANGUAGE: the words again (the summary pages hold theirs)
+      if type(ev) == "table" and ev.mod == mod.id and ev.key == "language" then
+        T.set(language())
+        Info.reset()
+      end
+      stale()
+    end)
     mod.events:on("battle.ended", function() Info.reset(); stale() end)
     for _, name in ipairs({ "save.loaded", "save.created", "checkpoint.restored" }) do
       mod.events:on(name, function()

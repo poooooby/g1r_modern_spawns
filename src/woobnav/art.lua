@@ -276,11 +276,11 @@ return function(mod)
     if not (G and G.newImageFont and love.image and love.filesystem and mod.read) then return end
     local okG, glyphs = pcall(function() return load(mod:read("assets/fonts/glyphs.lua"))() end)
     if not okG or type(glyphs) ~= "string" then return end
-    local function face(file)
+    local function face(file, set)
       local ok, font = pcall(function()
         local bytes = mod:read(file)
         local data = love.image.newImageData(love.filesystem.newFileData(bytes, file:match("[^/]+$")))
-        local f = G.newImageFont(data, glyphs)
+        local f = G.newImageFont(data, set or glyphs)
         f:setFilter("nearest", "nearest")
         return f
       end)
@@ -289,6 +289,16 @@ return function(mod)
     A.fonts.label = face("assets/fonts/hgss_font.png")
     A.fonts.small = face("assets/fonts/hgss_small_font.png")
     A.fonts.large = face("assets/fonts/hgss_large_font.png")
+    -- Japanese: the kana HGSS lacks, from Fusion Pixel 8px (Kanto Gear's Japanese face), at the
+    -- same heights and baseline (tools/woobnav_ja_font/generate.py); an image font takes only
+    -- image fonts as fallbacks, and measures with them too
+    local okJ, jaGlyphs = pcall(function() return load(mod:read("assets/fonts/ja_glyphs.lua"))() end)
+    if okJ and type(jaGlyphs) == "string" then
+      for name, file in pairs({ small = "assets/fonts/ja_small.png", label = "assets/fonts/ja_label.png" }) do
+        local ja = face(file, jaGlyphs)
+        if ja and A.fonts[name] then pcall(A.fonts[name].setFallbacks, A.fonts[name], ja) end
+      end
+    end
   end
   local fontsLoaded = false
   local function font(name)

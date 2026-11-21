@@ -3,6 +3,21 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [0.20.0] - 2026-11-20
+
+### Added
+
+- **LANGUAGE** option (user request: "a language option matching WoobOS"): the WoobNav in
+  English, Deutsch, Español, Français, Italiano, 日本語 or Português (BR), WoobOS's and Kanto
+  Gear's seven languages. Its words live in `lang/*.lua`, one data file per language, with
+  English filling anything a file leaves out. The game's own text (Pokémon and place names,
+  categories, Pokédex entries) stays as it is. Japanese draws kana from Fusion Pixel 8px, the
+  face Kanto Gear uses, at the WoobNav fonts' own size.
+- The WoobNav's Kanto Gear Store tile in Brazilian Portuguese (it follows Kanto Gear's language).
+
+Switching LANGUAGE changes no spawn: wild and trainer output are unchanged, and no table is
+redrawn (EVERY MAP keeps its rosters).
+
 ## [0.19.0] - 2026-11-20
 
 The stable release of the 0.18.x betas, with no further changes. Coming from 0.17.0:

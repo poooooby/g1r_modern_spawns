@@ -69,7 +69,7 @@ better stats.
 
 With [Kanto Gear](https://github.com/AverageConsumer/kanto-gear), get the WOOBNAV app from its
 Silph Store. It shows every wild Pokémon on your map with its real odds and levels, plus a
-summary for each one, in light or dark mode.
+summary for each one, in light or dark mode and in seven languages.
 
 ➡️ [Using the WoobNav](docs/woobnav.md)
 
@@ -103,6 +103,7 @@ Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own 
 | **TRAINER TEAMS** | OFF / ON / ON + ITEMS | OFF | Modern Pokémon for trainers; ON + ITEMS adds held items. |
 | **SEED** | up to 10 letters | your save's | Type a seed to share or replay a world. |
 | **REROLL SEED** | - / REROLL | - | Draw a new random seed for this save. |
+| **LANGUAGE** | ENGLISH / DEUTSCH / ESPANOL / FRANCAIS / ITALIANO / JAPANESE / PORTUGUES (BR) | ENGLISH | The WoobNav's language. |
 
 ## 🔗 Works With
 
@@ -120,7 +121,8 @@ Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own 
   [PokéAPI](https://pokeapi.co/).
 - Shiny chains: inspired by **TTiN** and **Untamed Tohjo**, used with permission.
 - WoobNav: Kanto Gear's look and its pixel fonts by **AverageConsumer** (MIT); the fonts are
-  BobsGame nD by Robert Matthew Pelloni (WTFPL) and scientifica by Akshay Oppiliappan (OFL 1.1).
+  BobsGame nD by Robert Matthew Pelloni (WTFPL) and scientifica by Akshay Oppiliappan (OFL 1.1),
+  and Japanese uses Fusion Pixel Font by TakWolf (OFL 1.1).
 
 ---
 

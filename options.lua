@@ -137,4 +137,18 @@ return {
     choices = { { "-", "idle" }, { "REROLL", "reroll" } },
     description = "Step right to REROLL to draw a new random seed for this save. Changing SPAWN MODE never changes the seed; only this or typing a SEED does.",
   },
+  {
+    -- The WoobNav's words (lang/*.lua, src/i18n.lua): the same seven languages as
+    -- WoobOS and Kanto Gear. Labels stay ASCII: the Game Boy menus can't draw accents.
+    key = "language",
+    label = "LANGUAGE",
+    type = "choice",
+    default = "en",
+    choices = {
+      { "ENGLISH", "en" }, { "DEUTSCH", "de" }, { "ESPANOL", "es" },
+      { "FRANCAIS", "fr" }, { "ITALIANO", "it" }, { "JAPANESE", "ja" },
+      { "PORTUGUES (BR)", "pt-br" },
+    },
+    description = "The language of the WoobNav app in Kanto Gear. The game's own text (Pokemon and place names, Pokedex entries) stays as it is.",
+  },
 }

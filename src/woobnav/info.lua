@@ -5,11 +5,15 @@
 --
 --   Info = makeInfo({ mod, profileOf = fn(id) -> exports.profileOf(id) | nil })
 --   Info.page(id) -> { id, name, dex, types = { names }, category, height, weight, text,
---                      stats = { { label, value } }, total, abilities = { names },
+--                      stats = { { stat key, value } } (lang/en.lua "stat.<key>"), total, abilities = { names },
 --                      line = { { id, name, how } }, seen, caught }
 
 return function(deps)
   local mod, profileOf = deps.mod, deps.profileOf
+  local T = deps.T or setmetatable({ f = function(key, ...)
+    local ok, s = pcall(string.format, key, ...)
+    return ok and s or key
+  end }, { __call = function(_, key) return key end })
   local floor = math.floor
   local generation = tonumber(mod.generation) or 1
 
@@ -129,11 +133,12 @@ return function(deps)
       local into = e.species or e.into
       if into == child then
         local m = tostring(e.method or ""):gsub("^EVOLVE_", "")
-        if m == "LEVEL" or m == "STAT" then return e.level and ("Lv " .. e.level) or nil end
-        if m == "ITEM" then return e.item and titled(e.item) or "Item" end
-        if m == "TRADE" then return "Trade" end
-        if m == "HAPPINESS" then return "Friendship" end
-        return e.level and ("Lv " .. e.level) or titled(m)
+        local lvl = tonumber(e.level)
+        if m == "LEVEL" or m == "STAT" then return lvl and T.f("evo.level", lvl) or nil end
+        if m == "ITEM" then return e.item and titled(e.item) or T("evo.item") end
+        if m == "TRADE" then return T("evo.trade") end
+        if m == "HAPPINESS" then return T("evo.friendship") end
+        return lvl and T.f("evo.level", lvl) or titled(m)
       end
     end
     return nil
@@ -171,7 +176,7 @@ return function(deps)
       if c.evolvesFrom then
         how = howEvolves(c.evolvesFrom, c.id)
         local lvl = tonumber(c.evolveLevel)
-        if not how and lvl and lvl > 0 then how = "Lv " .. lvl end
+        if not how and lvl and lvl > 0 then how = T.f("evo.level", lvl) end
       end
       out[#out + 1] = { id = c.id, name = rec and rec.name or c.id, how = how, stage = c.stage }
     end
@@ -215,8 +220,8 @@ return function(deps)
         end
         local okS, st = pcall(Pk.stats, index)
         st = okS and type(st) == "table" and st or {}
-        pg.stats = { { "HP", st.hp }, { "ATK", st.atk }, { "DEF", st.def }, { "SP.ATK", st.spa },
-                     { "SP.DEF", st.spd }, { "SPEED", st.spe } }
+        pg.stats = { { "hp", st.hp }, { "atk", st.atk }, { "def", st.def }, { "spa", st.spa },
+                     { "spd", st.spd }, { "spe", st.spe } }
         local ab = Pk._abilities and Pk._abilities[index]
         local seen = {}
         for _, a in ipairs(type(ab) == "table" and ab or {}) do
@@ -239,9 +244,9 @@ return function(deps)
           pg.weight = de.weight and weightOfTenths(de.weight) or nil
           local one, two = paragraph(de.text), paragraph(de.text2)
           pg.text = two ~= "" and (one .. " " .. two) or one
-          pg.stats = { { "HP", b.hp }, { "ATK", b.attack }, { "DEF", b.defense },
-                       { "SP.ATK", b.specialAttack or b.special }, { "SP.DEF", b.specialDefense or b.special },
-                       { "SPEED", b.speed } }
+          pg.stats = { { "hp", b.hp }, { "atk", b.attack }, { "def", b.defense },
+                       { "spa", b.specialAttack or b.special }, { "spd", b.specialDefense or b.special },
+                       { "spe", b.speed } }
         else
           local de = def.dexEntry or {}
           pg.category = de.kind and titled(de.kind) or nil
@@ -250,8 +255,8 @@ return function(deps)
           end
           pg.weight = de.weight and weightOfTenths(de.weight) or nil
           pg.text = paragraph(de.text and d and d.text and d.text[de.text] or "")
-          pg.stats = { { "HP", b.hp }, { "ATK", b.attack }, { "DEF", b.defense }, { "SPCL", b.special },
-                       { "SPEED", b.speed } }
+          pg.stats = { { "hp", b.hp }, { "atk", b.attack }, { "def", b.defense }, { "spc", b.special },
+                       { "spe", b.speed } }
         end
       end
     end)

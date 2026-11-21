@@ -53,3 +53,5 @@ tests/rates_test.lua
 tests/encounters_test.lua
 tests/woobnav_test.lua
 tests/drivers/woobnav_probe.lua
+tests/language_test.lua
+tools/woobnav_ja_font/generate.py

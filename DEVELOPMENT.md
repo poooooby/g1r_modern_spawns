@@ -209,9 +209,9 @@ WoobNav draws and takes input itself:
 | File | What |
 |---|---|
 | `init.lua` | state, the model (`exports.encounters` -> six-a-page cards; a species' HERE rows at each time of day), input actions, events, the registration |
-| `gear.lua` | the Store spec: words, 24x24 pal/rows icon, translations |
+| `gear.lua` | the Store spec: words, 24x24 pal/rows icon, translations (Kanto Gear's language) |
 | `view.lua` | the two screens on 240x216 (Kanto Gear's bottom screen) and their hit-testing (pure) |
-| `art.lua` | Kanto Gear's Pokegear palette in its light and dark variants (`A.setDark` swaps `A.C` in place), header plate, windows and buttons; its HGSS pixel fonts (`assets/fonts`); Pokémon pictures (Gen 1/2 coloured on the CPU, Gen 3 `frontPic`), trimmed to their opaque part |
+| `art.lua` | Kanto Gear's Pokegear palette in its light and dark variants (`A.setDark` swaps `A.C` in place), header plate, windows and buttons; its HGSS pixel fonts (`assets/fonts`, the Japanese atlases as their fallbacks); Pokémon pictures (Gen 1/2 coloured on the CPU, Gen 3 `frontPic`), trimmed to their opaque part |
 | `info.lua` | the summary page from the game's own Pokédex data (the sources WoobOS reads) |
 | `display.lua` | where it shows, following the Gear's DISPLAY MODE: second display (gate at `render.compose` 900, async readback push), handheld (the game to the second display), combined / fullscreen split (Gen 1/2 `render.viewport` capture + `render.window`; Gen 3 `Playfield.cutout` + `render.hud`); touches from `pollTouch`, `input.pointer`, Gen 3 `TouchControls` and a desktop mouse poll. No input layer: buttons stay with the game |
 | `layout.lua`, `gate.lua`, `surface.lua`, `host.lua` | geometry, the second-display gate, the canvas, the engine seams; condensed from NaviPlay (MIT, same author), engine wraps keyed `__woobnav*` so they chain with NaviPlay's |
@@ -220,6 +220,32 @@ The theme button (top right, `View.hit` -> `"theme"`) flips `Art.setDark`; the c
 playthrough like Kanto Gear's Home: `mod.save` key `woobnav_dark`, plus `mod.storage`
 `woobnav/theme` written at once and read on `save.loaded` / `save.created` /
 `checkpoint.restored` (never at load: a storage read can name the playthrough).
+
+### Languages
+
+LANGUAGE (`options.lua` `language`, default `en`) picks the WoobNav's words: `src/i18n.lua` loads
+`lang/<code>.lua` for WoobOS's and Kanto Gear's seven languages (`en de es fr it ja pt-br`,
+`T.CODES`, the row's order). `lang/en.lua` is the master: every key, and what another file
+leaves out shows in English. The files are data only (an empty environment). Words stay out of
+every RNG and cache key: `runtime.lua` returns early on a `language` change, so no table is
+dropped and EVERY MAP's rosters stay. The game's own text (Pokémon and place names, categories,
+Pokédex entries, ability and item names) is never translated. The Store tile's words follow
+Kanto Gear's own language (`gear.lua` `translations`, `pt-BR` there).
+
+The HGSS atlases have Latin and accents but no kana. `assets/fonts/ja_small.png` /
+`ja_label.png` (+ `ja_glyphs.lua`) are image fonts of every kana plus whatever `lang/` uses that
+HGSS lacks, rendered from Fusion Pixel 8px (OFL 1.1, Kanto Gear's Japanese face; notices in
+`assets/fonts/fusion-pixel/`) at the HGSS heights and baseline, and `art.lua` hands them to
+`Font:setFallbacks` (an image font only takes image fonts). After adding a character to a
+`lang/` file, rebuild them (needs Pillow and the sibling kanto-gear checkout):
+
+```sh
+python tools/woobnav_ja_font/generate.py
+```
+
+`tests/language_test.lua` checks every file against English (keys, `%s`/`%d`), every character
+against the fonts, and a live switch in the WoobNav that leaves the tables alone. The probe
+driver takes `WOOBNAV_LANG=<code>` (in memory only).
 
 `exports._woobnav` is a test seam (not API). `tests/woobnav_test.lua` covers the spec, the layout,
 the gate, registering with the real Gear (Crystal) and the whole tap flow;

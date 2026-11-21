@@ -33,6 +33,9 @@ Tap a Pokémon to see:
 - The back button (top left) returns to the list, then to Kanto Gear.
 - 🌙 **Light or dark:** tap the moon (top right) for night mode, and the sun to switch back.
   Your pick stays with your save.
+- 🌐 **Your language:** WoobleSpawns' **LANGUAGE** option shows WoobNav in English, German,
+  Spanish, French, Italian, Japanese or Brazilian Portuguese, the same languages as WoobOS and
+  Kanto Gear. Pokémon names, places and Pokédex entries stay in your game's own words.
 - ⚔️ In a battle, Kanto Gear takes the screen back for its battle controls. WoobNav returns on
   its own once the battle is over.
 - It shows wherever Kanto Gear shows (a second screen, a combined screen or fullscreen) and

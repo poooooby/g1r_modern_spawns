@@ -89,6 +89,13 @@ return function(deps)
         ["ODDS, LEVELS AND DEX INFO."] = "でる かくりつ・レベル・ずかん。",
         ["POWERED BY WOOBLESPAWNS."] = "WoobleSpawns提供のアプリ。",
       },
+      ["pt-BR"] = {
+        ["WOOBNAV"] = "WOOBNAV",
+        ["TOOLS"] = "FERRAMENTAS",
+        ["EVERY WILD POKEMON HERE."] = "Todos os Pokémon selvagens daqui.",
+        ["ODDS, LEVELS AND DEX INFO."] = "Chances, níveis e dados da Pokédex.",
+        ["POWERED BY WOOBLESPAWNS."] = "Um app do WoobleSpawns.",
+      },
     },
   }
 end
