@@ -8,7 +8,9 @@ With **TRAINER TEAMS** on, the trainers you battle field Pokémon from the gener
 Trainers, Gym Leaders, the Elite Four and your rival get Pokémon picked to fit their original
 teams. Every Gym Leader and Elite Four member keeps their type, so Brock still throws Rock
 types and Phoebe Ghosts, and they favour the stronger Pokémon of that type for their level.
-Levels and team sizes stay the game's own, and legendaries never join a trainer's team.
+🌋 Team Magma and 🌊 Team Aqua keep their element too: Maxie, his admins and his grunts send out
+Fire and Ground types and never a Water one, while Archie's side fields Water types and never a
+Fire one. Levels and team sizes stay the game's own, and legendaries never join a trainer's team.
 
 TRAINER TEAMS works whether MODERN SPAWNS is on or off. It follows your save's seed, so the same
 seed always gives the same teams.

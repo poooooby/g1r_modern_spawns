@@ -49,6 +49,17 @@ Trainers.RESISTS = {
   WATER = { WATER = true, GRASS = true, DRAGON = true },
 }
 
+-- The villain teams' themes, by the adapter's `team` (Gen 3: the word in the
+-- trainer class, TEAM MAGMA GRUNT / MAGMA ADMIN / MAGMA LEADER): every Pokemon
+-- such a trainer shows has
+-- one of `types` where a family fits (Mightyena becomes a Houndoom, not a
+-- Sharpedo), and never one of `avoid`, the rival team's element. Sharing one
+-- type with the original alone let Team Magma field Water types.
+Trainers.TEAM_THEMES = {
+  MAGMA = { types = { FIRE = true, GROUND = true }, avoid = { WATER = true } },
+  AQUA = { types = { WATER = true }, avoid = { FIRE = true } },
+}
+
 -- A starter's triangle type (GRASS, FIRE or WATER), or nil.
 local function elementOf(c)
   if not c then return nil end
@@ -191,7 +202,10 @@ end
 --                your starter beats (Trainers.BEATS), shown at the original's
 --                stage in every fight; it falls back to the usual pick only
 --                when no starter line fits
-function Trainers.planIdentity(ctx, ix, identity, appearances, gymType, rival)
+--   theme:       a villain team's Trainers.TEAM_THEMES entry (nil for anyone
+--                else): its types first, never its `avoid` types where any
+--                other family fits
+function Trainers.planIdentity(ctx, ix, identity, appearances, gymType, rival, theme)
   local config, Rng = ctx.config, ctx.Rng
   local byRoot = {}
   for _, a in ipairs(appearances) do
@@ -210,6 +224,18 @@ function Trainers.planIdentity(ctx, ix, identity, appearances, gymType, rival)
       local fitting = {}
       for i, k in ipairs(kids) do
         if ix.byId[k] and ix.byId[k].types[gymType] then fitting[#fitting + 1] = i end
+      end
+      if #fitting > 0 then return fitting[rng:int(1, #fitting)] end
+    elseif theme and kids then
+      local fitting = {}
+      for i, k in ipairs(kids) do
+        local c = ix.byId[k]
+        local themed, avoided = false, false
+        for t in pairs(c and c.types or {}) do
+          if theme.types[t] then themed = true end
+          if theme.avoid[t] then avoided = true end
+        end
+        if themed and not avoided then fitting[#fitting + 1] = i end
       end
       if #fitting > 0 then return fitting[rng:int(1, #fitting)] end
     end
@@ -241,13 +267,14 @@ function Trainers.planIdentity(ctx, ix, identity, appearances, gymType, rival)
     end
     local maxStageOf = weaker and function(a) return a.stage end or function() return nil end
     -- tier 1 (only the rival's starter): a starter line your starter beats
-    local tiers = { {}, {}, {}, {} }
+    local tiers = { {}, {}, {}, {}, {} }
     for _, family in ipairs(ix.roots) do
       -- a gym may keep an original family of its type when too few others
       -- have it (Kanto alone has one Ghost line); anyone else always changes
       local keep = family == original
       if (not keep or gymType) and ix.usable[family] and not used[family] then
         local ok, gymOk, bstGap, shownTypes = true, true, 0, {}
+        local themeOk, avoided = theme ~= nil, false
         local weakOk = weaker ~= nil and isStarter(family)
         for _, a in ipairs(apps) do
           local id = Trainers.stageFor(ix, config, family, a.level, a.stage, branchFor, maxStageOf(a))
@@ -259,6 +286,14 @@ function Trainers.planIdentity(ctx, ix, identity, appearances, gymType, rival)
           end
           if weaker and (not c.types[weaker] or (c.stage or 1) ~= a.stage) then weakOk = false end
           if gymType and not c.types[gymType] then gymOk = false end
+          if theme then
+            local themed = false
+            for t in pairs(c.types) do
+              if theme.types[t] then themed = true end
+              if theme.avoid[t] then avoided = true end
+            end
+            if not themed then themeOk = false end
+          end
           -- near the original's base stat total; a gym leader or Elite Four
           -- member (a typed boss) aims gym_bst_lift above it, so it leans
           -- toward the stronger families of its type without jumping a tier
@@ -275,12 +310,20 @@ function Trainers.planIdentity(ctx, ix, identity, appearances, gymType, rival)
           if weakOk and not keep then table.insert(tiers[1], entry) end
           if gymType then
             if gymOk then table.insert(tiers[2], entry) end
+          elseif theme then
+            -- a villain team: its own types (sharing the original's ranks first)
+            if themeOk and not avoided and not keep then table.insert(tiers[2], entry) end
           elseif shared > 0 then
             table.insert(tiers[2], entry)
           end
           if not keep then
-            if shared > 0 then table.insert(tiers[3], entry) end
-            table.insert(tiers[4], entry)
+            -- a villain team skips its rival team's element while anything else fits
+            if theme and avoided then
+              table.insert(tiers[5], entry)
+            else
+              if shared > 0 then table.insert(tiers[3], entry) end
+              table.insert(tiers[4], entry)
+            end
           end
         end
       end

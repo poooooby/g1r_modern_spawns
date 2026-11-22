@@ -57,7 +57,9 @@ return function(reg, mod, world)
     local rival = identity == "rival" or (className:find("TRAINER", 1, true) ~= nil and RSE_RIVALS[name] == true)
     -- the Elite Four and the champion: every Pokemon may hold an item (ON + ITEMS)
     local elite = className == "ELITE FOUR" or className == "CHAMPION"
-    return identity, gymType, boss, rival, elite
+    -- Team Magma and Team Aqua keep their element (Planner.TEAM_THEMES)
+    local team = className:find("MAGMA", 1, true) and "MAGMA" or className:find("AQUA", 1, true) and "AQUA" or nil
+    return identity, gymType, boss, rival, elite, team
   end
 
   -- the registry id for a numeric species slot (the cart's own and modded)
@@ -80,8 +82,8 @@ return function(reg, mod, world)
     local p = pack()
     local out = {}
     for _, row in pairs(p and p.trainers or {}) do
-      local identity, gymType, boss, rival = classify(row, p)
-      local info = out[identity] or { appearances = {}, gymType = gymType, boss = boss, rival = rival }
+      local identity, gymType, boss, rival, _, team = classify(row, p)
+      local info = out[identity] or { appearances = {}, gymType = gymType, boss = boss, rival = rival, team = team }
       out[identity] = info
       -- the lowest and highest of its battles' top levels: the rival's first
       -- and final battle (ON + ITEMS)
@@ -108,7 +110,7 @@ return function(reg, mod, world)
     local p = pack()
     local own = p and p.trainers and p.trainers[trainerId]
     if not own then return nil end
-    local identity, gymType, boss, rival, elite = classify(own, p)
+    local identity, gymType, boss, rival, elite, team = classify(own, p)
     local rows = {}
     for i, row in ipairs(party) do
       if type(row) ~= "table" then return nil end
@@ -126,7 +128,7 @@ return function(reg, mod, world)
                   identity = rowIdentity }
     end
     return { identity = identity, key = "trainer:" .. trainerId, gymType = gymType, boss = boss,
-             rival = rival, elite = elite, rows = rows }
+             rival = rival, elite = elite, team = team, rows = rows }
   end
 
   -- ------------------------------------------------------------ moves

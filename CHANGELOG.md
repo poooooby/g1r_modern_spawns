@@ -3,6 +3,25 @@
 All notable changes to this mod are documented here, in
 [keep a changelog](https://keepachangelog.com/en/1.1.0/) format.
 
+## [Unreleased]
+
+### Fixed
+
+- **TRAINER TEAMS: Team Magma and Team Aqua keep their element** (user report: the Magma
+  leaders fielded Water types). A trainer outside the Gyms only had to share one type with
+  each original Pokémon, so Maxie's Mightyena (Dark) could become a Sharpedo (Water/Dark) and
+  Tabitha's Golbat a Toxapex. Every grunt, admin and leader of Team Magma now shows Fire or
+  Ground types and never a Water one; Team Aqua shows Water types and never a Fire one
+  (`Trainers.TEAM_THEMES`, from the trainer class; a branching family takes a branch of the
+  theme too). Sharing a type with the original still ranks a family first within the theme
+  (Mightyena becomes a Houndoom). Verified over 12 seeds on Emerald and Ruby at GEN 1, 1-3 and
+  1-9: no Pokémon off theme.
+
+Existing saves get new Magma and Aqua teams (`ALGO` 4). Every other trainer's team is
+byte-identical (diffed every Emerald, Ruby and FireRed trainer before and after; Red and
+Crystal digests unchanged; FireRed's only changes are its unused Hoenn placeholder entries),
+and wild output is unchanged.
+
 ## [0.20.0] - 2026-11-20
 
 ### Added

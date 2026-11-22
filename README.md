@@ -80,12 +80,9 @@ summary for each one, in light or dark mode and in seven languages.
 2. Import it with the Gen1Recomp Mod Manager, or drop it in your mods folder.
 3. Play. On its own, WoobleSpawns mixes up your game's own Pokémon: 151 in Red, Blue and
    Yellow, 251 in Gold, Silver and Crystal, and 386 in the Gen 3 games. For the newer
-   generations, add the species mod for your game:
-   - **Red, Blue, Yellow:** [National Dex](https://github.com/sanjinpepic/gen1recomp-national-dex),
-     with its **NATIONAL DEX** option ON.
-   - **FireRed, LeafGreen, Ruby, Sapphire, Emerald:**
-     [WoobleDex](https://github.com/poooooby/national_dex_gen3), plus
-     [WoobleSpritePack](https://github.com/poooooby/g9-battle-sprites-gen3) for battle art.
+   generations, add [WoobleDex](https://github.com/poooooby/national_dex_gen3) and
+   [WoobleSpritePack](https://github.com/poooooby/g9-battle-sprites-gen3) for their battle
+   art. Both work in every game, Red to Emerald.
 
 ## ⚙️ Options
 
@@ -112,8 +109,9 @@ Open **OPTIONS → WOOBLESPAWNS**, the shortcut at the bottom of the game's own 
   overworld Pokémon use WoobleSpawns' Pokémon, legendaries and shiny chains.
 - [Kanto Gear](https://github.com/AverageConsumer/kanto-gear): the WOOBNAV app, and its own
   wild-encounter guide shows the Pokémon WoobleSpawns picked.
-- [WoobleDex](https://github.com/poooooby/national_dex_gen3): newer Pokémon on Gen 3, the
-  Pokédex AREA page for Pokémon you haven't seen, and working held items for trainer teams.
+- [WoobleDex](https://github.com/poooooby/national_dex_gen3): newer Pokémon in every game,
+  working held items for trainer teams, and in the Gen 3 games the Pokédex AREA page for
+  Pokémon you haven't seen.
 
 ## 🪪 Credits
 

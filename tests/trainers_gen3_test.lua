@@ -129,6 +129,32 @@ for _, name in ipairs({ "MAY", "BRENDAN", "WALLY" }) do
   end
 end
 
+-- Team Magma and Team Aqua keep their element: every Pokemon of a grunt, admin or leader has one
+-- of the team's types, and never the other team's (Maxie once fielded a Sharpedo)
+do
+  local Pack = require("src.core.game3.scripting.trainers").pack()
+  local THEMES = { MAGMA = { want = { FIRE = true, GROUND = true }, avoid = "WATER" },
+                   AQUA = { want = { WATER = true }, avoid = "FIRE" } }
+  for word, theme in pairs(THEMES) do
+    local n, off = 0, {}
+    for id, t in pairs(Pack.trainers) do
+      local cn = tostring(t.className or Pack.classNames[t.class])
+      if cn:find(word, 1, true) and type(t.party) == "table" and #t.party > 0 then
+        for _, row in ipairs((em.battle(id))) do
+          local sid = em.speciesOf(row)
+          local types, themed = em.types(sid), false
+          for ty in pairs(types) do if theme.want[ty] then themed = true end end
+          n = n + 1
+          if types[theme.avoid] or not themed then off[#off + 1] = tostring(id) .. ":" .. tostring(sid) end
+        end
+      end
+    end
+    table.sort(off)
+    T.check(n >= 40, "Team " .. word .. ": its trainers' Pokemon found (" .. n .. ")")
+    T.eq(table.concat(off, " "), "", "Team " .. word .. ": every Pokemon on theme, none " .. theme.avoid)
+  end
+end
+
 T.check(builtSets > 0, "custom-move Pokemon get built sets (" .. builtSets .. ")")
 
 -- left alone: Trainer Tower (0), Frontier / link (nil), secret bases (1024)
